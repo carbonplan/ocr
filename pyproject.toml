@@ -84,3 +84,22 @@
         "auto",
     ]
     console_output_style = "count"
+
+[project]
+    dependencies    = []
+    name            = "ocr"
+    requires-python = ">= 3.11"
+    version         = "0.0.1"
+
+[tool.pixi.project]
+    channels  = ["conda-forge"]
+    name      = "ocr"
+    platforms = ["linux-64", "osx-arm64"]
+
+    # [tool.pixi.pypi-dependencies]
+    # ocr = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+pre-commit = ">=4.1.0,<5"
