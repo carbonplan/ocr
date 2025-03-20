@@ -24,4 +24,10 @@ jobs:
           activate-environment: true
 
       - run: pixi info
-      - run: pixi list
+      - name: List installed libraries/packages
+        run: |
+          pixi list -e test
+
+      - name: Run tests
+        run: |
+          pixi run tests

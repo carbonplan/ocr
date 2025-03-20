@@ -8629,7 +8629,7 @@ packages:
 - pypi: .
   name: ocr
   version: 0.0.1
-  sha256: ed88785e7d9706887aa5d62539b484d328352155d6ed07e44e2f014d0059ac88
+  sha256: c2635db637370f2cc5080cd99716cb28c5072841c846d23338d4b53e78e7aba3
   requires_python: '>=3.13'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/openjpeg-2.5.3-h5fbd93e_0.conda
