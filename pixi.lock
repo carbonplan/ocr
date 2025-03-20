@@ -11019,8 +11019,8 @@ packages:
   timestamp: 1742255945595
 - pypi: .
   name: ocr
-  version: 0.0.1
-  sha256: 5a63cea1c6d0e99a2ae467d5a8267c6336251178e8d781ac5f2e93b4710db692
+  version: 0.0.post18+g791e562.d20250320
+  sha256: 267e928ffd46a3f2df9f98a61dab6ca072e920261e7f6e8c7bc18b951364302c
   requires_python: '>=3.13'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/openjpeg-2.5.3-h5fbd93e_0.conda

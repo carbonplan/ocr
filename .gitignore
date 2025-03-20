@@ -176,3 +176,4 @@ cython_debug/
 # pixi environments
 .pixi
 *.egg-info
+ocr/_version.py

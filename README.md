@@ -4,22 +4,7 @@ Open Climate Risk Platform
 
 ## installation
 
-To install dependencies locally, you can use [`pixi`](https://pixi.sh/latest/). From the root of the project, run:
+> [!IMPORTANT]
+> We use [`pixi`](https://pixi.sh/latest/) to manage our development environment, which you'll need to install before you can get started with the project.
 
-```bash
-# Install Pixi
-curl -fsSL https://pixi.sh/install.sh | bash
-
-# or use homebrew on macOS
-# brew install pixi
-```
-
-Detailed instructions for installing `pixi` can be found in the [pixi documentation](https://pixi.sh/latest/).
-
-## Install dependencies
-
-Once `pixi` is installed, you can install the project dependencies by running:
-
-```bash
-pixi install
-```
+Please see the [contributing guide](./contributing.md) for detailed instructions on how to set up your development environment, run tests, and submit pull requests.
