@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.42.1
+          cache: true
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list -e test
+
+      - name: Run tests
+        run: |
+          pixi run tests

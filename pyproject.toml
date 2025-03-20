@@ -1,3 +1,23 @@
+[build-system]
+    build-backend = "setuptools.build_meta"
+    requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
+
+[project]
+    dependencies    = []
+    name            = "ocr"
+    requires-python = ">= 3.13"
+    dynamic = ["version"]
+
+[tool.setuptools.packages.find]
+    include = ["ocr*"]
+
+[tool.setuptools_scm]
+    fallback_version  = "999"
+    local_scheme      = "node-and-date"
+    version_scheme    = "post-release"
+    write_to          = "ocr/_version.py"
+    write_to_template = '__version__ = "{version}"'
+
 [tool.coverage.run]
     branch = true
     omit   = ["tests/*"]
@@ -5,7 +25,7 @@
 [tool.ruff]
     extend-include = ["*.ipynb"]
     line-length    = 100
-    target-version = "py311"
+    target-version = "py313"
 
     builtins = ["ellipsis"]
     # Exclude a variety of commonly ignored directories.
@@ -78,28 +98,58 @@
     addopts = [
         "--cov-report=term-missing",
         "--cov-report=xml",
-        "--cov=./",
+        "--cov=./ocr",
         "--verbose",
-        "-n",
-        "auto",
     ]
     console_output_style = "count"
-
-[project]
-    dependencies    = []
-    name            = "ocr"
-    requires-python = ">= 3.11"
-    version         = "0.0.1"
 
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "osx-arm64"]
+    platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
-    # [tool.pixi.pypi-dependencies]
-    # ocr = { path = ".", editable = true }
-
-[tool.pixi.tasks]
+[tool.pixi.pypi-dependencies]
+    ocr = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
-pre-commit = ">=4.1.0,<5"
+    distributed = ">=2025.2.0,<2026"
+    fsspec      = ">=2025.3.0,<2026"
+    geopandas   = ">=1.0.1,<2"
+    icechunk    = ">=0.2.8,<0.3"
+    netcdf4     = ">=1.7.2,<2"
+    pooch       = ">=1.8.2,<2"
+    rioxarray   = ">=0.18.2,<0.19"
+    s3fs        = ">=2025.3.0,<2026"
+    xarray      = ">=2025.3.0,<2026"
+    zarr        = ">=3.0.5,<4"
+
+[tool.pixi.environments]
+    dev  = ["dev"]
+    docs = ["docs"]
+    lint = ["lint"]
+    test = ["test"]
+
+[tool.pixi.feature.test.dependencies]
+    pytest     = "*"
+    pytest-cov = ">=6.0.0,<7"
+
+[tool.pixi.feature.docs.dependencies]
+    myst-nb = ">=1.2.0,<2"
+
+[tool.pixi.feature.lint.dependencies]
+    pre-commit = ">=4.2.0,<5"
+    ruff       = ">=0.11.0,<0.12"
+
+[tool.pixi.feature.dev.dependencies]
+    jupyterlab = "*"
+
+[tool.pixi.feature.test.tasks]
+    tests = { cmd = "pytest" }
+
+[tool.pixi.feature.dev.tasks]
+    jupyter = { cmd = "jupyter lab" }
+
+[tool.pixi.feature.lint.tasks]
+    lint = { cmd = "ruff" }
+    format = { cmd = "ruff format" }
+    precommit = { cmd = "pre-commit run" }
