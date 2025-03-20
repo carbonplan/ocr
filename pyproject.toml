@@ -88,7 +88,7 @@
 [project]
     dependencies    = []
     name            = "ocr"
-    requires-python = ">= 3.11"
+    requires-python = ">= 3.13"
     version         = "0.0.1"
 
 [tool.pixi.project]
@@ -102,4 +102,4 @@
 [tool.pixi.tasks]
 
 [tool.pixi.dependencies]
-pre-commit = ">=4.1.0,<5"
+    pre-commit = ">=4.1.0,<5"
