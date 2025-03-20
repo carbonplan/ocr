@@ -18,7 +18,7 @@
 [tool.ruff]
     extend-include = ["*.ipynb"]
     line-length    = 100
-    target-version = "py311"
+    target-version = "py313"
 
     builtins = ["ellipsis"]
     # Exclude a variety of commonly ignored directories.
@@ -92,21 +92,42 @@
         "--cov-report=term-missing",
         "--cov-report=xml",
         "--cov=./",
-        "--verbose",
-        "-n",
-        "auto",
+        "--verbose"
     ]
     console_output_style = "count"
+
 
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "osx-arm64"]
+    platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
     ocr = { path = ".", editable = true }
 
-[tool.pixi.tasks]
 
 [tool.pixi.dependencies]
-    pre-commit = ">=4.1.0,<5"
+zarr = ">=3.0.5,<4"
+xarray = ">=2025.3.0,<2026"
+netcdf4 = ">=1.7.2,<2"
+pooch = ">=1.8.2,<2"
+rioxarray = ">=0.18.2,<0.19"
+geopandas = ">=1.0.1,<2"
+distributed = ">=2025.2.0,<2026"
+icechunk = ">=0.2.8,<0.3"
+
+[tool.pixi.environments]
+docs = ["docs"]
+test = ["test"]
+
+
+[tool.pixi.tasks]
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = ">=6.0.0,<7"
+pre-commit = ">=4.2.0,<5"
+ruff = ">=0.11.0,<0.12"
+
+[tool.pixi.feature.docs.dependencies]
+myst-nb = ">=1.2.0,<2"
