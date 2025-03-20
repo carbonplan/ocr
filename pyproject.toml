@@ -115,6 +115,8 @@ rioxarray = ">=0.18.2,<0.19"
 geopandas = ">=1.0.1,<2"
 distributed = ">=2025.2.0,<2026"
 icechunk = ">=0.2.8,<0.3"
+s3fs = ">=2025.3.0,<2026"
+fsspec = ">=2025.3.0,<2026"
 
 [tool.pixi.environments]
 docs = ["docs"]
