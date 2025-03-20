@@ -14,7 +14,7 @@ curl -fsSL https://pixi.sh/install.sh | bash
 # brew install pixi
 ```
 
-Detail instructions for installing `pixi` can be found in the [pixi documentation](https://pixi.sh/latest/).
+Detailed instructions for installing `pixi` can be found in the [pixi documentation](https://pixi.sh/latest/).
 
 ## Install dependencies
 
