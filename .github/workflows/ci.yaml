@@ -24,3 +24,4 @@ jobs:
           activate-environment: true
 
       - run: pixi info
+      - run: pixi list

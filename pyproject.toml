@@ -1,3 +1,16 @@
+[build-system]
+    build-backend = "setuptools.build_meta"
+    requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
+
+[project]
+    dependencies    = []
+    name            = "ocr"
+    requires-python = ">= 3.13"
+    version         = "0.0.1"
+
+[tool.setuptools.packages.find]
+    include = ["ocr*"]
+
 [tool.coverage.run]
     branch = true
     omit   = ["tests/*"]
@@ -85,19 +98,13 @@
     ]
     console_output_style = "count"
 
-[project]
-    dependencies    = []
-    name            = "ocr"
-    requires-python = ">= 3.13"
-    version         = "0.0.1"
-
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
     platforms = ["linux-64", "osx-arm64"]
 
-    # [tool.pixi.pypi-dependencies]
-    # ocr = { path = ".", editable = true }
+[tool.pixi.pypi-dependencies]
+    ocr = { path = ".", editable = true }
 
 [tool.pixi.tasks]
 
