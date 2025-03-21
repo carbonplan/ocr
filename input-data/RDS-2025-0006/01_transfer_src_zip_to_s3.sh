@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 
 # Spatial datasets of probabilistic wildfire risk components for the conterminous United States (270m) for circa 2011 climate and projected future climate circa 2047
@@ -14,4 +12,4 @@ mkdir -p USFS_fire_risk
 unzip RDS-2025-0006.zip -d USFS_fire_risk/
 
 # Upload the tiffs to s3
-s5cmd cp  'USFS_fire_risk/*' 's3://carbonplan-data/USFS/RDS-2025-0006/'
+s5cmd cp  'USFS_fire_risk/*/*/*.tif' 's3://carbonplan-ocr/input_data/tensor/USFS/RDS-2025-0006/input_tif/'
