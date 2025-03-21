@@ -104,3 +104,13 @@
 [tool.pixi.dependencies]
 pre-commit = ">=4.1.0,<5"
 coiled = "*"
+
+[tool.pixi.feature.input-data.dependencies]
+coiled = "*"
+icechunk = ">=0.2.8,<0.3"
+distributed = ">=2025.2.0,<2026"
+xarray = ">=2025.3.0,<2026"
+rioxarray = ">=0.18.2,<0.19"
+
+[tool.pixi.environments]
+input-data = ["input-data"]
