@@ -128,6 +128,7 @@
     docs = ["docs"]
     lint = ["lint"]
     test = ["test"]
+    input-data = ["input-data"]
 
 [tool.pixi.feature.test.dependencies]
     pytest     = "*"
@@ -142,6 +143,13 @@
 
 [tool.pixi.feature.dev.dependencies]
     jupyterlab = "*"
+
+[tool.pixi.feature.input-data.dependencies]
+    coiled = "*"
+    icechunk = ">=0.2.8,<0.3"
+    distributed = ">=2025.2.0,<2026"
+    xarray = ">=2025.3.0,<2026"
+    rioxarray = ">=0.18.2,<0.19"
 
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
