@@ -12,4 +12,4 @@ mkdir -p USFS_fire_risk
 unzip RDS-2025-0006.zip -d USFS_fire_risk/
 
 # Upload the tiffs to s3
-s5cmd cp  'USFS_fire_risk/*/*/*.tif' 's3://carbonplan-ocr/input_data/tensor/USFS/RDS-2025-0006/input_tif/'
+s5cmd cp  'USFS_fire_risk/*/*/*.tif' 's3://carbonplan-ocr/input/tensor/USFS/RDS-2025-0006/input_tif/'
