@@ -129,7 +129,8 @@
     docs = ["docs"]
     lint = ["lint"]
     test = ["test"]
-bucket-creation = ["bucket-creation"]
+    bucket-creation = ["bucket-creation"]
+    input-data = ["input-data"]
 
 [tool.pixi.feature.test.dependencies]
     pytest     = "*"
@@ -145,14 +146,22 @@ bucket-creation = ["bucket-creation"]
 [tool.pixi.feature.dev.dependencies]
     jupyterlab = "*"
 
+[tool.pixi.feature.input-data.dependencies]
+    coiled = "*"
+    icechunk = ">=0.2.8,<0.3"
+    distributed = ">=2025.2.0,<2026"
+    xarray = ">=2025.3.0,<2026"
+    rioxarray = ">=0.18.2,<0.19"
+
+[tool.pixi.feature.bucket-creation.dependencies]
+boto3 = "*"
+
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
 
 [tool.pixi.feature.dev.tasks]
     jupyter = { cmd = "jupyter lab" }
 
-[tool.pixi.feature.bucket-creation.dependencies]
-boto3 = "*"
 
 [tool.pixi.feature.lint.tasks]
     lint = { cmd = "ruff" }
