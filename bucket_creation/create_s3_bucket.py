@@ -30,12 +30,12 @@ s3_client.put_bucket_cors(
 
 # create empty dir structure
 subfolders = [
-    'input_data/tensor/',
-    'input_data/vector/',
+    'input/fire-risk/tensor/',
+    'input/fire-risk/vector/',
     'intermediate/',
-    'output/analysis/fire_risk/tensor/',
-    'output/analysis/fire_risk/vector/',
-    'output/web/',
+    'output/analysis/fire-risk/tensor/',
+    'output/analysis/fire-risk/vector/',
+    'output/web/fire-risk/',
 ]
 
 for folder in subfolders:
@@ -49,7 +49,7 @@ lifecycle_config = {
         {
             'ID': 'input-rule',
             'Status': 'Enabled',
-            'Filter': {'Prefix': 'input_data/'},
+            'Filter': {'Prefix': 'input/'},
             'Expiration': {'Days': 365},
         },
         {
