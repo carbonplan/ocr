@@ -103,3 +103,4 @@
 
 [tool.pixi.dependencies]
 pre-commit = ">=4.1.0,<5"
+coiled = "*"
