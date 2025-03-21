@@ -3,7 +3,8 @@
     requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
 
 [project]
-    dependencies    = []
+    dependencies    = [
+]
     name            = "ocr"
     requires-python = ">= 3.13"
     dynamic = ["version"]
@@ -128,6 +129,7 @@
     docs = ["docs"]
     lint = ["lint"]
     test = ["test"]
+bucket-creation = ["bucket-creation"]
 
 [tool.pixi.feature.test.dependencies]
     pytest     = "*"
@@ -148,6 +150,9 @@
 
 [tool.pixi.feature.dev.tasks]
     jupyter = { cmd = "jupyter lab" }
+
+[tool.pixi.feature.bucket-creation.dependencies]
+boto3 = "*"
 
 [tool.pixi.feature.lint.tasks]
     lint = { cmd = "ruff" }
