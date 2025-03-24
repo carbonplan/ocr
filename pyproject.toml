@@ -129,8 +129,7 @@
     docs = ["docs"]
     lint = ["lint"]
     test = ["test"]
-    bucket-creation = ["bucket-creation"]
-    input-data = ["input-data"]
+    data-mgmt = ["data-mgmt"]
 
 [tool.pixi.feature.test.dependencies]
     pytest     = "*"
@@ -146,8 +145,9 @@
 [tool.pixi.feature.dev.dependencies]
     jupyterlab = "*"
 
-[tool.pixi.feature.input-data.dependencies]
+[tool.pixi.feature.data-mgmt.dependencies]
     coiled = "*"
+    boto3 = "*"
     icechunk = ">=0.2.8,<0.3"
     distributed = ">=2025.2.0,<2026"
     xarray = ">=2025.3.0,<2026"
