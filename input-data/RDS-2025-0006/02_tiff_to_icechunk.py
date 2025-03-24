@@ -18,7 +18,9 @@ def build_icechunk(ds_name: str):
         'FLP6.tif',
     ]
 
-    path = f's3://carbonplan-ocr/input/tensor/USFS/RDS-2025-0006/input_tif/Data/{ds_name}/'
+    path = (
+        f's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2025-0006/input_tif/Data/{ds_name}/'
+    )
     url_list = [path + var for var in var_name_list]
 
     def preprocess(ds, filename):
@@ -36,7 +38,7 @@ def build_icechunk(ds_name: str):
 
     storage = icechunk.s3_storage(
         bucket='carbonplan-ocr',
-        prefix=f'input/tensor/USFS/{ds_name}_Icechunk',
+        prefix=f'input/fire-risk/tensor/USFS/{ds_name}_Icechunk',
         region='us-west-2',
     )
     repo = icechunk.Repository.open_or_create(storage)
@@ -47,7 +49,7 @@ def build_icechunk(ds_name: str):
     print(first_snapshot)
 
 
-@coiled.function(region='us-west-2', vm_type='m8g.large')
+@coiled.function(region='us-west-2', vm_type='m8g.xlarge', tags={'Project': 'OCR'})
 def main():
     build_icechunk('2011ClimateRun')
     build_icechunk('2047ClimateRun')
