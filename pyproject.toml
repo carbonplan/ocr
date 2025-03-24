@@ -3,6 +3,7 @@
     requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
 
 [project]
+
     dependencies    = []
     dynamic         = ["version"]
     name            = "ocr"
@@ -113,6 +114,7 @@
 
 [tool.pixi.dependencies]
     bottleneck  = "*"
+    coiled      = ">=1.89.0,<2"
     distributed = ">=2025.2.0,<2026"
     flox        = "*"
     fsspec      = ">=2025.3.0,<2026"
@@ -121,10 +123,12 @@
     netcdf4     = ">=1.7.2,<2"
     numba       = ">=0.54"
     numbagg     = "*"
+    opencv      = ">=4.10.0,<5"
     opt_einsum  = "*"
     pooch       = ">=1.8.2,<2"
     rioxarray   = ">=0.18.2,<0.19"
     s3fs        = ">=2025.3.0,<2026"
+    windrose    = ">=1.9.2,<2"
     xarray      = ">=2025.3.0,<2026"
     zarr        = ">=3.0.5,<4"
 
@@ -150,13 +154,9 @@
     jupyterlab = "*"
 
 [tool.pixi.feature.data-mgmt.dependencies]
-    boto3       = "*"
-    coiled      = "*"
-    distributed = ">=2025.2.0,<2026"
-    icechunk    = ">=0.2.8,<0.3"
-    patool      = ">=4.0.0,<5"
-    rioxarray   = ">=0.18.2,<0.19"
-    xarray      = ">=2025.3.0,<2026"
+    awscli = ">=2.25.1,<3"
+    boto3  = "*"
+    patool = ">=4.0.0,<5"
 
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
@@ -168,3 +168,6 @@
     format    = { cmd = "ruff format" }
     lint      = { cmd = "ruff" }
     precommit = { cmd = "pre-commit run" }
+
+[tool.pixi.tasks]
+    jupyter = { cmd = "jupyter lab" }
