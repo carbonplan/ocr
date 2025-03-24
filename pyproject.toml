@@ -153,8 +153,6 @@
     xarray = ">=2025.3.0,<2026"
     rioxarray = ">=0.18.2,<0.19"
 
-[tool.pixi.feature.bucket-creation.dependencies]
-boto3 = "*"
 
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
