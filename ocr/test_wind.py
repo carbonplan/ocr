@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ocr.wind import generate_angles, generate_weights
+from ocr.wind import generate_angles, generate_weights, generate_wind_directional_kernels
 
 
 def test_generate_angles_returns_dict():
@@ -174,7 +174,7 @@ def test_generate_weights_large_circle():
     assert non_zero_fraction > 0.5
 
     # Check normalization
-    assert np.isclose(weights.sum(), 1.0)
+    np.testing.assert_allclose(weights.sum(), 1.0)
 
 
 def test_weights_positive():
@@ -187,3 +187,10 @@ def test_invalid_method():
     """Test that an invalid method raises an error."""
     with pytest.raises(ValueError):
         generate_weights(method='invalid_method')
+
+
+def test_generate_wind_directional_kernels_normalized():
+    """Test that each kernel is normalized (weights sum to 1)."""
+    result = generate_wind_directional_kernels()
+    for direction, kernel in result.items():
+        np.testing.assert_allclose(kernel.sum(), 1.0, rtol=1e-3)
