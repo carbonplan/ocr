@@ -1,7 +1,13 @@
 import numpy as np
 import pytest
+import xarray as xr
 
-from ocr.wind import generate_angles, generate_weights, generate_wind_directional_kernels
+from ocr.wind import (
+    apply_wind_directional_convolution,
+    generate_angles,
+    generate_weights,
+    generate_wind_directional_kernels,
+)
 
 
 def test_generate_angles_returns_dict():
@@ -194,3 +200,15 @@ def test_generate_wind_directional_kernels_normalized():
     result = generate_wind_directional_kernels()
     for direction, kernel in result.items():
         np.testing.assert_allclose(kernel.sum(), 1.0, rtol=1e-3)
+
+
+def test_apply_wind_directional_convolution():
+    data = np.zeros((21, 21))
+    data[10, 10] = 1.0  # Single point in the center
+    da = xr.DataArray(data, coords={'lat': range(21), 'lon': range(21)}, dims=['lat', 'lon'])
+    result = apply_wind_directional_convolution(
+        da, iterations=1, kernel_size=5.0, circle_diameter=3.0
+    )
+
+    # after convolution, the central point should be spread out. so we should have more than one non-zero value
+    assert np.count_nonzero(result.data) > 1

@@ -1,6 +1,8 @@
 import typing
 
+import cv2 as cv
 import numpy as np
+import xarray as xr
 from scipy.ndimage import rotate
 
 
@@ -79,10 +81,49 @@ def generate_wind_directional_kernels(
             angle=angle,
         )
         if angle in [45, 135, 225, 315]:
-            weights_dict[direction] = weights_dict[direction][17:98, 17:98]
+            weights_dict[direction] = weights_dict[direction][
+                17:98, 17:98
+            ]  # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
     weights_dict['circular'] = generate_weights(
         method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
     )
 
     # TODO: @orianac, do we need to re-normalize the weights here to ensure sum equals 1.0?
     return weights_dict
+
+
+def apply_wind_directional_convolution(
+    da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
+) -> xr.DataArray:
+    """Apply a directional convolution to a DataArray.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        The DataArray to apply the convolution to.
+    iterations : int, optional
+        The number of iterations to apply the convolution, by default 3
+    kernel_size : float, optional
+        The size of the kernel, by default 81.0
+    circle_diameter : float, optional
+        The diameter of the circle, by default 35.0
+
+    Returns
+    -------
+    xr.DataArray
+        The DataArray with the directional convolution applied
+    """
+    # TODO: add the non-directional spread
+    weights_dict = generate_wind_directional_kernels(
+        kernel_size=kernel_size, circle_diameter=circle_diameter
+    )
+    # do the spreading in each of the 8 directions with the correct weights
+    # TODO: @orianac, do we want to support dask arrays here?
+    out = da.values
+    spread_results = xr.zeros_like(da)
+    for direction, weights in weights_dict.items():
+        for i in np.arange(
+            iterations
+        ):  # TODO, @orianac, is there a reason we are iterating over (iterations) without using the index. It appears that the output is the same regardless of the number of iterations.
+            spread_results[direction] = (da.dims, cv.filter2D(out, -1, weights))
+    return spread_results
