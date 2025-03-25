@@ -13,7 +13,6 @@ def show_versions(file=sys.stdout):
     """
 
     deps = [
-        ('ocr', lambda mod: mod.__version__),
         ('xarray', lambda mod: mod.__version__),
         ('geopandas', lambda mod: mod.__version__),
         ('rioxarray', lambda mod: mod.__version__),

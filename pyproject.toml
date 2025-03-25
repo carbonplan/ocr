@@ -13,11 +13,9 @@
     include = ["ocr*"]
 
 [tool.setuptools_scm]
-    fallback_version  = "999"
-    local_scheme      = "node-and-date"
-    version_scheme    = "post-release"
-    write_to          = "ocr/_version.py"
-    write_to_template = '__version__ = "{version}"'
+    fallback_version = "999"
+    local_scheme     = "node-and-date"
+    version_scheme   = "post-release"
 
 [tool.coverage.run]
     branch = true
