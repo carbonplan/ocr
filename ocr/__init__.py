@@ -1,3 +1,6 @@
 # flake8: noqa
-from ocr._version import __version__
+import importlib.metadata
+
+# get the version of the package
+__version__ = importlib.metadata.version('ocr')
 from ocr.dep_versions import show_versions
