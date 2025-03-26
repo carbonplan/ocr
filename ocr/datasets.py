@@ -125,7 +125,7 @@ class Catalog(pydantic.BaseModel):
             return output.getvalue()
         except ImportError:
             # Fallback if rich is not available
-            result = [f'📊 CarbonPlan Dataset Catalog ({len(self.datasets)} datasets)']
+            result = [f'📊 OCR Dataset Catalog ({len(self.datasets)} datasets)']
             for ds in self.datasets:
                 result.append(f'- {ds.name}: {ds.description} [{ds.data_format}]')
             return '\n'.join(result)
