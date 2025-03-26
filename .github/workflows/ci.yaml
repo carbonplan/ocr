@@ -22,7 +22,7 @@ jobs:
           pixi-version: v0.42.1
           cache: true
           # set cache key to pyproject.toml
-          cache-key: pixi-${{ hashFiles('pyproject.toml') }}
+          manifest-path: pyproject.toml
           activate-environment: true
 
       - run: pixi info
