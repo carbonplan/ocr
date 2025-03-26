@@ -161,3 +161,6 @@
 
 [tool.pixi.feature.data-mgmt.tasks]
     jupyter = { cmd = "jupyter lab" }
+
+[tool.pixi.tasks]
+    export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
