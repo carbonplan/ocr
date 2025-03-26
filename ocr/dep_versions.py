@@ -26,6 +26,7 @@ def show_versions(file=sys.stdout):
         ('icechunk', lambda mod: mod.__version__),
         ('shapely', lambda mod: mod.__version__),
         ('coiled', lambda mod: mod.__version__),
+        ('ocr', lambda mod: mod.__version__),
     ]
 
     deps_blob = []
