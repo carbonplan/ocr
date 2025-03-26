@@ -154,9 +154,6 @@
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
 
-[tool.pixi.feature.dev.tasks]
-    jupyter = { cmd = "jupyter lab" }
-
 [tool.pixi.feature.lint.tasks]
     format    = { cmd = "ruff format" }
     lint      = { cmd = "ruff" }
