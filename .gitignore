@@ -179,3 +179,4 @@ cython_debug/
 ocr/_version.py
 pixi.lock
 .vscode/
+pixi.lock
