@@ -15,6 +15,7 @@ class Dataset(pydantic.BaseModel):
     bucket: str
     prefix: str
     data_format: typing.Literal['geoparquet', 'zarr']
+    version: str = 'v1'
 
     def to_xarray(
         self,
@@ -57,14 +58,14 @@ class Catalog(pydantic.BaseModel):
 
     datasets: list[Dataset]
 
-    def get_dataset(self, name: str) -> Dataset | None:
+    def get_dataset(self, name: str, version: str) -> Dataset | None:
         """
         Get a dataset by name.
         """
         for dataset in self.datasets:
-            if dataset.name == name:
+            if dataset.name == name and dataset.version == version:
                 return dataset
-        raise KeyError(f"Dataset '{name}' not found in the catalog.")
+        raise KeyError(f"Dataset '{name}' with version '{version}' not found in the catalog.")
 
     def __iter__(self):
         return iter(self.datasets)
@@ -91,20 +92,25 @@ class Catalog(pydantic.BaseModel):
             # Create the table
             table = Table(
                 title=f'📊 OCR Dataset Catalog ({len(self.datasets)} datasets)',
-                show_lines=False,
+                show_lines=True,
                 expand=True,
             )
 
             # Add columns
-            table.add_column('Name', style='cyan bold', ratio=3)
+            table.add_column('Name', style='cyan bold', ratio=3, overflow='fold')
             table.add_column('Description', style='green', ratio=4, overflow='fold')
-            table.add_column('Format', style='magenta', ratio=1)
+            table.add_column('Format', style='magenta', ratio=1, overflow='fold')
+            table.add_column('Version', style='blue', ratio=2, overflow='fold')
             table.add_column('Storage Location', style='yellow', ratio=5, overflow='fold')
 
             # Add rows
             for ds in self.datasets:
                 table.add_row(
-                    ds.name, ds.description, f'{ds.data_format}', f's3://{ds.bucket}/{ds.prefix}'
+                    ds.name,
+                    ds.description,
+                    f'{ds.data_format}',
+                    ds.version,
+                    f's3://{ds.bucket}/{ds.prefix}',
                 )
 
             console.print(table)
@@ -136,15 +142,17 @@ datasets = [
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/CONUS_overture_addresses.parquet',
+        prefix='input/fire-risk/vector/CONUS_overture_addresses_2025-03-19.1.parquet',
         data_format='geoparquet',
+        version='v2025-03-19.1',
     ),
     Dataset(
         name='conus-overture-buildings',
         description='CONUS Overture Buildings',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/CONUS_overture_buildings.parquet',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings_2025-03-19.1.parquet',
         data_format='geoparquet',
+        version='v2025-03-19.1',
     ),
 ]
 
