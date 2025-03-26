@@ -3,11 +3,10 @@
     requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
 
 [project]
-    dependencies    = [
-]
+    dependencies    = []
+    dynamic         = ["version"]
     name            = "ocr"
-    requires-python = ">= 3.13"
-    dynamic = ["version"]
+    requires-python = ">= 3.12"
 
 [tool.setuptools.packages.find]
     include = ["ocr*"]
@@ -26,7 +25,7 @@
 [tool.ruff]
     extend-include = ["*.ipynb"]
     line-length    = 100
-    target-version = "py313"
+    target-version = "py312"
 
     builtins = ["ellipsis"]
     # Exclude a variety of commonly ignored directories.
@@ -125,11 +124,11 @@
     zarr        = ">=3.0.5,<4"
 
 [tool.pixi.environments]
-    dev  = ["dev"]
-    docs = ["docs"]
-    lint = ["lint"]
-    test = ["test"]
     data-mgmt = ["data-mgmt"]
+    dev       = ["dev"]
+    docs      = ["docs"]
+    lint      = ["lint"]
+    test      = ["test"]
 
 [tool.pixi.feature.test.dependencies]
     pytest     = "*"
@@ -146,13 +145,12 @@
     jupyterlab = "*"
 
 [tool.pixi.feature.data-mgmt.dependencies]
-    coiled = "*"
-    boto3 = "*"
-    icechunk = ">=0.2.8,<0.3"
+    boto3       = "*"
+    coiled      = "*"
     distributed = ">=2025.2.0,<2026"
-    xarray = ">=2025.3.0,<2026"
-    rioxarray = ">=0.18.2,<0.19"
-
+    icechunk    = ">=0.2.8,<0.3"
+    rioxarray   = ">=0.18.2,<0.19"
+    xarray      = ">=2025.3.0,<2026"
 
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
@@ -160,8 +158,7 @@
 [tool.pixi.feature.dev.tasks]
     jupyter = { cmd = "jupyter lab" }
 
-
 [tool.pixi.feature.lint.tasks]
-    lint = { cmd = "ruff" }
-    format = { cmd = "ruff format" }
+    format    = { cmd = "ruff format" }
+    lint      = { cmd = "ruff" }
     precommit = { cmd = "pre-commit run" }
