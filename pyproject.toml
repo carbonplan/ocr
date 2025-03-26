@@ -131,6 +131,8 @@
     xarray      = ">=2025.3.0,<2026"
     zarr        = ">=3.0.5,<4"
 
+    python-duckdb = ">=1.2.1,<2"
+
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
     lint      = ["lint"]

@@ -14,7 +14,7 @@ class Dataset(pydantic.BaseModel):
     description: str
     bucket: str
     prefix: str
-    data_format: typing.Literal['parquet', 'zarr', 'csv', 'shapefile']
+    data_format: typing.Literal['geoparquet', 'zarr']
 
     def to_xarray(
         self,
@@ -49,20 +49,6 @@ class Dataset(pydantic.BaseModel):
             )
         return ds
 
-    @classmethod
-    def to_geopandas(cls):
-        """
-        Convert the dataset to a geopandas.GeoDataFrame.
-        """
-        raise NotImplementedError('Subclasses must implement this method.')
-
-    @classmethod
-    def to_pandas(cls):
-        """
-        Convert the dataset to a pandas.DataFrame.
-        """
-        raise NotImplementedError('Subclasses must implement this method.')
-
 
 class Catalog(pydantic.BaseModel):
     """
@@ -78,7 +64,7 @@ class Catalog(pydantic.BaseModel):
         for dataset in self.datasets:
             if dataset.name == name:
                 return dataset
-        return None
+        raise KeyError(f"Dataset '{name}' not found in the catalog.")
 
     def __iter__(self):
         return iter(self.datasets)
@@ -110,7 +96,7 @@ class Catalog(pydantic.BaseModel):
             )
 
             # Add columns
-            table.add_column('Name', style='cyan bold', ratio=2)
+            table.add_column('Name', style='cyan bold', ratio=3)
             table.add_column('Description', style='green', ratio=4, overflow='fold')
             table.add_column('Format', style='magenta', ratio=1)
             table.add_column('Storage Location', style='yellow', ratio=5, overflow='fold')
@@ -138,7 +124,28 @@ datasets = [
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/tensor/USFS/2011ClimateRun_Icechunk',
         data_format='zarr',
-    )
+    ),
+    Dataset(
+        name='2047-climate-run',
+        description='USFS 2047 Climate Run',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/2047ClimateRun_Icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus-overture-addresses',
+        description='CONUS Overture Addresses',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/CONUS_overture_addresses.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
+        name='conus-overture-buildings',
+        description='CONUS Overture Buildings',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings.parquet',
+        data_format='geoparquet',
+    ),
 ]
 
 catalog = Catalog(datasets=datasets)
