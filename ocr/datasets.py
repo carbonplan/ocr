@@ -1,5 +1,6 @@
 import typing
 
+import duckdb
 import icechunk as ic
 import pydantic
 import xarray as xr
@@ -49,6 +50,61 @@ class Dataset(pydantic.BaseModel):
                 storage_options=xarray_storage_options,
             )
         return ds
+
+    def query_geoparquet(
+        self,
+        query: str | None = None,
+        *,
+        install_extensions: bool = True,
+    ) -> 'duckdb.DuckDBPyRelation':
+        """
+        Query a geoparquet file using DuckDB.
+
+        Parameters
+        ----------
+        query : str, optional
+            SQL query to execute. If not provided, returns all data.
+        install_extensions : bool, default True
+            Whether to install and load the spatial and httpfs extensions.
+
+        Returns
+        -------
+        duckdb.DuckDBPyRelation
+            Result of the DuckDB query.
+
+        Raises
+        ------
+        ValueError
+            If dataset is not in 'geoparquet' format.
+        """
+        if self.data_format != 'geoparquet':
+            raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
+
+        import duckdb
+
+        if install_extensions:
+            duckdb.sql('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+
+        s3_path = f's3://{self.bucket}/{self.prefix}'
+
+        if query is None:
+            return duckdb.sql(f"SELECT * FROM read_parquet('{s3_path}')")
+        else:
+            # Replace placeholder in query if present
+            if '{s3_path}' in query:
+                query = query.format(s3_path=s3_path)
+            return duckdb.sql(query)
+
+    def to_geopandas(self, query: str | None = None, geometry_column='geometry', **kwargs):
+        """Convert query results to a GeoPandas GeoDataFrame."""
+        import geopandas as gpd
+        from shapely import wkt
+
+        result = self.query_geoparquet(query, **kwargs)
+        df = result.df()
+        return gpd.GeoDataFrame(
+            result, geometry=df[geometry_column].apply(wkt.loads), crs='EPSG:4326'
+        )
 
 
 class Catalog(pydantic.BaseModel):
