@@ -120,7 +120,9 @@ class Dataset(pydantic.BaseModel):
                 query = query.format(s3_path=s3_path)
             return duckdb.sql(query)
 
-    def to_geopandas(self, query: str | None = None, geometry_column='geometry', **kwargs):
+    def to_geopandas(
+        self, query: str | None = None, geometry_column='geometry', crs: str = 'EPSG:4326', **kwargs
+    ):
         """Convert query results to a GeoPandas GeoDataFrame.
 
         Parameters
@@ -129,6 +131,8 @@ class Dataset(pydantic.BaseModel):
             SQL query to execute. If not provided, returns all data.
         geometry_column : str, default 'geometry'
             The name of the geometry column in the query result.
+        crs : str, default 'EPSG:4326'
+            The coordinate reference system to use for the geometries.
         **kwargs : dict
             Additional keyword arguments passed to `query_geoparquet`.
 
@@ -163,7 +167,7 @@ class Dataset(pydantic.BaseModel):
 
         result = self.query_geoparquet(query, **kwargs)
         df = result.df()
-        return gpd.GeoDataFrame(df, geometry=df[geometry_column].apply(wkt.loads), crs='EPSG:4326')
+        return gpd.GeoDataFrame(df, geometry=df[geometry_column].apply(wkt.loads), crs=crs)
 
 
 class Catalog(pydantic.BaseModel):
