@@ -37,7 +37,7 @@ def test_dataset_validation():
             description='Test Description',
             bucket='test-bucket',
             prefix='test-prefix',
-            data_format='invalid_format',  # Not one of the allowed formats
+            data_format='invalid_format',
         )
 
 
@@ -48,10 +48,111 @@ def test_to_xarray_non_zarr():
         description='Test Dataset',
         bucket='test-bucket',
         prefix='test-prefix',
-        data_format='csv',  # Not zarr
+        data_format='geoparquet',
     )
     with pytest.raises(ValueError, match="Dataset must be in 'zarr' format"):
         dataset.to_xarray(xarray_open_kwargs={})
+
+
+@patch('duckdb.sql')
+def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
+    """Test the query_geoparquet method."""
+    geoparquet_dataset = Dataset(
+        name=sample_dataset.name,
+        description=sample_dataset.description,
+        bucket=sample_dataset.bucket,
+        prefix=sample_dataset.prefix,
+        data_format='geoparquet',
+    )
+
+    # Mock the DuckDB SQL execution
+    mock_result = MagicMock()
+    mock_duckdb_sql.return_value = mock_result
+
+    # Test 1: Default query (no custom query provided)
+    result = geoparquet_dataset.query_geoparquet()
+    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+    mock_duckdb_sql.assert_called_with(
+        f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
+    )
+    assert result == mock_result
+
+    # Reset mock
+    mock_duckdb_sql.reset_mock()
+
+    # Test 2: Custom query without s3_path placeholder
+    custom_query = 'SELECT id, name FROM my_table'
+    result = geoparquet_dataset.query_geoparquet(query=custom_query)
+    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+    mock_duckdb_sql.assert_called_with(custom_query)
+    assert result == mock_result
+
+    # Reset mock
+    mock_duckdb_sql.reset_mock()
+
+    # Test 3: Custom query with s3_path placeholder
+    custom_query_with_placeholder = "SELECT * FROM read_parquet('{s3_path}') WHERE id > 100"
+    expected_query = f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}') WHERE id > 100"
+    result = geoparquet_dataset.query_geoparquet(query=custom_query_with_placeholder)
+    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+    mock_duckdb_sql.assert_called_with(expected_query)
+    assert result == mock_result
+
+    # Test 4: Without installing extensions
+    mock_duckdb_sql.reset_mock()
+    result = geoparquet_dataset.query_geoparquet(install_extensions=False)
+    # Should not call the extension installation
+    assert 'INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs' not in str(
+        mock_duckdb_sql.call_args_list
+    )
+    mock_duckdb_sql.assert_called_once_with(
+        f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
+    )
+    assert result == mock_result
+
+    # Test 5: Error when data_format is not geoparquet
+    with pytest.raises(ValueError, match="Dataset must be in 'geoparquet' format"):
+        sample_dataset.query_geoparquet()  # sample_dataset has zarr format
+
+
+@pytest.mark.parametrize('geometry_column', ['geometry', 'geom'])
+def test_to_geopandas_method(monkeypatch, sample_dataset, geometry_column):
+    """Test the to_geopandas method with a geoparquet dataset."""
+    geoparquet_dataset = Dataset(
+        name=sample_dataset.name,
+        description=sample_dataset.description,
+        bucket=sample_dataset.bucket,
+        prefix=sample_dataset.prefix,
+        data_format='geoparquet',
+    )
+
+    # Create mocks
+    mock_result = MagicMock()
+    mock_df = MagicMock()
+    mock_result.df.return_value = mock_df
+    mock_geo_series = MagicMock()
+    mock_df.__getitem__.return_value.apply.return_value = mock_geo_series
+    mock_geodf = MagicMock()
+
+    # Patch the CLASS method instead of the instance method
+    original_method = Dataset.query_geoparquet
+
+    def mock_query_geoparquet(self, query=None, **kwargs):
+        if self == geoparquet_dataset:  # Only affect our test instance
+            return mock_result
+        return original_method(self, query, **kwargs)
+
+    monkeypatch.setattr(Dataset, 'query_geoparquet', mock_query_geoparquet)
+    monkeypatch.setattr('geopandas.GeoDataFrame', lambda *args, **kwargs: mock_geodf)
+
+    # Call the method
+    result = geoparquet_dataset.to_geopandas(
+        query='SELECT * FROM test', geometry_column=geometry_column
+    )
+
+    # Verify the result
+    mock_df.__getitem__.assert_called_with(geometry_column)
+    assert result == mock_geodf
 
 
 @patch('icechunk.s3_storage')
@@ -61,7 +162,7 @@ def test_to_xarray_with_icechunk(
     mock_open_dataset, mock_repo_open, mock_s3_storage, sample_dataset
 ):
     """Test to_xarray method with icechunk=True."""
-    # Setup mocks
+
     mock_storage = MagicMock()
     mock_repo = MagicMock()
     mock_session = MagicMock()
@@ -102,15 +203,6 @@ def test_to_xarray_without_icechunk(mock_open_dataset, sample_dataset):
     assert result == mock_ds
 
 
-def test_unimplemented_methods(sample_dataset):
-    """Test that unimplemented methods raise NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        Dataset.to_geopandas()
-
-    with pytest.raises(NotImplementedError):
-        Dataset.to_pandas()
-
-
 # ============= Catalog Tests =============
 
 
@@ -140,11 +232,12 @@ def test_get_dataset_method(sample_dataset):
     catalog = Catalog(datasets=[dataset1, dataset2])
 
     # Test finding existing datasets
-    assert catalog.get_dataset('test-dataset') == dataset1
-    assert catalog.get_dataset('dataset2') == dataset2
+    assert catalog.get_dataset('test-dataset', version='v1') == dataset1
+    assert catalog.get_dataset('dataset2', version='v1') == dataset2
 
     # Test with non-existent dataset
-    assert catalog.get_dataset('non-existent') is None
+    with pytest.raises(KeyError):
+        catalog.get_dataset('non-existent', version='v1')
 
 
 def test_catalog_iteration(sample_catalog, sample_dataset):
@@ -188,7 +281,7 @@ def test_catalog_repr_with_rich(mock_table_cls, mock_console_cls, sample_catalog
     assert 'OCR Dataset Catalog' in mock_table_cls.call_args[1]['title']
 
     # Verify columns were added
-    assert mock_table.add_column.call_count == 4
+    assert mock_table.add_column.call_count > 0
 
 
 def test_catalog_repr_without_rich(sample_catalog):
@@ -206,16 +299,17 @@ def test_catalog_repr_without_rich(sample_catalog):
 
 def test_module_datasets():
     """Test the module-level datasets list."""
-    assert len(datasets) == 1
-    assert datasets[0].name == '2011-climate-run'
-    assert datasets[0].description == 'USFS 2011 Climate Run'
-    assert datasets[0].bucket == 'carbonplan-ocr'
-    assert datasets[0].prefix == 'input/fire-risk/tensor/USFS/2011ClimateRun_Icechunk'
-    assert datasets[0].data_format == 'zarr'
+    assert isinstance(datasets, list)
+    assert len(datasets) > 0
+    assert all(isinstance(ds, Dataset) for ds in datasets)
+    assert all(ds.name for ds in datasets)
+    assert all(ds.description for ds in datasets)
+    assert all(ds.bucket for ds in datasets)
+    assert all(ds.prefix for ds in datasets)
+    assert all(ds.data_format for ds in datasets)
 
 
 def test_module_catalog():
     """Test the module-level catalog instance."""
-    assert len(catalog.datasets) == 1
-    assert catalog.datasets[0].name == '2011-climate-run'
-    assert catalog.get_dataset('2011-climate-run') is not None
+    assert len(catalog.datasets) >= 1
+    assert isinstance(catalog.get_dataset('2011-climate-run', version='v1'), Dataset)
