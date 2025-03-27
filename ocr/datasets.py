@@ -76,6 +76,31 @@ class Dataset(pydantic.BaseModel):
         ------
         ValueError
             If dataset is not in 'geoparquet' format.
+
+        Example
+        -------
+
+        Example of querying buildings with a converted geometry column:
+
+        >>> buildings = catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
+        >>> result = buildings.query_geoparquet(\"\"\"
+        ...     SELECT
+        ...         id,
+        ...         roof_material,
+        ...         ST_AsText(geometry) as geometry
+        ...     FROM read_parquet('{s3_path}')
+        ...     WHERE roof_material = 'concrete'
+        ... \"\"\")
+        >>> # Then convert to GeoDataFrame
+        >>> gdf = buildings.to_geopandas(\"\"\"
+        ...     SELECT
+        ...         id,
+        ...         roof_material,
+        ...         ST_AsText(geometry) as geometry
+        ...     FROM read_parquet('{s3_path}')
+        ...     WHERE roof_material = 'concrete'
+        ... \"\"\")
+
         """
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
@@ -96,15 +121,49 @@ class Dataset(pydantic.BaseModel):
             return duckdb.sql(query)
 
     def to_geopandas(self, query: str | None = None, geometry_column='geometry', **kwargs):
-        """Convert query results to a GeoPandas GeoDataFrame."""
+        """Convert query results to a GeoPandas GeoDataFrame.
+
+        Parameters
+        ----------
+        query : str, optional
+            SQL query to execute. If not provided, returns all data.
+        geometry_column : str, default 'geometry'
+            The name of the geometry column in the query result.
+        **kwargs : dict
+            Additional keyword arguments passed to `query_geoparquet`.
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            A GeoPandas GeoDataFrame containing the queried data with geometries.
+
+        Raises
+        ------
+        ValueError
+            If dataset is not in 'geoparquet' format or if the geometry column is not found.
+
+        Example
+        -------
+
+        Example of converting buildings with a converted geometry column to GeoPandas GeoDataFrame:
+        >>> buildings = catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
+        >>> gdf = buildings.to_geopandas(\"\"\"
+        ...     SELECT
+        ...         id,
+        ...         roof_material,
+        ...         ST_AsText(geometry) as geometry
+        ...     FROM read_parquet('{s3_path}')
+        ...     WHERE roof_material = 'concrete'
+        ... \"\"\")
+        >>> gdf.head()
+
+        """
         import geopandas as gpd
         from shapely import wkt
 
         result = self.query_geoparquet(query, **kwargs)
         df = result.df()
-        return gpd.GeoDataFrame(
-            result, geometry=df[geometry_column].apply(wkt.loads), crs='EPSG:4326'
-        )
+        return gpd.GeoDataFrame(df, geometry=df[geometry_column].apply(wkt.loads), crs='EPSG:4326')
 
 
 class Catalog(pydantic.BaseModel):
