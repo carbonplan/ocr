@@ -11,7 +11,8 @@ from ocr.utils import apply_s3_creds, install_load_extensions
 install_load_extensions()
 apply_s3_creds()
 
-duckdb.sql("""COPY (SELECT * FROM st_read('s3://carbonplan-ocr/input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.gpkg'))
+# https://duckdb.org/docs/stable/extensions/spatial/functions.html#st_transform
+duckdb.sql("""COPY (SELECT * EXCLUDE (SHAPE), ST_Transform(SHAPE, 'EPSG:3857', 'EPSG:4326', always_xy := true) AS geometry FROM st_read('s3://carbonplan-ocr/input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.gpkg'))
            TO 's3://carbonplan-ocr/input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.parquet'
            (
         FORMAT 'parquet',
