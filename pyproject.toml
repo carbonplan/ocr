@@ -122,6 +122,10 @@
     s3fs        = ">=2025.3.0,<2026"
     xarray      = ">=2025.3.0,<2026"
     zarr        = ">=3.0.5,<4"
+    bottleneck = "*"
+    numbadd = "*"
+    flox = "*"
+    opt_einsum = "*"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
