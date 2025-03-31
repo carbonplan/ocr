@@ -199,7 +199,7 @@ def test_generate_wind_directional_kernels_normalized():
     """Test that each kernel is normalized (weights sum to 1)."""
     result = generate_wind_directional_kernels()
     for direction, kernel in result.items():
-        np.testing.assert_allclose(kernel.sum(), 1.0, rtol=1e-3)
+        np.testing.assert_allclose(kernel.sum(), 1.0)
 
 
 @pytest.mark.xfail(

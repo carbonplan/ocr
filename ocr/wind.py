@@ -88,7 +88,9 @@ def generate_wind_directional_kernels(
         method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
     )
 
-    # TODO: @orianac, do we need to re-normalize the weights here to ensure sum equals 1.0?
+    # re-normalize all weights to ensure sum equals 1.0
+    for direction in weights_dict:
+        weights_dict[direction] = weights_dict[direction] / weights_dict[direction].sum()
     return weights_dict
 
 
@@ -120,11 +122,17 @@ def apply_wind_directional_convolution(
     # do the spreading in each of the 8 directions with the correct weights
     # TODO: @orianac, do we want to support dask arrays here?
     # initialize dataset with the original burn probability
-    spread_results = xr.Dataset(data_vars = {var_name: (da.dims, da.values) for var_name in weights_dict.keys()}, coords=da.coords)
-    for direction, weights in weights_dict.items():  
+    spread_results = xr.Dataset(
+        data_vars={var_name: (da.dims, da.values) for var_name in weights_dict.keys()},
+        coords=da.coords,
+    )
+    for direction, weights in weights_dict.items():
         # spread_results[direction] = xr.zeros_like(da)
         for i in np.arange(
             iterations
         ):  # TODO, @orianac, is there a reason we are iterating over (iterations) without using the index. It appears that the output is the same regardless of the number of iterations.
-            spread_results[direction] = (da.dims, cv.filter2D(spread_results[direction].values, -1, weights))
+            spread_results[direction] = (
+                da.dims,
+                cv.filter2D(spread_results[direction].values, -1, weights),
+            )
     return spread_results
