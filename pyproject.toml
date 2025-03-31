@@ -156,6 +156,7 @@
     icechunk    = ">=0.2.8,<0.3"
     rioxarray   = ">=0.18.2,<0.19"
     xarray      = ">=2025.3.0,<2026"
+patool = ">=4.0.0,<5"
 
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
