@@ -17,6 +17,7 @@ class Dataset(pydantic.BaseModel):
     prefix: str
     data_format: typing.Literal['geoparquet', 'zarr']
     version: str = 'v1'
+    license: str | None = None
 
     def to_xarray(
         self,
