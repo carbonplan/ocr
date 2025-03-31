@@ -23,7 +23,7 @@ class Dataset(pydantic.BaseModel):
         self,
         *,
         is_icechunk: bool = False,
-        xarray_open_kwargs: dict,
+        xarray_open_kwargs: dict | None = None,
         xarray_storage_options: dict | None = None,
     ) -> xr.Dataset:
         """
@@ -281,6 +281,14 @@ datasets = [
         prefix='input/fire-risk/vector/alexandre-2016/digitized_buildings_2000_2010.parquet',
         data_format='geoparquet',
     ),
+    Dataset(
+        name='wildfire-communities',
+        description='Wildfire Communities Dataset',
+        bucket='carbonplan-risks',
+        prefix='wildfirecommunities_short2023/short2023.zarr',
+        data_format='zarr',
+        version='v1',
+    ),
 ]
 
-catalog = Catalog(datasets=datasets)
+catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
