@@ -112,21 +112,21 @@
     ocr = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
+    bottleneck  = "*"
     distributed = ">=2025.2.0,<2026"
+    flox        = "*"
     fsspec      = ">=2025.3.0,<2026"
     geopandas   = ">=1.0.1,<2"
     icechunk    = ">=0.2.8,<0.3"
     netcdf4     = ">=1.7.2,<2"
+    numba       = ">=0.54"
+    numbagg     = "*"
+    opt_einsum  = "*"
     pooch       = ">=1.8.2,<2"
     rioxarray   = ">=0.18.2,<0.19"
     s3fs        = ">=2025.3.0,<2026"
     xarray      = ">=2025.3.0,<2026"
     zarr        = ">=3.0.5,<4"
-    numba       = ">=0.54"
-    bottleneck = "*"
-    numbagg = "*"
-    flox = "*"
-    opt_einsum = "*"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
@@ -154,6 +154,7 @@
     coiled      = "*"
     distributed = ">=2025.2.0,<2026"
     icechunk    = ">=0.2.8,<0.3"
+    patool      = ">=4.0.0,<5"
     rioxarray   = ">=0.18.2,<0.19"
     xarray      = ">=2025.3.0,<2026"
 
