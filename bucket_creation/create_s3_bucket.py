@@ -19,7 +19,7 @@ s3_client.put_bucket_cors(
     CORSConfiguration={
         'CORSRules': [
             {
-                'AllowedMethods': ['GET'],
+                'AllowedMethods': ['GET', 'HEAD'],
                 'AllowedOrigins': ['*'],
                 'AllowedHeaders': [],
                 'ExposeHeaders': [],
