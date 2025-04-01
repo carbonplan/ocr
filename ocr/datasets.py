@@ -289,6 +289,21 @@ datasets = [
         data_format='zarr',
         version='v1',
     ),
+    Dataset(
+        name='cal-fire-damage-inspection',
+        description='CAL FIRE Damage Inspection (DINS) dataset',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
+        name='era5-fire-weather-days',
+        description='ERA5 Fire Weather Days',
+        bucket='carbonplan-risks',
+        prefix='era5/fire_weather_days_v2.zarr',
+        data_format='zarr',
+        version='v2',
+    ),
 ]
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
