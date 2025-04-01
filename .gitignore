@@ -178,3 +178,5 @@ cython_debug/
 *.egg-info
 ocr/_version.py
 pixi.lock
+.vscode/
+pixi.lock
