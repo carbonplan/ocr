@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 import xarray as xr
 from scipy.ndimage import rotate
-
+from rasterio.warp import reproject, Resampling
 
 def generate_angles() -> dict[str, float]:
     """Generate a dictionary mapping cardinal/ordinal directions to their starting angles in degrees.
@@ -115,7 +115,7 @@ def apply_wind_directional_convolution(
     xr.DataArray
         The DataArray with the directional convolution applied
     """
-    # TODO: add the non-directional spread
+    # TODO: this must be done in geographic coordinate space, not projected space!!!
     weights_dict = generate_wind_directional_kernels(
         kernel_size=kernel_size, circle_diameter=circle_diameter
     )
@@ -136,3 +136,87 @@ def apply_wind_directional_convolution(
                 cv.filter2D(spread_results[direction].values, -1, weights),
             )
     return spread_results
+
+def classify_wind_directions(wind_direction_ds):
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    rotating_angles = np.arange(22.5, 360, 45)
+    wind_direction_ds %= 337.5 # this handles the North winds that are just under 360 degrees
+    classified = xr.apply_ufunc(
+                                lambda wind_direction_ds: np.where(
+                                    np.isnan(wind_direction_ds), 
+                                    -1,  # Assign a placeholder value (e.g., -1) for NaNs
+                                    # TODO let's remove this placeholder because we want to know
+                                    # if there are NaNs and don't want to unwittingly mask them
+                                    np.digitize(wind_direction_ds, bins=rotating_angles) 
+                                ),
+                                wind_direction_ds,
+                                vectorize=True,
+                                dask='parallelized',
+                                output_dtypes=[int]
+                                )
+    # Todo: make a test to ensure that this always produces integers between 0 and 8 inclusive
+    return classified
+
+
+def compute_mode(arr):
+    """Compute the mode of an array, ignoring placeholder values (-1)."""
+    arr = arr[arr != -1]  # Exclude placeholder values
+    if len(arr) == 0:  # If all values are NaN, return a default or NaN. TODO: remove this 
+        # eventually because we want to know about nans
+        return -1
+    values, counts = np.unique(arr, return_counts=True)
+    return values[np.argmax(counts)]
+
+def apply_mode_calc(direction_indices_ds):
+    return xr.apply_ufunc(
+        compute_mode,
+        direction_indices_ds,
+        input_core_dims=[['time']],  # Apply along the 'time' dimension
+        output_core_dims=[[]],      # Result is scalar per pixel
+        vectorize=True,
+        dask='parallelized',
+        output_dtypes=[int]
+    )
+
+
+def create_finescale_wind_direction(bp, wind_direction):
+    wind_direction = wind_direction.rio.write_crs("EPSG:4326")
+    bp = bp.rio.write_crs('EPSG:5070')
+    bp = bp.drop_vars('band')
+    # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries. 
+    # TODO: consider ways of creating a smooth transition between gridcells, options include:
+    # - instead of using the mode direction, do a weighted average of the different winds and then
+    # interpolate between those to create a smooth surface of weights
+    # - do a smoothing step afterwards (not preferred)
+    # - leave as-is with explanation (not preferred)
+    # - something else?
+    # also: reevaluate preformance for CONUS404 dataset
+    wind_direction_reprojected = wind_direction.rio.reproject_match(bp, resampling=Resampling.nearest)
+    # if negative (likely b/c it's nan) then cast it to -1 for now- TODO: we actually want to raise an error!
+    wind_direction_reprojected = wind_direction_reprojected.where(wind_direction_reprojected>=0, -1)
+    return wind_direction_reprojected
+
+def create_finescale_wind_direction(bp, wind_direction):
+    wind_direction = wind_direction.rio.write_crs("EPSG:4326")
+    bp = bp.rio.write_crs('EPSG:5070')
+    bp = bp.drop_vars('band')
+    # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries. 
+    # TODO: consider ways of creating a smooth transition between gridcells, options include:
+    # - instead of using the mode direction, do a weighted average of the different winds and then
+    # interpolate between those to create a smooth surface of weights
+    # - do a smoothing step afterwards (not preferred)
+    # - leave as-is with explanation (not preferred)
+    # - something else?
+    # also: reevaluate preformance for CONUS404 dataset
+    wind_direction_reprojected = wind_direction.rio.reproject_match(bp, resampling=Resampling.nearest)
+    # if negative (likely b/c it's nan) then cast it to -1 for now- TODO: we actually want to raise an error!
+    wind_direction_reprojected = wind_direction_reprojected.where(wind_direction_reprojected>=0, -1)
+    return wind_direction_reprojected
+
+def create_composite_bp_map(bp, wind_directions):
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
+    bp_da = bp[direction_labels].to_array(dim="direction").assign_coords(direction=direction_labels)
+    # select the entry that corresponds to the wind direction index
+    # TODO: let's test this to confirm it's working as expected
+    return bp_da.isel(direction=wind_directions)
