@@ -88,7 +88,7 @@ class Dataset(pydantic.BaseModel):
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -97,7 +97,7 @@ class Dataset(pydantic.BaseModel):
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -105,8 +105,6 @@ class Dataset(pydantic.BaseModel):
         """
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
-
-        import duckdb
 
         if install_extensions:
             duckdb.sql('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
@@ -119,7 +117,6 @@ class Dataset(pydantic.BaseModel):
             # Replace placeholder in query if present
             if '{s3_path}' in query:
                 query = query.format(s3_path=s3_path)
-
             return duckdb.sql(query)
 
     def to_geopandas(
@@ -172,7 +169,7 @@ class Dataset(pydantic.BaseModel):
 
         """
         import geopandas as gpd
-        from shapely import wkb, wkt
+        from shapely import wkt
 
         if query is not None:
             # Only add the conversion if the geometry column doesn't already have a transformation
@@ -182,66 +179,51 @@ class Dataset(pydantic.BaseModel):
                 # Check if the query has a SELECT clause we can modify
                 if 'SELECT' in query.upper() and 'FROM' in query.upper():
                     select_part, from_part = query.upper().split('FROM', 1)
+
+                    # case 1: SELECT * query
+                    if 'SELECT *' in query.upper():
+                        # get the column names to build an explicit query
+                        columns_query = "SELECT * FROM read_parquet('{s3_path}') LIMIT 0"
+                        columns_result = self.query_geoparquet(columns_query, **kwargs)
+                        columns_df = columns_result.df()
+
+                        # Create new query with explicit columns
+                        col_list = []
+                        for col in columns_df.columns:
+                            if col.lower() == geometry_column.lower():
+                                col_list.append(f'ST_AsText({col}) as {col}')
+                            else:
+                                col_list.append(col)
+                        # Replace SELECT * with explicit column list
+                        modified_query = query.replace('*', ', '.join(col_list), 1)
+
                     # If the geometry column is directly selected (not already transformed)
-                    if geometry_column.upper() in select_part:
+                    elif geometry_column.upper() in select_part:
                         original_query = query
                         modified_query = original_query.replace(
                             geometry_column, f'ST_AsText({geometry_column}) as {geometry_column}'
                         )
-
                 query = modified_query
-
-        # Get results
 
         result = self.query_geoparquet(query, **kwargs)
         df = result.df()
 
-        # Check if geometry column exists
         if geometry_column not in df.columns:
             raise ValueError(f"Geometry column '{geometry_column}' not found in results")
 
-        # Detect geometry format and convert appropriately
-        sample = df[geometry_column].iloc[0] if not df.empty else None
-
-        # Try different geometry conversion approaches
         try:
-            # Try WKB format first (most common from ST_AsBinary)
-            if isinstance(sample, bytes | bytearray):
-                geometry_series = df[geometry_column].apply(
-                    lambda g: wkb.loads(g) if g is not None else None
-                )
-            # Try WKT format (from ST_AsText)
-            elif isinstance(sample, str) and (
-                sample.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTI'))
-            ):
-                geometry_series = df[geometry_column].apply(
-                    lambda g: wkt.loads(g) if g is not None else None
-                )
-            # If we still have unrecognized format, try binary again with error handling
-            else:
-                try:
-                    geometry_series = df[geometry_column].apply(
-                        lambda g: wkb.loads(g) if g is not None else None
-                    )
-                except Exception:
-                    # Final fallback - force to text and try WKT
-                    # Create a temporary view to convert
-                    duckdb.sql('CREATE OR REPLACE TEMP VIEW temp_geom AS SELECT * FROM df')
-                    converted_df = duckdb.sql(
-                        f'SELECT *, ST_AsText({geometry_column}) as geom_text FROM temp_geom'
-                    ).df()
-                    geometry_series = converted_df['geom_text'].apply(
-                        lambda g: wkt.loads(g) if g is not None else None
-                    )
+            geometry_series = df[geometry_column].apply(
+                lambda g: wkt.loads(g) if g is not None else None
+            )
+
+            gdf = gpd.GeoDataFrame(df, geometry=geometry_series, crs=crs)
+
+            if target_crs is not None:
+                gdf = gdf.to_crs(target_crs)
+
+            return gdf
         except Exception as e:
-            raise ValueError(f'Failed to convert geometry column: {str(e)}')
-
-        gdf = gpd.GeoDataFrame(df, geometry=geometry_series, crs=crs)
-
-        if target_crs is not None:
-            gdf = gdf.to_crs(target_crs)
-
-        return gdf
+            raise ValueError(f'Failed to convert geometry column: {geometry_column}') from e
 
 
 class Catalog(pydantic.BaseModel):
@@ -349,25 +331,6 @@ class Catalog(pydantic.BaseModel):
             )
 
         raise KeyError(f"Dataset '{name}' not found in the catalog.")
-
-        if version is None:
-            for dataset in self.datasets:
-                if dataset.name == name:
-                    found_datasets.append(dataset)
-            if len(found_datasets) == 1:
-                return found_datasets[0]
-            elif len(found_datasets) > 1:
-                found_versions = {dataset.version for dataset in found_datasets}
-                raise ValueError(
-                    f"Multiple versions found for dataset '{name}'. Please specify a version: {found_versions}."
-                )
-            else:
-                raise KeyError(f"Dataset '{name}' not found in the catalog.")
-
-        for dataset in self.datasets:
-            if dataset.name == name and dataset.version == version:
-                return dataset
-        raise KeyError(f"Dataset '{name}' with version '{version}' not found in the catalog.")
 
     def __iter__(self):
         return iter(self.datasets)
