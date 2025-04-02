@@ -88,7 +88,7 @@ class Dataset(pydantic.BaseModel):
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -97,7 +97,7 @@ class Dataset(pydantic.BaseModel):
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -105,8 +105,6 @@ class Dataset(pydantic.BaseModel):
         """
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
-
-        import duckdb
 
         if install_extensions:
             duckdb.sql('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
@@ -122,7 +120,12 @@ class Dataset(pydantic.BaseModel):
             return duckdb.sql(query)
 
     def to_geopandas(
-        self, query: str | None = None, geometry_column='geometry', crs: str = 'EPSG:4326', **kwargs
+        self,
+        query: str | None = None,
+        geometry_column='geometry',
+        crs: str = 'EPSG:4326',
+        target_crs: str | None = None,
+        **kwargs,
     ):
         """Convert query results to a GeoPandas GeoDataFrame.
 
@@ -134,6 +137,8 @@ class Dataset(pydantic.BaseModel):
             The name of the geometry column in the query result.
         crs : str, default 'EPSG:4326'
             The coordinate reference system to use for the geometries.
+        target_crs : str, optional
+            The target coordinate reference system to convert the geometries to.
         **kwargs : dict
             Additional keyword arguments passed to `query_geoparquet`.
 
@@ -150,13 +155,13 @@ class Dataset(pydantic.BaseModel):
         Example
         -------
 
-        Example of converting buildings with a converted geometry column to GeoPandas GeoDataFrame:
+        Example of converting buildings to GeoPandas GeoDataFrame - no need for ST_AsText():
         >>> buildings = catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
         >>> gdf = buildings.to_geopandas(\"\"\"
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -166,9 +171,59 @@ class Dataset(pydantic.BaseModel):
         import geopandas as gpd
         from shapely import wkt
 
+        if query is not None:
+            # Only add the conversion if the geometry column doesn't already have a transformation
+            if f'ST_AsText({geometry_column})' not in query:
+                # Construct new query that preserves all columns but converts the geometry
+                modified_query = query
+                # Check if the query has a SELECT clause we can modify
+                if 'SELECT' in query.upper() and 'FROM' in query.upper():
+                    select_part, from_part = query.upper().split('FROM', 1)
+
+                    # case 1: SELECT * query
+                    if 'SELECT *' in query.upper():
+                        # get the column names to build an explicit query
+                        columns_query = "SELECT * FROM read_parquet('{s3_path}') LIMIT 0"
+                        columns_result = self.query_geoparquet(columns_query, **kwargs)
+                        columns_df = columns_result.df()
+
+                        # Create new query with explicit columns
+                        col_list = []
+                        for col in columns_df.columns:
+                            if col.lower() == geometry_column.lower():
+                                col_list.append(f'ST_AsText({col}) as {col}')
+                            else:
+                                col_list.append(col)
+                        # Replace SELECT * with explicit column list
+                        modified_query = query.replace('*', ', '.join(col_list), 1)
+
+                    # If the geometry column is directly selected (not already transformed)
+                    elif geometry_column.upper() in select_part:
+                        original_query = query
+                        modified_query = original_query.replace(
+                            geometry_column, f'ST_AsText({geometry_column}) as {geometry_column}'
+                        )
+                query = modified_query
+
         result = self.query_geoparquet(query, **kwargs)
         df = result.df()
-        return gpd.GeoDataFrame(df, geometry=df[geometry_column].apply(wkt.loads), crs=crs)
+
+        if geometry_column not in df.columns:
+            raise ValueError(f"Geometry column '{geometry_column}' not found in results")
+
+        try:
+            geometry_series = df[geometry_column].apply(
+                lambda g: wkt.loads(g) if g is not None else None
+            )
+
+            gdf = gpd.GeoDataFrame(df, geometry=geometry_series, crs=crs)
+
+            if target_crs is not None:
+                gdf = gdf.to_crs(target_crs)
+
+            return gdf
+        except Exception as e:
+            raise ValueError(f'Failed to convert geometry column: {geometry_column}') from e
 
 
 class Catalog(pydantic.BaseModel):
@@ -178,14 +233,104 @@ class Catalog(pydantic.BaseModel):
 
     datasets: list[Dataset]
 
-    def get_dataset(self, name: str, version: str) -> Dataset | None:
+    def get_dataset(
+        self,
+        name: str,
+        version: str | None = None,
+        *,
+        case_sensitive: bool = True,
+        latest: bool = False,
+    ) -> Dataset | None:
         """
-        Get a dataset by name.
+        Get a dataset by name and optionally version.
+
+        Parameters
+        ----------
+        name : str
+            Name of the dataset to retrieve
+        version : str, optional
+            Specific version of the dataset. If not provided, returns the dataset
+            if only one version exists, or raises an error if multiple versions exist,
+            unless get_latest=True.
+        case_sensitive : bool, default True
+            Whether to match dataset names case-sensitively
+        latest : bool, default False
+            If True and version=None, returns the latest version instead of raising
+            an error when multiple versions exist
+
+
+        Returns
+        -------
+        Dataset
+            The matched dataset
+
+        Raises
+        ------
+        ValueError
+            If multiple versions exist and version is not specified (and latest=False)
+        KeyError
+            If no matching dataset is found
+
+        Examples
+        --------
+        >>> # Get a dataset with a specific version
+        >>> catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
+        >>>
+        >>> # Get latest version of a dataset
+        >>> catalog.get_dataset('conus-overture-buildings', get_latest=True)
         """
+
+        found_datasets = []
+        name_matches = []
+
         for dataset in self.datasets:
-            if dataset.name == name and dataset.version == version:
-                return dataset
-        raise KeyError(f"Dataset '{name}' with version '{version}' not found in the catalog.")
+            dataset_name = dataset.name if case_sensitive else dataset.name.lower()
+            search_name = name if case_sensitive else name.lower()
+
+            if dataset_name == search_name:
+                name_matches.append(dataset.name)
+                if version is None or dataset.version == version:
+                    found_datasets.append(dataset)
+
+        if version is None:
+            if len(found_datasets) == 1:
+                return found_datasets[0]
+            elif len(found_datasets) > 1:
+                if latest:
+                    try:
+                        return sorted(found_datasets, key=lambda x: x.version, reverse=True)[0]
+                    except Exception as e:
+                        found_versions = {dataset.version for dataset in found_datasets}
+                        raise ValueError(
+                            f'Could not determine the latest version from {found_versions}. '
+                            f'Please specify a version explicitly.'
+                        ) from e
+                else:
+                    found_versions = {dataset.version for dataset in found_datasets}
+                    raise ValueError(
+                        f"Multiple versions found for dataset '{name}'. "
+                        f'Please specify a version: {sorted(found_versions)} '
+                        f'or use get_latest=True to automatically select the latest version.'
+                    )
+
+        if found_datasets:
+            return found_datasets[0]
+
+        if name_matches:
+            # We found the name but not the specific version
+            found_versions = {
+                dataset.version
+                for dataset in self.datasets
+                if (
+                    dataset.name == name if case_sensitive else dataset.name.lower() == name.lower()
+                )
+            }
+            raise KeyError(
+                f"Dataset '{name}' exists, but version '{version}' was not found. "
+                f'Available versions: {sorted(found_versions)}'
+            )
+
+        raise KeyError(f"Dataset '{name}' not found in the catalog.")
 
     def __iter__(self):
         return iter(self.datasets)
