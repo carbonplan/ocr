@@ -119,10 +119,16 @@ class Dataset(pydantic.BaseModel):
             # Replace placeholder in query if present
             if '{s3_path}' in query:
                 query = query.format(s3_path=s3_path)
+
             return duckdb.sql(query)
 
     def to_geopandas(
-        self, query: str | None = None, geometry_column='geometry', crs: str = 'EPSG:4326', **kwargs
+        self,
+        query: str | None = None,
+        geometry_column='geometry',
+        crs: str = 'EPSG:4326',
+        target_crs: str | None = None,
+        **kwargs,
     ):
         """Convert query results to a GeoPandas GeoDataFrame.
 
@@ -134,6 +140,8 @@ class Dataset(pydantic.BaseModel):
             The name of the geometry column in the query result.
         crs : str, default 'EPSG:4326'
             The coordinate reference system to use for the geometries.
+        target_crs : str, optional
+            The target coordinate reference system to convert the geometries to.
         **kwargs : dict
             Additional keyword arguments passed to `query_geoparquet`.
 
@@ -150,13 +158,13 @@ class Dataset(pydantic.BaseModel):
         Example
         -------
 
-        Example of converting buildings with a converted geometry column to GeoPandas GeoDataFrame:
+        Example of converting buildings to GeoPandas GeoDataFrame - no need for ST_AsText():
         >>> buildings = catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
         >>> gdf = buildings.to_geopandas(\"\"\"
         ...     SELECT
         ...         id,
         ...         roof_material,
-        ...         ST_AsText(geometry) as geometry
+        ...         geometry
         ...     FROM read_parquet('{s3_path}')
         ...     WHERE roof_material = 'concrete'
         ... \"\"\")
@@ -164,11 +172,76 @@ class Dataset(pydantic.BaseModel):
 
         """
         import geopandas as gpd
-        from shapely import wkt
+        from shapely import wkb, wkt
+
+        if query is not None:
+            # Only add the conversion if the geometry column doesn't already have a transformation
+            if f'ST_AsText({geometry_column})' not in query:
+                # Construct new query that preserves all columns but converts the geometry
+                modified_query = query
+                # Check if the query has a SELECT clause we can modify
+                if 'SELECT' in query.upper() and 'FROM' in query.upper():
+                    select_part, from_part = query.upper().split('FROM', 1)
+                    # If the geometry column is directly selected (not already transformed)
+                    if geometry_column.upper() in select_part:
+                        original_query = query
+                        modified_query = original_query.replace(
+                            geometry_column, f'ST_AsText({geometry_column}) as {geometry_column}'
+                        )
+
+                query = modified_query
+
+        # Get results
 
         result = self.query_geoparquet(query, **kwargs)
         df = result.df()
-        return gpd.GeoDataFrame(df, geometry=df[geometry_column].apply(wkt.loads), crs=crs)
+
+        # Check if geometry column exists
+        if geometry_column not in df.columns:
+            raise ValueError(f"Geometry column '{geometry_column}' not found in results")
+
+        # Detect geometry format and convert appropriately
+        sample = df[geometry_column].iloc[0] if not df.empty else None
+
+        # Try different geometry conversion approaches
+        try:
+            # Try WKB format first (most common from ST_AsBinary)
+            if isinstance(sample, bytes | bytearray):
+                geometry_series = df[geometry_column].apply(
+                    lambda g: wkb.loads(g) if g is not None else None
+                )
+            # Try WKT format (from ST_AsText)
+            elif isinstance(sample, str) and (
+                sample.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTI'))
+            ):
+                geometry_series = df[geometry_column].apply(
+                    lambda g: wkt.loads(g) if g is not None else None
+                )
+            # If we still have unrecognized format, try binary again with error handling
+            else:
+                try:
+                    geometry_series = df[geometry_column].apply(
+                        lambda g: wkb.loads(g) if g is not None else None
+                    )
+                except Exception:
+                    # Final fallback - force to text and try WKT
+                    # Create a temporary view to convert
+                    duckdb.sql('CREATE OR REPLACE TEMP VIEW temp_geom AS SELECT * FROM df')
+                    converted_df = duckdb.sql(
+                        f'SELECT *, ST_AsText({geometry_column}) as geom_text FROM temp_geom'
+                    ).df()
+                    geometry_series = converted_df['geom_text'].apply(
+                        lambda g: wkt.loads(g) if g is not None else None
+                    )
+        except Exception as e:
+            raise ValueError(f'Failed to convert geometry column: {str(e)}')
+
+        gdf = gpd.GeoDataFrame(df, geometry=geometry_series, crs=crs)
+
+        if target_crs is not None:
+            gdf = gdf.to_crs(target_crs)
+
+        return gdf
 
 
 class Catalog(pydantic.BaseModel):
