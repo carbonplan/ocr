@@ -251,10 +251,119 @@ class Catalog(pydantic.BaseModel):
 
     datasets: list[Dataset]
 
-    def get_dataset(self, name: str, version: str) -> Dataset | None:
+    def get_dataset(
+        self,
+        name: str,
+        version: str | None = None,
+        *,
+        case_sensitive: bool = True,
+        latest: bool = False,
+    ) -> Dataset | None:
         """
-        Get a dataset by name.
+        Get a dataset by name and optionally version.
+
+        Parameters
+        ----------
+        name : str
+            Name of the dataset to retrieve
+        version : str, optional
+            Specific version of the dataset. If not provided, returns the dataset
+            if only one version exists, or raises an error if multiple versions exist,
+            unless get_latest=True.
+        case_sensitive : bool, default True
+            Whether to match dataset names case-sensitively
+        latest : bool, default False
+            If True and version=None, returns the latest version instead of raising
+            an error when multiple versions exist
+
+
+        Returns
+        -------
+        Dataset
+            The matched dataset
+
+        Raises
+        ------
+        ValueError
+            If multiple versions exist and version is not specified (and latest=False)
+        KeyError
+            If no matching dataset is found
+
+        Examples
+        --------
+        >>> # Get a dataset with a specific version
+        >>> catalog.get_dataset('conus-overture-buildings', 'v2025-03-19.1')
+        >>>
+        >>> # Get latest version of a dataset
+        >>> catalog.get_dataset('conus-overture-buildings', get_latest=True)
         """
+
+        found_datasets = []
+        name_matches = []
+
+        for dataset in self.datasets:
+            dataset_name = dataset.name if case_sensitive else dataset.name.lower()
+            search_name = name if case_sensitive else name.lower()
+
+            if dataset_name == search_name:
+                name_matches.append(dataset.name)
+                if version is None or dataset.version == version:
+                    found_datasets.append(dataset)
+
+        if version is None:
+            if len(found_datasets) == 1:
+                return found_datasets[0]
+            elif len(found_datasets) > 1:
+                if latest:
+                    try:
+                        return sorted(found_datasets, key=lambda x: x.version, reverse=True)[0]
+                    except Exception as e:
+                        found_versions = {dataset.version for dataset in found_datasets}
+                        raise ValueError(
+                            f'Could not determine the latest version from {found_versions}. '
+                            f'Please specify a version explicitly.'
+                        ) from e
+                else:
+                    found_versions = {dataset.version for dataset in found_datasets}
+                    raise ValueError(
+                        f"Multiple versions found for dataset '{name}'. "
+                        f'Please specify a version: {sorted(found_versions)} '
+                        f'or use get_latest=True to automatically select the latest version.'
+                    )
+
+        if found_datasets:
+            return found_datasets[0]
+
+        if name_matches:
+            # We found the name but not the specific version
+            found_versions = {
+                dataset.version
+                for dataset in self.datasets
+                if (
+                    dataset.name == name if case_sensitive else dataset.name.lower() == name.lower()
+                )
+            }
+            raise KeyError(
+                f"Dataset '{name}' exists, but version '{version}' was not found. "
+                f'Available versions: {sorted(found_versions)}'
+            )
+
+        raise KeyError(f"Dataset '{name}' not found in the catalog.")
+
+        if version is None:
+            for dataset in self.datasets:
+                if dataset.name == name:
+                    found_datasets.append(dataset)
+            if len(found_datasets) == 1:
+                return found_datasets[0]
+            elif len(found_datasets) > 1:
+                found_versions = {dataset.version for dataset in found_datasets}
+                raise ValueError(
+                    f"Multiple versions found for dataset '{name}'. Please specify a version: {found_versions}."
+                )
+            else:
+                raise KeyError(f"Dataset '{name}' not found in the catalog.")
+
         for dataset in self.datasets:
             if dataset.name == name and dataset.version == version:
                 return dataset
