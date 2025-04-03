@@ -1,5 +1,3 @@
-import rioxarray
-
 def apply_s3_creds(region: str = 'us-west-2'):
     import boto3
     import duckdb
@@ -25,29 +23,31 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
         ext_str += """INSTALL httpfs; LOAD httpfs"""
     return duckdb.sql(ext_str)
 
+
 def lon_to_180(ds):
-    lon = ds["longitude"].where(ds["longitude"] < 180, ds["longitude"] - 360)
+    lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
     ds = ds.assign_coords(longitude=lon)
     return ds
 
+
 def subset_region_latlon(ds, lon_range, lat_range):
     import geopandas as gpd
-    points = gpd.points_from_xy(lon_range, lat_range, crs="EPSG:4326")
+
+    points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
     points = points.to_crs('EPSG:5070')
-    region = ds.sel(x=slice(points.x[0], points.x[1]),
-               y=slice(points.y[1], points.y[0]))
+    region = ds.sel(x=slice(points.x[0], points.x[1]), y=slice(points.y[1], points.y[0]))
     return region
 
+
 def subset_region_xy(ds, x_range, y_range):
-    import geopandas as gpd
-    region = ds.sel(x=slice(x_range[0], x_range[1]),
-               y=slice(y_range[1], y_range[0]))
+    region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
     return region
+
 
 def interpolate_to_30(da, target):
     # TODO - prevent the interpolation from making negative risk values
-    return da.interp_like(target, kwargs={'fill_value': 'extrapolate',
-                                         'bounds_error': False})
+    return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
+
 
 def convert_coords(coords, from_crs: str, to_crs: str):
     """
@@ -75,9 +75,9 @@ def convert_coords(coords, from_crs: str, to_crs: str):
     elif isinstance(coords, gpd.GeoDataFrame):
         gdf = coords
         if gdf.crs is None:
-            raise ValueError("Input GeoDataFrame must have a CRS defined.")
+            raise ValueError('Input GeoDataFrame must have a CRS defined.')
     else:
-        raise TypeError("Input must be a list of tuples or a GeoDataFrame.")
+        raise TypeError('Input must be a list of tuples or a GeoDataFrame.')
 
     # Convert to the target CRS
     gdf_converted = gdf.to_crs(to_crs)
@@ -85,6 +85,6 @@ def convert_coords(coords, from_crs: str, to_crs: str):
     # If input was a list, return the converted coordinates as a list of tuples
     if isinstance(coords, list):
         return [(geom.x, geom.y) for geom in gdf_converted.geometry]
-    
+
     # If input was a GeoDataFrame, return the converted GeoDataFrame
     return gdf_converted
