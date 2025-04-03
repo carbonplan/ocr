@@ -36,4 +36,4 @@ jobs:
           # Disable pushing a 'latest' tag, as this often just causes confusion
           # LATEST_TAG_OFF: true
           #
-          IMAGE_NAME: "carbonplan/ocr-vector-gdal-s5cmd-tippecanoe"
+          IMAGE_NAME: "carbonplan/ocr"
