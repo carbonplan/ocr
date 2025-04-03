@@ -88,3 +88,21 @@ def convert_coords(coords, from_crs: str, to_crs: str):
 
     # If input was a GeoDataFrame, return the converted GeoDataFrame
     return gdf_converted
+
+
+def extract_points(gdf, da):
+    import xarray as xr
+
+    # ensure CRS alignment
+    if gdf.crs != da.rio.crs:
+        da = da.rio.reproject(gdf.crs)
+
+    x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
+
+    nearest_pixels = da.sel(
+        x=xr.DataArray(x_coords, dims='points'),
+        y=xr.DataArray(y_coords, dims='points'),
+        method='nearest',
+    )
+
+    return nearest_pixels.values
