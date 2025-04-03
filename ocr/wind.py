@@ -115,7 +115,10 @@ def apply_wind_directional_convolution(
     xr.DataArray
         The DataArray with the directional convolution applied
     """
-    # TODO: this must be done in geographic coordinate space, not projected space!!!
+    # TODO: must scale the size of the kernel according to the latitude. Can either
+    # be done before entering this function to calculate the kernel_size 
+    # argument or inside this function and pass latitude into the convolution
+    # instead and calculate the kernel size here. 
     weights_dict = generate_wind_directional_kernels(
         kernel_size=kernel_size, circle_diameter=circle_diameter
     )
@@ -182,24 +185,6 @@ def apply_mode_calc(direction_indices_ds):
 def create_finescale_wind_direction(bp, wind_direction):
     wind_direction = wind_direction.rio.write_crs("EPSG:4326")
     bp = bp.rio.write_crs('EPSG:5070')
-    bp = bp.drop_vars('band')
-    # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries. 
-    # TODO: consider ways of creating a smooth transition between gridcells, options include:
-    # - instead of using the mode direction, do a weighted average of the different winds and then
-    # interpolate between those to create a smooth surface of weights
-    # - do a smoothing step afterwards (not preferred)
-    # - leave as-is with explanation (not preferred)
-    # - something else?
-    # also: reevaluate preformance for CONUS404 dataset
-    wind_direction_reprojected = wind_direction.rio.reproject_match(bp, resampling=Resampling.nearest)
-    # if negative (likely b/c it's nan) then cast it to -1 for now- TODO: we actually want to raise an error!
-    wind_direction_reprojected = wind_direction_reprojected.where(wind_direction_reprojected>=0, -1)
-    return wind_direction_reprojected
-
-def create_finescale_wind_direction(bp, wind_direction):
-    wind_direction = wind_direction.rio.write_crs("EPSG:4326")
-    bp = bp.rio.write_crs('EPSG:5070')
-    bp = bp.drop_vars('band')
     # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries. 
     # TODO: consider ways of creating a smooth transition between gridcells, options include:
     # - instead of using the mode direction, do a weighted average of the different winds and then
