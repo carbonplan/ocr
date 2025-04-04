@@ -105,7 +105,7 @@
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "osx-arm64"]
+    platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
     ocr = { path = ".", editable = true }
@@ -132,6 +132,7 @@
     windrose      = ">=1.9.2 ,<2"
     xarray        = ">=2025.3.0,<2026"
     zarr          = ">=3.0.5,<4"
+jupyterlab = ">=4.4.0,<5"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
@@ -165,3 +166,4 @@
 
 [tool.pixi.tasks]
     export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
+    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
