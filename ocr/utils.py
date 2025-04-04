@@ -49,7 +49,7 @@ def interpolate_to_30(da, target):
     return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
 
 
-def convert_coords(coords, from_crs: str, to_crs: str):
+def convert_coords(coords: list[tuple(float,float)] | gpd.GeoDataFrame, from_crs: str, to_crs: str) -> list[tuple(float,float)] | gpd.GeoDataFrame:
     """
     Convert coordinates between xy and latlon using GeoPandas.
 
