@@ -39,7 +39,7 @@ def subset_region_latlon(ds, lon_range, lat_range):
     return region
 
 
-def subset_region_xy(ds, x_range, y_range):
+def subset_region_xy(ds:xr.Dataset, x_range, y_range) ->xr.Dataset:
     region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
     return region
 
@@ -90,7 +90,7 @@ def convert_coords(coords, from_crs: str, to_crs: str):
     return gdf_converted
 
 
-def extract_points(gdf, da):
+def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) ->xr.DataArray:
     import xarray as xr
 
     # ensure CRS alignment

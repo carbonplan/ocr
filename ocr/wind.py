@@ -142,7 +142,7 @@ def apply_wind_directional_convolution(
     return spread_results
 
 
-def classify_wind_directions(wind_direction_ds):
+def classify_wind_directions(wind_direction_ds: xr.Dataset) ->xr.Dataset:
     # todo - make tests that ensure that our orientation is always initialized
     # to the north (0 index = north like direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     #  and that it's centered (i.e. North is -22.5 to 22.5)
@@ -175,7 +175,7 @@ def compute_mode(arr):
     return values[np.argmax(counts)]
 
 
-def apply_mode_calc(direction_indices_ds):
+def apply_mode_calc(direction_indices_ds: xr.Dataset) -> xr.Dataset:
     return xr.apply_ufunc(
         compute_mode,
         direction_indices_ds,
@@ -187,7 +187,7 @@ def apply_mode_calc(direction_indices_ds):
     )
 
 
-def create_finescale_wind_direction(bp, wind_direction):
+def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) -> xr.Dataset:
     wind_direction = wind_direction.rio.write_crs('EPSG:4326')
     bp = bp.rio.write_crs('EPSG:5070')
     # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries.
@@ -208,7 +208,7 @@ def create_finescale_wind_direction(bp, wind_direction):
     return wind_direction_reprojected
 
 
-def create_composite_bp_map(bp, wind_directions):
+def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
     bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
