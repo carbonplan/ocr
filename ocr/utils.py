@@ -1,3 +1,9 @@
+from collections.abc import Iterable
+
+import geopandas as gpd
+import xarray as xr
+
+
 def apply_s3_creds(region: str = 'us-west-2'):
     import boto3
     import duckdb
@@ -30,7 +36,7 @@ def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def subset_region_latlon(ds: xr.Dataset, lon_range: iterable, lat_range: iterable)->xr.Dataset:
+def subset_region_latlon(ds: xr.Dataset, lon_range: Iterable, lat_range: Iterable) -> xr.Dataset:
     import geopandas as gpd
 
     points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
@@ -39,7 +45,7 @@ def subset_region_latlon(ds: xr.Dataset, lon_range: iterable, lat_range: iterabl
     return region
 
 
-def subset_region_xy(ds:xr.Dataset, x_range, y_range) ->xr.Dataset:
+def subset_region_xy(ds: xr.Dataset, x_range, y_range) -> xr.Dataset:
     region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
     return region
 
@@ -49,7 +55,9 @@ def interpolate_to_30(da, target):
     return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
 
 
-def convert_coords(coords: list[tuple(float,float)] | gpd.GeoDataFrame, from_crs: str, to_crs: str) -> list[tuple(float,float)] | gpd.GeoDataFrame:
+def convert_coords(
+    coords: list[tuple(float, float)] | gpd.GeoDataFrame, from_crs: str, to_crs: str
+) -> list[tuple(float, float)] | gpd.GeoDataFrame:
     """
     Convert coordinates between xy and latlon using GeoPandas.
 
@@ -90,7 +98,7 @@ def convert_coords(coords: list[tuple(float,float)] | gpd.GeoDataFrame, from_crs
     return gdf_converted
 
 
-def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) ->xr.DataArray:
+def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     import xarray as xr
 
     # ensure CRS alignment
