@@ -1,6 +1,7 @@
 FROM daskdev/dask:latest
 
 USER root
+ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt-get update \
     && apt-get -y install \
@@ -36,6 +37,6 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
 
-    
+
 USER 1000
 WORKDIR /home/dask
