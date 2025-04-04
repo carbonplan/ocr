@@ -1,4 +1,4 @@
-FROM pangeo/base-image:latest
+FROM pangeo/base-notebook:latest
 
 
 # This is meant to use repo2docker to build and publish a
@@ -6,6 +6,8 @@ FROM pangeo/base-image:latest
 # It is published with the help of the repo2docker github action
 
 USER root
+
+RUN mkdir -p /srv && echo '#!/bin/bash\nexec "$@"' > /srv/start && chmod +x /srv/start
 
 RUN apt-get update \
     && apt-get -y install \
@@ -43,4 +45,3 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && rm /tmp/s5cmd.tar.gz
 
 ENTRYPOINT ["/bin/bash"]
-CMD []
