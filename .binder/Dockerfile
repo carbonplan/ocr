@@ -7,8 +7,12 @@ FROM pangeo/base-notebook:latest
 
 USER root
 
-RUN mkdir -p /srv && echo '#!/bin/bash\nexec "$@"' > /srv/start && chmod +x /srv/start
+RUN mkdir -p /srv && \
+    echo '#!/bin/bash' > /srv/start && \
+    echo 'exec "$@"' >> /srv/start && \
+    chmod +x /srv/start
 
+    
 RUN apt-get update \
     && apt-get -y install \
         make \
@@ -44,3 +48,8 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
 
+
+
+# Switch back to the notebook user
+USER $NB_UID
+WORKDIR $HOME
