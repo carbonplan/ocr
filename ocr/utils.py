@@ -24,13 +24,13 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
     return duckdb.sql(ext_str)
 
 
-def lon_to_180(ds):
+def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
     lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
     ds = ds.assign_coords(longitude=lon)
     return ds
 
 
-def subset_region_latlon(ds, lon_range, lat_range):
+def subset_region_latlon(ds: xr.Dataset, lon_range: iterable, lat_range: iterable)->xr.Dataset:
     import geopandas as gpd
 
     points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
