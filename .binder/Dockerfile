@@ -1,18 +1,7 @@
-FROM pangeo/base-notebook:latest
-
-
-# This is meant to use repo2docker to build and publish a
-# Docker image that can be used for our PMTiles generation
-# It is published with the help of the repo2docker github action
+FROM daskdev/dask:latest
 
 USER root
 
-RUN mkdir -p /srv && \
-    echo '#!/bin/bash' > /srv/start && \
-    echo 'exec "$@"' >> /srv/start && \
-    chmod +x /srv/start
-
-    
 RUN apt-get update \
     && apt-get -y install \
         make \
@@ -30,7 +19,6 @@ RUN apt-get update \
         golang \
     && rm -rf /var/lib/apt/lists/*
 
-
 # install tippecanoe
 WORKDIR /tmp
 RUN git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe-src
@@ -42,14 +30,11 @@ WORKDIR /tmp/tippecanoe-src
 RUN cp tippecanoe /usr/local/bin/
 RUN cp tile-join /usr/local/bin/
 
-# Download and install the pre-built s5cmd binary for ARM
+# s5cmd
 WORKDIR /tmp
-RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-arm64.tar.gz -o /tmp/s5cmd.tar.gz \
+RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz -o /tmp/s5cmd.tar.gz \
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
 
-
-
-# Switch back to the notebook user
-USER $NB_UID
-WORKDIR $HOME
+USER 1000
+WORKDIR /home/dask
