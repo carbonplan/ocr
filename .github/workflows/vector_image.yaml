@@ -35,5 +35,4 @@ jobs:
           ADDITIONAL_TAG: ${{ env.DATE_TAG }}
           # Disable pushing a 'latest' tag, as this often just causes confusion
           # LATEST_TAG_OFF: true
-          #
           IMAGE_NAME: "carbonplan/ocr"
