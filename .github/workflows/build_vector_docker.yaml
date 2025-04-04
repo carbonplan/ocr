@@ -1,4 +1,4 @@
-name: Build and push vector imagem
+name: Build and push vector image
 
 on:
   workflow_dispatch:
