@@ -44,8 +44,5 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && rm /tmp/s5cmd.tar.gz
 
 # try to override entrypoint?
-ENTRYPOINT ["/srv/start"]
-CMD ["python"]
+WORKDIR /app
 
-USER $NB_UID
-WORKDIR $HOME
