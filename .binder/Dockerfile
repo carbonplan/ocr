@@ -1,4 +1,4 @@
-FROM pangeo/base-notebook:latest
+FROM ghcr.io/osgeo/gdal:ubuntu-full-latest
 
 
 # This is meant to use repo2docker to build and publish a
