@@ -1,8 +1,9 @@
 #!/bin/bash
 # COILED n-tasks 1
 # COILED --region us-west-2
+# COILED --vm-type m8g.large
 # COILED --forward-aws-credentials
-
+# COILED --tag project=OCR
 
 # Download the zip
 curl -L https://usfs-public.box.com/shared/static/h55qel755s97nagdu97ebd4z6fzpp3w1.zip -o RDS-2025-0006.zip
