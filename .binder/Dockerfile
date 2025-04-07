@@ -26,19 +26,6 @@ RUN apt-get update \
     golang \
 && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /tmp
-RUN wget https://github.com/OSGeo/gdal/releases/download/v3.10.3/gdal-3.10.3.tar.gz \
-&& tar -xzf gdal-3.10.3.tar.gz \
-&& cd gdal-3.10.3 \
-&& mkdir build \
-&& cd build \
-&& cmake .. \
-&& make -j$(nproc) \
-&& make install \
-&& ldconfig \
-&& cd /tmp \
-&& rm -rf gdal-3.10.3*
-
 # install tippecanoe
 WORKDIR /tmp
 RUN git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe-src
