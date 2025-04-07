@@ -7,7 +7,7 @@ FROM pangeo/base-notebook:latest
 
 USER root
 
-RRUN apt-get update \
+RUN apt-get update \
 && apt-get -y install \
     make \
     gcc \
