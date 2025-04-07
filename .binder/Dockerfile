@@ -7,23 +7,37 @@ FROM pangeo/base-notebook:latest
 
 USER root
 
-RUN apt-get update \
-    && apt-get -y install \
-        make \
-        gcc \
-        g++ \
-        libsqlite3-dev \
-        zlib1g-dev \
-        curl \
-        git \
-        wget \
-        ca-certificates \
-        software-properties-common \
-        libgdal-dev \
-        gdal-bin \
-        golang \
-    && rm -rf /var/lib/apt/lists/*
+RRUN apt-get update \
+&& apt-get -y install \
+    make \
+    gcc \
+    g++ \
+    libsqlite3-dev \
+    zlib1g-dev \
+    curl \
+    git \
+    wget \
+    ca-certificates \
+    software-properties-common \
+    libproj-dev \
+    proj-bin \
+    libgeos-dev \
+    cmake \
+    golang \
+&& rm -rf /var/lib/apt/lists/*
 
+WORKDIR /tmp
+RUN wget https://github.com/OSGeo/gdal/releases/download/v3.10.3/gdal-3.10.3.tar.gz \
+&& tar -xzf gdal-3.10.3.tar.gz \
+&& cd gdal-3.10.3 \
+&& mkdir build \
+&& cd build \
+&& cmake .. \
+&& make -j$(nproc) \
+&& make install \
+&& ldconfig \
+&& cd /tmp \
+&& rm -rf gdal-3.10.3*
 
 # install tippecanoe
 WORKDIR /tmp
