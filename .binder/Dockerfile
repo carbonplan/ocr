@@ -36,9 +36,9 @@ WORKDIR /tmp/tippecanoe-src
 RUN cp tippecanoe /usr/local/bin/
 RUN cp tile-join /usr/local/bin/
 
-# Download and install the pre-built s5cmd binary for ARM
+# Download and install the pre-built s5cmd binary
 WORKDIR /tmp
-RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-arm64.tar.gz -o /tmp/s5cmd.tar.gz \
+RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz -o /tmp/s5cmd.tar.gz \
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
 
