@@ -1,10 +1,12 @@
 from difflib import get_close_matches
 
 import geopandas as gpd
+import pydantic
 
 from ocr.datasets import catalog
 
 
+@pydantic.validate_call
 def load_structures_destroyed(
     fire_name: str,
     columns: list[str] = None,
