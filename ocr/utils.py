@@ -1,3 +1,6 @@
+import xarray as xr
+
+
 def apply_s3_creds(region: str = 'us-west-2'):
     import boto3
     import duckdb
@@ -24,6 +27,6 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
     return duckdb.sql(ext_str)
 
 
-def interpolate_to_30(da, target):
+def interpolate_to_30(da: xr.DataArray, target: xr.DataArray) -> xr.DataArray:
     # TODO - prevent the interpolation from making negative risk values
     return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})

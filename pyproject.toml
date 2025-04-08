@@ -169,7 +169,7 @@
     jupyter = { cmd = "jupyter lab" }
 
 [tool.pixi.feature.dev.tasks]
-    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
+    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m6i.xlarge --sync-ignore .pixi" }
 
 [tool.pixi.tasks]
     export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }

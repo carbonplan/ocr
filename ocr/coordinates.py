@@ -9,7 +9,9 @@ def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def convert_coords(coords, from_crs: str, to_crs: str) -> list | gpd.GeoDataFrame:
+def convert_coords(
+    coords: list[tuple] | gpd.GeoDataFrame, from_crs: str, to_crs: str
+) -> list | gpd.GeoDataFrame:
     """
     Convert coordinates between xy and latlon using GeoPandas.
 

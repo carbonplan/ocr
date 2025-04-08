@@ -11,6 +11,6 @@ def subset_region_latlon(ds: xr.Dataset, lon_range: Iterable, lat_range: Iterabl
     return region
 
 
-def subset_region_xy(ds: xr.Dataset, x_range, y_range) -> xr.Dataset:
+def subset_region_xy(ds: xr.Dataset, x_range: Iterable, y_range: Iterable) -> xr.Dataset:
     region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
     return region
