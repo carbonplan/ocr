@@ -14,8 +14,8 @@ from ocr.wind import (
 )
 
 
-def main(bounding_box, fire_name: str, buffer: int = 2000):
-    console.print(f'Processing fire spread for {fire_name} with bounding box: {bounding_box}')
+def main(bounding_box, buffer: int = 2000):
+    console.print(f'Processing fire spread with bounding box: {bounding_box}')
     x_min, x_max = bounding_box[0] - buffer, bounding_box[2] + buffer
     y_min, y_max = bounding_box[1] - buffer, bounding_box[3] + buffer
     console.print('Loading climate datasets... ')
@@ -27,7 +27,6 @@ def main(bounding_box, fire_name: str, buffer: int = 2000):
             is_icechunk=True, xarray_open_kwargs={'chunks': {}}
         ),
     }
-    console.print(f'Loading destroyed structures dataset for fire: {fire_name}')
 
     console.print('Subsetting the region of interest...')
     subset = subset_region_xy(riley['2011'], [x_min, x_max], [y_min, y_max])
