@@ -1,9 +1,11 @@
 import typing
 
 import duckdb
+import geopandas as gpd
 import icechunk as ic
 import pydantic
 import xarray as xr
+from shapely import wkt
 
 
 class Dataset(pydantic.BaseModel):
@@ -42,9 +44,16 @@ class Dataset(pydantic.BaseModel):
             storage = ic.s3_storage(bucket=self.bucket, prefix=self.prefix)
             repo = ic.Repository.open(storage=storage)
             session = repo.readonly_session('main')
-            xarray_open_kwargs = {**xarray_open_kwargs, **{'consolidated': False, 'engine': 'zarr'}}
+            xarray_open_kwargs = {
+                **xarray_open_kwargs,
+                **{'consolidated': False, 'engine': 'zarr'},
+            }
             ds = xr.open_dataset(session.store, **xarray_open_kwargs)
         else:
+            xarray_open_kwargs = {
+                **{'engine': 'zarr', 'chunks': {}},
+                **xarray_open_kwargs,
+            }
             ds = xr.open_dataset(
                 f's3://{self.bucket}/{self.prefix}',
                 **xarray_open_kwargs,
@@ -126,7 +135,7 @@ class Dataset(pydantic.BaseModel):
         crs: str = 'EPSG:4326',
         target_crs: str | None = None,
         **kwargs,
-    ):
+    ) -> gpd.GeoDataFrame:
         """Convert query results to a GeoPandas GeoDataFrame.
 
         Parameters
@@ -168,8 +177,6 @@ class Dataset(pydantic.BaseModel):
         >>> gdf.head()
 
         """
-        import geopandas as gpd
-        from shapely import wkt
 
         if query is not None:
             # Only add the conversion if the geometry column doesn't already have a transformation
@@ -201,7 +208,8 @@ class Dataset(pydantic.BaseModel):
                     elif geometry_column.upper() in select_part:
                         original_query = query
                         modified_query = original_query.replace(
-                            geometry_column, f'ST_AsText({geometry_column}) as {geometry_column}'
+                            geometry_column,
+                            f'ST_AsText({geometry_column}) as {geometry_column}',
                         )
                 query = modified_query
 
