@@ -1,9 +1,11 @@
 import typing
 
 import duckdb
+import geopandas as gpd
 import icechunk as ic
 import pydantic
 import xarray as xr
+from shapely import wkt
 
 
 class Dataset(pydantic.BaseModel):
@@ -22,35 +24,81 @@ class Dataset(pydantic.BaseModel):
     def to_xarray(
         self,
         *,
-        is_icechunk: bool = False,
+        is_icechunk: bool | None = None,
         xarray_open_kwargs: dict | None = None,
         xarray_storage_options: dict | None = None,
     ) -> xr.Dataset:
         """
         Convert the dataset to an xarray.Dataset.
+
+        Parameters
+        ----------
+        is_icechunk : bool | None, default None
+            Whether to use icechunk to access the data.
+            - If True: only try using icechunk
+            - If None: try icechunk first, fall back to direct S3 access if it fails
+            - If False: only use direct S3 access
+        xarray_open_kwargs : dict, optional
+            Additional keyword arguments to pass to xarray.open_dataset.
+        xarray_storage_options : dict, optional
+            Storage options for S3 access when not using icechunk.
+
+        Returns
+        -------
+        xr.Dataset
+            The opened dataset.
+
+        Raises
+        ------
+        ValueError
+            If the dataset is not in 'zarr' format.
+        FileNotFoundError
+            If the dataset cannot be found or accessed.
         """
         if self.data_format != 'zarr':
             raise ValueError("Dataset must be in 'zarr' format to convert to xarray.")
 
-        if xarray_open_kwargs is None:
-            xarray_open_kwargs = {}
+        xarray_open_kwargs = xarray_open_kwargs or {}
+        xarray_storage_options = xarray_storage_options or {}
 
-        if xarray_storage_options is None:
-            xarray_storage_options = {}
+        # Try icechunk if is_icechunk is True or None
+        if is_icechunk is not False:
+            try:
+                storage = ic.s3_storage(bucket=self.bucket, prefix=self.prefix)
+                repo = ic.Repository.open(storage=storage)
+                session = repo.readonly_session('main')
 
-        if is_icechunk:
-            storage = ic.s3_storage(bucket=self.bucket, prefix=self.prefix)
-            repo = ic.Repository.open(storage=storage)
-            session = repo.readonly_session('main')
-            xarray_open_kwargs = {**xarray_open_kwargs, **{'consolidated': False, 'engine': 'zarr'}}
-            ds = xr.open_dataset(session.store, **xarray_open_kwargs)
-        else:
+                icechunk_kwargs = {
+                    'consolidated': False,
+                    'engine': 'zarr',
+                    'chunks': {},
+                    **xarray_open_kwargs,
+                }
+
+                ds = xr.open_dataset(session.store, **icechunk_kwargs)
+                return ds
+            except Exception as exc:
+                # If is_icechunk=True but icechunk failed, raise the error
+                if is_icechunk is True:
+                    raise FileNotFoundError(
+                        f"Failed to open icechunk repository: '{self.bucket}/{self.prefix}'"
+                    ) from exc
+                # Otherwise, if is_icechunk=None, we'll try the fallback method
+
+        # Direct S3 access (either is_icechunk=False or icechunk failed with is_icechunk=None)
+        try:
+            direct_s3_kwargs = {'engine': 'zarr', 'chunks': {}, **xarray_open_kwargs}
+
             ds = xr.open_dataset(
                 f's3://{self.bucket}/{self.prefix}',
-                **xarray_open_kwargs,
+                **direct_s3_kwargs,
                 storage_options=xarray_storage_options,
             )
-        return ds
+            return ds
+        except Exception as exc:
+            raise FileNotFoundError(
+                f"No such file or directory: 's3://{self.bucket}/{self.prefix}'"
+            ) from exc
 
     def query_geoparquet(
         self,
@@ -126,7 +174,7 @@ class Dataset(pydantic.BaseModel):
         crs: str = 'EPSG:4326',
         target_crs: str | None = None,
         **kwargs,
-    ):
+    ) -> gpd.GeoDataFrame:
         """Convert query results to a GeoPandas GeoDataFrame.
 
         Parameters
@@ -168,8 +216,6 @@ class Dataset(pydantic.BaseModel):
         >>> gdf.head()
 
         """
-        import geopandas as gpd
-        from shapely import wkt
 
         if query is not None:
             # Only add the conversion if the geometry column doesn't already have a transformation
@@ -201,7 +247,8 @@ class Dataset(pydantic.BaseModel):
                     elif geometry_column.upper() in select_part:
                         original_query = query
                         modified_query = original_query.replace(
-                            geometry_column, f'ST_AsText({geometry_column}) as {geometry_column}'
+                            geometry_column,
+                            f'ST_AsText({geometry_column}) as {geometry_column}',
                         )
                 query = modified_query
 
