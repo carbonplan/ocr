@@ -6,32 +6,48 @@ import icechunk
 import xarray as xr
 from icechunk.xarray import to_icechunk
 
-
-def build_icechunk():
-    path = 's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/BP_CONUS.tif'
-    ds = xr.open_dataset(path, engine='rasterio', chunks={})
-    # remove 1d band dim and chunk to ~100MB
-    ds = ds.squeeze().drop_vars('band').chunk({'y': 6000, 'x': 4500})
-
-    storage = icechunk.s3_storage(
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_Icechunk',
-        region='us-west-2',
-    )
-    repo = icechunk.Repository.open_or_create(storage)
-
-    session = repo.writable_session('main')
-    to_icechunk(ds, session)
-    snapshot = session.commit('Add BP raster to store')
-    print(snapshot)
-
-
-@coiled.function(
-    region='us-west-2', n_workers=[1, 20], vm_type='m8g.large', tags={'Project': 'OCR'}
+cluster = coiled.Cluster(
+    name='ocr_RDS_2020-0016-02',
+    region='us-west-2',
+    n_workers=10,
+    tags={'project': 'OCR'},
+    worker_vm_types='m8g.large',
+    scheduler_vm_types='m8g.2xlarge',
 )
-def main():
-    build_icechunk()
+
+client = cluster.get_client()
+
+cluster.adapt(minimum=1, maximum=200)
 
 
-if __name__ == '__main__':
-    main()
+var_list = ['BP', 'CRPS', 'CFL', 'Exposure', 'FLEP4', 'FLEP8', 'WHP']
+fpath_dict = {
+    var_name: f's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/{var_name}_CONUS.tif'
+    for var_name in var_list
+}
+
+# merge all the datasets and rename vars
+merge_ds = xr.merge(
+    [
+        xr.open_dataset(fpath, engine='rasterio')
+        .squeeze()
+        .drop_vars('band')
+        .rename({'band_data': var_name})
+        for var_name, fpath in fpath_dict.items()
+    ],
+    compat='override',
+    join='override',
+)
+
+merge_ds = merge_ds.chunk({'y': 6000, 'x': 4500})
+
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_all_vars_merge_icechunk',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open_or_create(storage)
+
+session = repo.writable_session('main')
+to_icechunk(merge_ds, session)
+snapshot = session.commit('Add all variables to store')
