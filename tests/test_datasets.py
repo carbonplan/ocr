@@ -190,7 +190,7 @@ def test_to_xarray_without_icechunk(mock_open_dataset, sample_dataset):
     mock_open_dataset.return_value = mock_ds
 
     storage_options = {'anon': True}
-    open_kwargs = {'chunks': 'auto'}
+    open_kwargs = {'engine': 'zarr', 'chunks': 'auto'}
 
     result = sample_dataset.to_xarray(
         is_icechunk=False, xarray_open_kwargs=open_kwargs, xarray_storage_options=storage_options
