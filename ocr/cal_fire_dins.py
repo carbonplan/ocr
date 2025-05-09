@@ -7,8 +7,8 @@ from ocr.datasets import catalog
 
 def load_structures_destroyed(
     fire_name: str,
-    columns: list[str] = None,
-    target_crs: str = None,
+    columns: list[str] | None = None,
+    target_crs: str | None = None,
 ) -> gpd.GeoDataFrame:
     """
     Load structures destroyed/damaged data for a specific fire.

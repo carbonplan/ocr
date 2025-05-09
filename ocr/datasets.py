@@ -287,7 +287,7 @@ class Catalog(pydantic.BaseModel):
         *,
         case_sensitive: bool = True,
         latest: bool = False,
-    ) -> Dataset | None:
+    ) -> Dataset:
         """
         Get a dataset by name and optionally version.
 
