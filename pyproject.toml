@@ -133,6 +133,10 @@
     xarray        = ">=2025.3.0,<2026"
     zarr          = ">=3.0.5,<4"
 jupyterlab = ">=4.4.0,<5"
+geemap = ">=0.35.3,<0.36"
+earthengine-api = ">=1.5.11,<2"
+planetary-computer = ">=1.0.0,<2"
+adlfs = ">=2024.12.0,<2025"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
@@ -167,3 +171,4 @@ jupyterlab = ">=4.4.0,<5"
 [tool.pixi.tasks]
     export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
     start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
+    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
