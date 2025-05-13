@@ -86,6 +86,10 @@ class ChunkingConfig(pydantic.BaseModel):
         x, y = self.transform * (x_idx, y_idx)
         return x, y
 
+    def chunks_to_slices(self, chunks: dict) -> dict:
+        """Create a dict of chunk_ids and slices from input chunk dict"""
+        return {key: self.chunk_id_to_slice(value) for key, value in chunks.items()}
+
     def chunk_id_to_slice(self, chunk_id):
         """
         Convert a chunk ID (iy, ix) to corresponding array slices
@@ -242,7 +246,7 @@ class ChunkingConfig(pydantic.BaseModel):
         plt.tight_layout()
         plt.show()
 
-    def get_chunks_for_bbox(self, bbox):
+    def get_chunks_for_bbox(self, bbox) -> dict:
         """
         Find all chunks that intersect with the given bounding box
 
@@ -271,7 +275,7 @@ class ChunkingConfig(pydantic.BaseModel):
         x_starts = chunk_info['x_starts']
 
         # Find intersecting chunks
-        intersecting_chunks = []
+        intersecting_chunks = {}
 
         for iy, y0 in enumerate(y_starts):
             h = y_chunks[iy]
@@ -287,7 +291,7 @@ class ChunkingConfig(pydantic.BaseModel):
 
                 # Check for intersection
                 if bbox.intersects(chunk_box):
-                    intersecting_chunks.append((iy, ix))
+                    intersecting_chunks[f'y{iy}_x{ix}'] = (iy, ix)
 
         return intersecting_chunks
 
