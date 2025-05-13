@@ -452,3 +452,41 @@ class ChunkingConfig(pydantic.BaseModel):
 
         plt.tight_layout()
         plt.show()
+
+    def combine_chunk_slices(self, chunk_slices_dict):
+        """
+        Combine multiple chunk slices into a single y_slice and x_slice
+        that spans the entire region.
+
+        Usage:
+        y_slice, x_slice = config.combine_chunk_slices(chunk_slices_ca)
+        y_slice, x_slice
+
+        Parameters
+        ----------
+        chunk_slices_dict : dict
+            Dictionary mapping chunk IDs to (y_slice, x_slice) tuples
+
+        Returns
+        -------
+        tuple
+            (y_slice, x_slice) covering the entire region
+        """
+        # Initialize with extreme values
+        y_min = float('inf')
+        y_max = float('-inf')
+        x_min = float('inf')
+        x_max = float('-inf')
+
+        # Find min start and max stop for both dimensions
+        for chunk_id, (y_slice, x_slice) in chunk_slices_dict.items():
+            y_min = min(y_min, y_slice.start)
+            y_max = max(y_max, y_slice.stop)
+            x_min = min(x_min, x_slice.start)
+            x_max = max(x_max, x_slice.stop)
+
+        # Create combined slices
+        y_slice = slice(np.int64(y_min), np.int64(y_max), None)
+        x_slice = slice(np.int64(x_min), np.int64(x_max), None)
+
+        return y_slice, x_slice
