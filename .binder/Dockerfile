@@ -43,4 +43,10 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
 
+# install gpq
+RUN curl -L https://github.com/planetlabs/gpq/releases/download/v0.24.0/gpq-linux-amd64.tar.gz -o /tmp/gpq.tar.gz \
+    && tar -xvzf /tmp/gpq.tar.gz -C /usr/local/bin/ \
+    && rm /tmp/gpq.tar.gz
+
+
 WORKDIR /app
