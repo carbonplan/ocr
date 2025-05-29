@@ -467,6 +467,14 @@ datasets = [
         version='v2025-03-19.1',
     ),
     Dataset(
+        name='conus-overture-buildings-5070',
+        description='CONUS Overture Buildings in EPSG 5070. Columns are: bbox, bbox_5070, geometry, geometry_5070',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings_5070_2025-03-19.1.parquet',
+        data_format='geoparquet',
+        version='v2025-03-19.1',
+    ),
+    Dataset(
         name='alexandre-2016-digitized-buildings',
         description='Data from: Factors related to building loss due to wildfires in the conterminous United States',
         bucket='carbonplan-ocr',

@@ -23,15 +23,17 @@ class ChunkingConfig(pydantic.BaseModel):
         self.chunks = self.chunks or dict(zip(['x', 'y'], self.ds.CRPS.data.chunksize))
 
     def __repr__(self):
+        # TODO: Should this be the tuple rep and/or the lat/lon repr
         return self.extent.__repr__()
 
     @functools.cached_property
     def extent(self):
+        # TODO: float or int
         return box(
-            minx=float(self.ds.x.min()),
-            maxx=float(self.ds.x.max()),
-            miny=float(self.ds.y.min()),
-            maxy=float(self.ds.y.max()),
+            minx=int(self.ds.x.min()),
+            maxx=int(self.ds.x.max()),
+            miny=int(self.ds.y.min()),
+            maxy=int(self.ds.y.max()),
         )
 
     @functools.cached_property
@@ -54,7 +56,7 @@ class ChunkingConfig(pydantic.BaseModel):
         return self.ds.odc.geobox.transform
 
     @functools.cached_property
-    def chunk_info(self):
+    def chunk_info(self) -> dict:
         """Get information about the dataset's chunks"""
         y_chunks, x_chunks = self.ds.CRPS.data.chunks
         y_starts = np.cumsum([0] + list(y_chunks[:-1]))
@@ -85,6 +87,20 @@ class ChunkingConfig(pydantic.BaseModel):
         """Convert array indices to EPSG:5070 coordinates"""
         x, y = self.transform * (x_idx, y_idx)
         return x, y
+
+    def chunks_to_slices(self, chunks: dict) -> dict:
+        """Create a dict of chunk_ids and slices from input chunk dict"""
+        return {key: self.chunk_id_to_slice(value) for key, value in chunks.items()}
+
+    def region_id_chunk_lookup(self, region_id: str) -> tuple:
+        """given a region_id, ex: 'y5_x14, returns the corresponding chunk (5, 14)"""
+        return self.get_chunk_mapping()[region_id]
+
+    def region_id_slice_lookup(self, region_id: str) -> tuple:
+        """given a region_id, ex: 'y5_x14, returns the corresponding x,y slices. ex:
+        (slice(np.int64(30000), np.int64(36000), None),
+        slice(np.int64(85500), np.int64(90000), None))"""
+        return self.chunk_id_to_slice(self.region_id_chunk_lookup(region_id))
 
     def chunk_id_to_slice(self, chunk_id):
         """
@@ -151,6 +167,107 @@ class ChunkingConfig(pydantic.BaseModel):
         x_max, y_min = self.index_to_coords(x_slice.stop, y_slice.stop)  # lower-right
 
         return box(x_min, y_min, x_max, y_max)
+
+    def get_chunk_mapping(self):
+        """Returns a dict of region_ids and their corresponding chunk_indexes."""
+        chunk_info = self.chunk_info
+        y_chunks = chunk_info['y_chunks']
+        x_chunks = chunk_info['x_chunks']
+        y_starts = chunk_info['y_starts']
+        x_starts = chunk_info['x_starts']
+
+        chunk_mapping = {}
+        for iy, y0 in enumerate(y_starts):
+            h = y_chunks[iy]
+            for ix, x0 in enumerate(x_starts):
+                w = x_chunks[ix]
+                chunk_mapping[f'y{iy}_x{ix}'] = (iy, ix)
+
+        return chunk_mapping
+
+    # def get_chunks_for_bbox(self, bbox):
+    #     """
+    #     Find all chunks that intersect with the given bounding box
+
+    #     Parameters
+    #     ----------
+    #     bbox : BoundingBox or tuple
+    #         Bounding box to check for intersection. If tuple, format is (minx, miny, maxx, maxy)
+
+    #     Returns
+    #     -------
+    #     list of tuples
+    #         List of (iy, ix) tuples identifying the intersecting chunks
+    #     """
+    #     # Convert tuple to BoundingBox if needed
+    #     if isinstance(bbox, tuple):
+    #         if len(bbox) == 4:
+    #             bbox = box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
+    #         else:
+    #             raise ValueError('Bounding box tuple must have 4 elements (minx, miny, maxx, maxy)')
+
+    #     # Get chunk info
+    #     chunk_info = self.chunk_info
+    #     y_chunks = chunk_info['y_chunks']
+    #     x_chunks = chunk_info['x_chunks']
+    #     y_starts = chunk_info['y_starts']
+    #     x_starts = chunk_info['x_starts']
+
+    #     # Find intersecting chunks
+    #     intersecting_chunks = {}
+
+    #     for iy, y0 in enumerate(y_starts):
+    #         h = y_chunks[iy]
+    #         for ix, x0 in enumerate(x_starts):
+    #             w = x_chunks[ix]
+
+    #             # Get chunk boundaries in geographic coordinates
+    #             xx0, yy0 = self.index_to_coords(x0, y0)
+    #             xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
+
+    #             # Create a box for this chunk (note Y axis flip)
+    #             chunk_box = box(xx0, yy1, xx1, yy0)
+
+    #             # Check for intersection
+    #             if bbox.intersects(chunk_box):
+    #                 intersecting_chunks[f'y{iy}_x{ix}'] = (iy, ix)
+
+    #     return intersecting_chunks
+
+    def combine_chunk_slices(self, chunk_slices_dict):
+        """
+        Combine multiple chunk slices into a single y_slice and x_slice
+        that spans the entire region.
+        Usage:
+        y_slice, x_slice = config.combine_chunk_slices(chunk_slices_ca)
+        y_slice, x_slice
+        Parameters
+        ----------
+        chunk_slices_dict : dict
+            Dictionary mapping chunk IDs to (y_slice, x_slice) tuples
+        Returns
+        -------
+        tuple
+            (y_slice, x_slice) covering the entire region
+        """
+        # Initialize with extreme values
+        y_min = float('inf')
+        y_max = float('-inf')
+        x_min = float('inf')
+        x_max = float('-inf')
+
+        # Find min start and max stop for both dimensions
+        for chunk_id, (y_slice, x_slice) in chunk_slices_dict.items():
+            y_min = min(y_min, y_slice.start)
+            y_max = max(y_max, y_slice.stop)
+            x_min = min(x_min, x_slice.start)
+            x_max = max(x_max, x_slice.stop)
+
+        # Create combined slices
+        y_slice = slice(np.int64(y_min), np.int64(y_max), None)
+        x_slice = slice(np.int64(x_min), np.int64(x_max), None)
+
+        return y_slice, x_slice
 
     def plot_all_chunks(self, color_by_size=False):
         """
@@ -241,55 +358,6 @@ class ChunkingConfig(pydantic.BaseModel):
 
         plt.tight_layout()
         plt.show()
-
-    def get_chunks_for_bbox(self, bbox):
-        """
-        Find all chunks that intersect with the given bounding box
-
-        Parameters
-        ----------
-        bbox : BoundingBox or tuple
-            Bounding box to check for intersection. If tuple, format is (minx, miny, maxx, maxy)
-
-        Returns
-        -------
-        list of tuples
-            List of (iy, ix) tuples identifying the intersecting chunks
-        """
-        # Convert tuple to BoundingBox if needed
-        if isinstance(bbox, tuple):
-            if len(bbox) == 4:
-                bbox = box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
-            else:
-                raise ValueError('Bounding box tuple must have 4 elements (minx, miny, maxx, maxy)')
-
-        # Get chunk info
-        chunk_info = self.chunk_info
-        y_chunks = chunk_info['y_chunks']
-        x_chunks = chunk_info['x_chunks']
-        y_starts = chunk_info['y_starts']
-        x_starts = chunk_info['x_starts']
-
-        # Find intersecting chunks
-        intersecting_chunks = []
-
-        for iy, y0 in enumerate(y_starts):
-            h = y_chunks[iy]
-            for ix, x0 in enumerate(x_starts):
-                w = x_chunks[ix]
-
-                # Get chunk boundaries in geographic coordinates
-                xx0, yy0 = self.index_to_coords(x0, y0)
-                xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
-
-                # Create a box for this chunk (note Y axis flip)
-                chunk_box = box(xx0, yy1, xx1, yy0)
-
-                # Check for intersection
-                if bbox.intersects(chunk_box):
-                    intersecting_chunks.append((iy, ix))
-
-        return intersecting_chunks
 
     def visualize_chunks_on_conus(
         self, chunks=None, color_by_size=False, highlight_chunks=None, include_all_chunks=False
