@@ -35,12 +35,15 @@ def main(
     batch_commands = coiled_batch_cmds.generate_batch_commands()
     print(batch_commands)
     for submit_command in batch_commands:
-        print(f'submitting to coiled batch: {submit_command}')
-        subprocess.Popen(submit_command, shell=True, cwd='.')
+        print(submit_command)
+        # print(f'submitting to coiled batch: {submit_command}')
+        # subprocess.Popen(submit_command, shell=True, cwd='.')
 
 
 if __name__ == '__main__':
     main()
+
+
 
 
 # NEXT

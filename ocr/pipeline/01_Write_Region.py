@@ -29,13 +29,11 @@ def sample_risk_region(region_id: str):
     icechunk_config = template_config.init_icechunk_repo(readonly=True)
 
     ds = xr.open_zarr(icechunk_config['session'].store, consolidated=False, chunks={})
+
     # tmp, this should be in 01
     ds.rio.write_crs(5070, inplace=True)
 
     # Note: get a bbox subset of dataset extent - only in full extent template! For now we are circumventing that!
-
-    # y_slice, x_slice = config.region_id_slice_lookup(region_id=region_id)
-    # subset_ds = ds.isel(y=y_slice, x=x_slice)
     bbox = x_y_bbox_tuple_from_xarray_extent(ds)
 
     building_parquet_5070 = catalog.get_dataset('conus-overture-buildings-5070')
@@ -54,11 +52,15 @@ def sample_risk_region(region_id: str):
     buildings_table['geometry_4326'] = gpd.GeoSeries.from_wkt(buildings_table['geometry_4326'])
     buildings_subset_gdf = gpd.GeoDataFrame(buildings_table, geometry='geometry', crs='EPSG:5070')
 
-    # NOTE: VAR NAME IS HARD CODED!
-    buildings_subset_gdf['BP'] = extract_points(buildings_subset_gdf, ds['BP'])
+    data_var_list = list(ds.data_vars)
+    for var in data_var_list:
+        buildings_subset_gdf[var] = extract_points(buildings_subset_gdf, ds[var])
+
     # NOTE: TODO: PARQUET PATH IS HARDCODED
-    buildings_subset_gdf[['BP', 'bbox_4326', 'geometry_4326', 'geometry']].to_parquet(
-        f's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/{region_id}.parquet',
+    geom_cols =['bbox_4326', 'geometry_4326', 'geometry']
+
+    buildings_subset_gdf[data_var_list + geom_cols].to_parquet(
+        f's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/{region_id}_2var.parquet',
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,
@@ -77,13 +79,16 @@ def run_wind_region(region_id: str):
     icechunk_config = template_config.init_icechunk_repo()
 
     # TODO: We should use logging here!
-    print(f'01_Wind_click: processing region: {region_id}')
+    print(f'Writing wind: processing region: {region_id}')
 
     y_slice, x_slice = config.region_id_slice_lookup(region_id=region_id)
 
     # TEMPORARY! This can be replaced the a contained 'wind' function
     ds = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()[['BP']]
     ds['BP'] = ds['BP'].astype('float32')
+    import random
+    ds['BP_wind_adjusted'] = ds['BP'] + random.uniform(0.0, 0.01)
+
     subset_ds = ds.isel(y=y_slice, x=x_slice)
 
     # TEMPORARY! We will want to write to a template
@@ -105,9 +110,8 @@ def run_wind_region(region_id: str):
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 def main(region_id: str):
     """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
-    # run_wind_region(region_id)
-    # sample_risk_region(region_id)
-    print(f'{region_id}')
+    run_wind_region(region_id)
+    sample_risk_region(region_id)
 
 
 if __name__ == '__main__':

@@ -1,10 +1,6 @@
 import typing
-
-import cv2 as cv
 import numpy as np
 import xarray as xr
-from rasterio.warp import Resampling
-from scipy.ndimage import rotate
 
 
 def generate_angles() -> dict[str, float]:
@@ -59,6 +55,8 @@ def generate_weights(
 def generate_wind_directional_kernels(
     kernel_size: float = 81.0, circle_diameter: float = 35.0
 ) -> dict[str, np.ndarray]:
+    from scipy.ndimage import rotate
+
     """Generate a dictionary of 2D arrays of weights for circular kernels oriented in different directions.
     Parameters
     ----------
@@ -116,6 +114,8 @@ def apply_wind_directional_convolution(
     xr.DataArray
         The DataArray with the directional convolution applied
     """
+    import cv2 as cv
+
     # TODO: must scale the size of the kernel according to the latitude. Can either
     # be done before entering this function to calculate the kernel_size
     # argument or inside this function and pass latitude into the convolution
@@ -188,6 +188,8 @@ def apply_mode_calc(direction_indices_ds: xr.Dataset) -> xr.Dataset:
 
 
 def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) -> xr.Dataset:
+    from rasterio.warp import Resampling
+
     wind_direction = wind_direction.rio.write_crs('EPSG:4326')
     bp = bp.rio.write_crs('EPSG:5070')
     # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries.
