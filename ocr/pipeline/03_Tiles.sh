@@ -11,7 +11,7 @@
 # maybe we should switch to gpq:
 # ex: gpq convert --to=geojson in.geoparquet | tippecanoe -o out.pmtiles
 
-s5cmd cp --sp 's3://carbonplan-ocr/intermediate/fire-risk/vector/aggregated_regions.parquet' 'region.parquet'
+s5cmd cp --sp 's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated.parquet' 'region.parquet'
 
 # convert to FGB
 ogr2ogr -progress -f FlatGeobuf \
@@ -22,10 +22,10 @@ region.parquet \
 echo gdal conversion done
 
 # gen pmtiles with tons of mystery knobs
-tippecanoe -o region_id_y10_x2.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest-as-needed -q --extend-zooms-if-still-dropping -zg region.fgb
+tippecanoe -o aggregated.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest-as-needed -q --extend-zooms-if-still-dropping -zg region.fgb
 
 
 echo tippecanoe tiles done
 
 # schlep it back to s3
-s5cmd cp --sp 'region_id_y10_x2.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/aggregated_regions.pmtiles'
+s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/two_variable_layer.pmtiles'

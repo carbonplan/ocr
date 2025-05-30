@@ -171,16 +171,12 @@ class ChunkingConfig(pydantic.BaseModel):
     def get_chunk_mapping(self):
         """Returns a dict of region_ids and their corresponding chunk_indexes."""
         chunk_info = self.chunk_info
-        y_chunks = chunk_info['y_chunks']
-        x_chunks = chunk_info['x_chunks']
         y_starts = chunk_info['y_starts']
         x_starts = chunk_info['x_starts']
 
         chunk_mapping = {}
         for iy, y0 in enumerate(y_starts):
-            h = y_chunks[iy]
             for ix, x0 in enumerate(x_starts):
-                w = x_chunks[ix]
                 chunk_mapping[f'y{iy}_x{ix}'] = (iy, ix)
 
         return chunk_mapping

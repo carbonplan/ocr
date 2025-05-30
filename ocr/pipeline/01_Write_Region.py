@@ -14,7 +14,8 @@ def sample_risk_region(region_id: str):
     import xarray as xr
 
     from ocr import catalog
-    from ocr.chunking_config import ChunkingConfig
+
+    # from ocr.chunking_config import ChunkingConfig
     from ocr.config import TemplateConfig
     from ocr.utils import extract_points, x_y_bbox_tuple_from_xarray_extent
 
@@ -22,7 +23,7 @@ def sample_risk_region(region_id: str):
     print(f'Creating building samples for region: {region_id}')
 
     # Note / Warning: This is still hardcoded to USFS chunking config!
-    config = ChunkingConfig()
+    # config = ChunkingConfig()
 
     template_config = TemplateConfig()
     # TODO: Make sure to add a 'readonly' options
@@ -57,7 +58,7 @@ def sample_risk_region(region_id: str):
         buildings_subset_gdf[var] = extract_points(buildings_subset_gdf, ds[var])
 
     # NOTE: TODO: PARQUET PATH IS HARDCODED
-    geom_cols =['bbox_4326', 'geometry_4326', 'geometry']
+    geom_cols = ['bbox_4326', 'geometry_4326', 'geometry']
 
     buildings_subset_gdf[data_var_list + geom_cols].to_parquet(
         f's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/{region_id}_2var.parquet',
@@ -86,7 +87,10 @@ def run_wind_region(region_id: str):
     # TEMPORARY! This can be replaced the a contained 'wind' function
     ds = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()[['BP']]
     ds['BP'] = ds['BP'].astype('float32')
+
+    # TEMP!
     import random
+
     ds['BP_wind_adjusted'] = ds['BP'] + random.uniform(0.0, 0.01)
 
     subset_ds = ds.isel(y=y_slice, x=x_slice)
@@ -110,8 +114,9 @@ def run_wind_region(region_id: str):
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 def main(region_id: str):
     """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
-    run_wind_region(region_id)
-    sample_risk_region(region_id)
+    # run_wind_region(region_id)
+    # sample_risk_region(region_id)
+    print('here')
 
 
 if __name__ == '__main__':

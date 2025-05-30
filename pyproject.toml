@@ -17,6 +17,7 @@
     "geopandas>=1.0.1",
     "icechunk>=0.2.15",
     "ipdb>=0.13.13",
+    "jupyter>=1.1.1",
     "numba>=0.61.2",
     "numbagg>=0.9.0",
     "obstore>=0.6.0",

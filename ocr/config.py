@@ -35,7 +35,7 @@ class TemplateConfig:
 
     def create_icechunk_zarr_chunked_template():
         # TODO: This should create a template, write it and commit it.
-        icechunk_repo_config = self.init_icechunk_repo()
+        # icechunk_repo_config = self.init_icechunk_repo()
 
         # TODO: / WARNING The chunking config of the end result may differ from the USFS one.
         # We need to make the ChunkingConfig more general most likely
@@ -58,8 +58,6 @@ class BatchJobs:
     region_id: tuple[str, ...]
     run_on_coiled: bool = False
 
-    # TODO: Add which pipeline step as an option!
-    # Warning: Hardcoding in 1st step
     def generate_batch_commands(self):
         batch_command_list = []
         for rid in self.region_id:

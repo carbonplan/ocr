@@ -8,23 +8,25 @@
 # aggregate geoparquet regions, reproject and write
 
 import duckdb
+
 from ocr.utils import apply_s3_creds, install_load_extensions
+
 install_load_extensions()
 apply_s3_creds()
 
-# Hardcoding LA region icechunk store, eventually we will use 'template' in catalog
-region_id = 'y10_x2'
+# region_id = 'y1_x3'
 
 # we will probably want to wildcard later to aggregate
 # for now, we are using a single region and just selecting out the 4326 geometry for pmtiles
-risk = duckdb.sql(f"""
+risk = duckdb.sql("""
     SET preserve_insertion_order=false;
     COPY (
     SELECT
-    BP as risk,
+    BP as USFS_risk,
+    BP_wind_adjusted as wind_risk,
     bbox_4326 as bbox,
     geometry_4326 as geometry
-    FROM 's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/*.parquet)
+    FROM 's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/*.parquet')
     TO  's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated.parquet' (
     FORMAT 'parquet',
     COMPRESSION 'zstd',
