@@ -529,7 +529,7 @@ datasets = [
         name='USFS-wildfire-risk-communities-4326',
         description='Wildfire Risk to Communites - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk',
+        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
         data_format='zarr',
     ),
 ]
