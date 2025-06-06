@@ -1,9 +1,16 @@
+# COILED n-tasks 1
+# COILED --region us-west-2
+# COILED --vm-type m7i.8xlarge
+# COILED --forward-aws-credentials
+# COILED --tag project=OCR
+
+
 # Script to reproject the USFS 30m Community Risk dataset to EPSG:4326
 
 
-import coiled
 import icechunk
 import xarray as xr
+from distributed import Client
 from icechunk.xarray import to_icechunk
 from odc.geo.xr import assign_crs, xr_reproject
 
@@ -22,7 +29,7 @@ def load_USFS_community_risk() -> xr.Dataset:
 def write_to_icechunk(ds: xr.Dataset):
     storage = icechunk.s3_storage(
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk',
+        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
         region='us-west-2',
     )
     repo = icechunk.Repository.open_or_create(storage)
@@ -42,14 +49,8 @@ def interpolate_and_reproject():
     write_to_icechunk(rps_30_4326)
 
 
-@coiled.function(
-    region='us-west-2',
-    n_workers=10,
-    vm_type='r7a.2xlarge',
-    tags={'Project': 'OCR'},
-    idle_timeout='5 minutes',
-)
 def main():
+    client = Client()
     interpolate_and_reproject()
 
 
