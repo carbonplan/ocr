@@ -97,7 +97,7 @@ def run_wind_region(region_id: str):
     climate_run_subset = climate_run.sel(latitude=y_slice, longitude=x_slice)
     wind_directions = important_days.sel(latitude=y_slice, longitude=x_slice)
 
-    blurred_bp = apply_wind_directional_convolution(rps_30_subset['BP'], iterations=3)
+    blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
     direction_modes = apply_mode_calc(direction_indices).compute()
 
@@ -112,8 +112,14 @@ def run_wind_region(region_id: str):
     wind_informed_bp = create_composite_bp_map(blurred_bp, wind_direction_reprojected).drop_vars(
         'direction'
     )
+    # fix tiny FP misalignment in .sel of lat/lon between two datasets.
+    wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
+        latitude=rps_30_subset.latitude, longitude=rps_30_subset.longitude
+    )
 
-    risk_4326 = (wind_informed_bp * rps_30_subset['CRPS']).to_dataset(name='wind_risk')
+    risk_4326 = (wind_informed_bp_float_corrected * rps_30_subset['CRPS']).to_dataset(
+        name='wind_risk'
+    )
     # add in USFS 30m 4326 risk score (burn probability)
     risk_4326['USFS_RPS'] = rps_30_subset['RPS']
 

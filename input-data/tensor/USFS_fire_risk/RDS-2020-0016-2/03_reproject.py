@@ -10,7 +10,6 @@
 
 import icechunk
 import xarray as xr
-from distributed import Client
 from icechunk.xarray import to_icechunk
 from odc.geo.xr import assign_crs, xr_reproject
 
@@ -50,7 +49,6 @@ def interpolate_and_reproject():
 
 
 def main():
-    client = Client()
     interpolate_and_reproject()
 
 
