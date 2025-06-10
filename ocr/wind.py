@@ -192,7 +192,7 @@ def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) 
     from rasterio.warp import Resampling
 
     wind_direction = wind_direction.rio.write_crs('EPSG:4326')
-    bp = bp.rio.write_crs('EPSG:5070')
+    # bp = bp.rio.write_crs('EPSG:5070')
     # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries.
     # TODO: consider ways of creating a smooth transition between gridcells, options include:
     # - instead of using the mode direction, do a weighted average of the different winds and then

@@ -11,7 +11,7 @@
 # maybe we should switch to gpq:
 # ex: gpq convert --to=geojson in.geoparquet | tippecanoe -o out.pmtiles
 
-s5cmd cp --sp 's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated.parquet' 'region.parquet'
+s5cmd cp --sp 's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated_wind.parquet' 'region.parquet'
 
 # convert to FGB
 ogr2ogr -progress -f FlatGeobuf \
@@ -28,4 +28,4 @@ tippecanoe -o aggregated.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest
 echo tippecanoe tiles done
 
 # schlep it back to s3
-s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/two_variable_layer.pmtiles'
+s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/wind_layer_and_RPS.pmtiles'

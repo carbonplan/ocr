@@ -14,7 +14,6 @@ from ocr.utils import apply_s3_creds, install_load_extensions
 install_load_extensions()
 apply_s3_creds()
 
-# region_id = 'y1_x3'
 
 # we will probably want to wildcard later to aggregate
 # for now, we are using a single region and just selecting out the 4326 geometry for pmtiles
@@ -22,12 +21,12 @@ risk = duckdb.sql("""
     SET preserve_insertion_order=false;
     COPY (
     SELECT
-    BP as USFS_risk,
-    BP_wind_adjusted as wind_risk,
+    wind_risk as wind_risk,
+    USFS_RPS as USFS_RPS,
     bbox_4326 as bbox,
     geometry_4326 as geometry
     FROM 's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/*.parquet')
-    TO  's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated.parquet' (
+    TO  's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated_wind.parquet' (
     FORMAT 'parquet',
     COMPRESSION 'zstd',
     OVERWRITE_OR_IGNORE true);""")

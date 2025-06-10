@@ -116,9 +116,9 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     return nearest_pixels.values
 
 
-def x_y_bbox_tuple_from_xarray_extent(ds: xr.Dataset) -> tuple:
-    x_min = int(ds.x.min())
-    x_max = int(ds.x.max())
-    y_min = int(ds.y.min())
-    y_max = int(ds.y.max())
+def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y') -> tuple:
+    x_min = float(ds[x_name].min())
+    x_max = float(ds[x_name].max())
+    y_min = float(ds[y_name].min())
+    y_max = float(ds[y_name].max())
     return (x_min, y_min, x_max, y_max)

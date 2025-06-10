@@ -17,7 +17,7 @@ def sample_risk_region(region_id: str):
 
     # from ocr.chunking_config import ChunkingConfig
     from ocr.config import TemplateConfig
-    from ocr.utils import extract_points, x_y_bbox_tuple_from_xarray_extent
+    from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
     # TODO: We should use logging here!
     print(f'Creating building samples for region: {region_id}')
@@ -35,7 +35,7 @@ def sample_risk_region(region_id: str):
     ds.rio.write_crs(5070, inplace=True)
 
     # Note: get a bbox subset of dataset extent - only in full extent template! For now we are circumventing that!
-    bbox = x_y_bbox_tuple_from_xarray_extent(ds)
+    bbox = bbox_tuple_from_xarray_extent(ds)
 
     building_parquet_5070 = catalog.get_dataset('conus-overture-buildings-5070')
 
@@ -70,59 +70,131 @@ def sample_risk_region(region_id: str):
 
 
 def run_wind_region(region_id: str):
-    # TODO: / WARNING The chunking config of the end result may differ from the USFS one. We need to make the ChunkingConfig more general most likely
+    from odc.geo.xr import assign_crs, xr_reproject
+    from rasterio.warp import Resampling
+
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
     from ocr.config import TemplateConfig
+    from ocr.utils import (
+        lon_to_180,
+    )
+    from ocr.wind import (
+        apply_mode_calc,
+        apply_wind_directional_convolution,
+        classify_wind_directions,
+        create_composite_bp_map,
+    )
 
     config = ChunkingConfig()
+
+    # init icechunk repo
     template_config = TemplateConfig()
     icechunk_config = template_config.init_icechunk_repo()
 
-    # TODO: We should use logging here!
-    print(f'Writing wind: processing region: {region_id}')
+    climate_run = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[
+        ['BP']
+    ]  # .to_dataset().isel(latitude=slice(60000,66000), longitude=slice(100000,104500))
+    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
+        ['BP', 'CRPS', 'RPS']
+    ]  # .isel(y=y_slice, x=x_slice)
+    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[
+        ['sfcWindfromdir']
+    ]  # .isel(y=y_slice, x=x_slice)
+    important_days = lon_to_180(important_days)
 
-    y_slice, x_slice = config.region_id_slice_lookup(region_id=region_id)
+    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
+    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
+    climate_run_subset = climate_run.sel(latitude=y_slice, longitude=x_slice)
+    wind_directions = important_days.sel(latitude=y_slice, longitude=x_slice)
 
-    # TEMPORARY! This can be replaced the a contained 'wind' function
-    ds = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()[['BP']]
-    ds['BP'] = ds['BP'].astype('float32')
+    blurred_bp = apply_wind_directional_convolution(rps_30_subset['BP'], iterations=3)
+    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
+    direction_modes = apply_mode_calc(direction_indices).compute()
 
-    # TEMP!
-    import random
+    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
+    blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
+    # TODO! We can probably use xarray's interp_like, instead of reproject match, since we have the same coords
+    # direction_modes_sfc.interp_like(blurred_bp,method="nearest").plot()
+    wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
+        blurred_bp, resampling=Resampling.nearest
+    ).rename({'y': 'latitude', 'x': 'longitude'})
 
-    ds['BP_wind_adjusted'] = ds['BP'] + random.uniform(0.0, 0.01)
+    wind_informed_bp = create_composite_bp_map(blurred_bp, wind_direction_reprojected)
 
-    subset_ds = ds.isel(y=y_slice, x=x_slice)
+    risk_4326 = (wind_informed_bp * rps_30_subset['CRPS']).to_dataset(name='wind_risk')
+    # add in USFS 30m 4326 risk score (burn probability)
+    risk_4326['USFS_RPS'] = rps_30_subset['RPS']
 
-    # TEMPORARY! We will want to write to a template
-    # for now, call icechunk.config to init
-    subset_ds.rio.write_crs(5070, inplace=True)
-
-    subset_ds.to_zarr(
+    # assign crs and reproject EPSG:5070
+    risk_4326 = assign_crs(risk_4326, crs='EPSG:4326')
+    risk_5070 = xr_reproject(risk_4326, how='EPSG:5070')
+    # what is up with this chunking? : Dimensions:      (y: 7883, x: 5475)
+    # Frozen({'y': (6000, 1883), 'x': (4500, 975)
+    # is the .sel wrong or?
+    risk_5070.to_zarr(
         icechunk_config['session'].store,
         mode='w',
         consolidated=False,
     )
 
     icechunk_config['session'].commit(f'{region_id}')
-    # TODO: When doing uncoop writes, we will have to update this all!
-    # eventually this should be region_id?
+
+    # # TODO: When doing uncoop writes, we will have to update this all!
+    # # eventually this should be region_id?
+
+    # # TODO: / WARNING The chunking config of the end result may differ from the USFS one. We need to make the ChunkingConfig more general most likely
+    # from ocr import catalog
+    # from ocr.chunking_config import ChunkingConfig
+    # from ocr.config import TemplateConfig
+
+    # config = ChunkingConfig()
+    # template_config = TemplateConfig()
+    # icechunk_config = template_config.init_icechunk_repo()
+
+    # # TODO: We should use logging here!
+    # print(f'Writing wind: processing region: {region_id}')
+
+    # y_slice, x_slice = config.region_id_slice_lookup(region_id=region_id)
+
+    # # TEMPORARY! This can be replaced the a contained 'wind' function
+    # ds = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()[['BP']]
+    # ds['BP'] = ds['BP'].astype('float32')
+
+    # # TEMP!
+    # import random
+
+    # ds['BP_wind_adjusted'] = ds['BP'] + random.uniform(0.0, 0.01)
+
+    # subset_ds = ds.isel(y=y_slice, x=x_slice)
+
+    # # TEMPORARY! We will want to write to a template
+    # # for now, call icechunk.config to init
+    # subset_ds.rio.write_crs(5070, inplace=True)
+
+    # subset_ds.to_zarr(
+    #     icechunk_config['session'].store,
+    #     mode='w',
+    #     consolidated=False,
+    # )
+
+    # icechunk_config['session'].commit(f'{region_id}')
+    # # TODO: When doing uncoop writes, we will have to update this all!
+    # # eventually this should be region_id?
+    print('done')
 
 
 @click.command()
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 def main(region_id: str):
     """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
-    # run_wind_region(region_id)
-    # sample_risk_region(region_id)
-    print('here')
+    run_wind_region(region_id)
+    sample_risk_region(region_id)
 
 
 if __name__ == '__main__':
     main()
-
-# uv run python main.py -r y9_x1 -c
+# uv run python main.py -r y2_x4 -c
 # uv run python main.py -r y9_x2 -c
 # uv run python main.py -r y10_x2 -c
 # uv run python main.py -r y10_x3 -c
