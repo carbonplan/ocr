@@ -101,15 +101,14 @@ def convert_coords(
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     import xarray as xr
 
-    # ensure CRS alignment
-    if gdf.crs != da.rio.crs:
-        da = da.rio.reproject(gdf.crs)
-
+    # UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+    # We could calculate centroids in 5070 space and save them in gpq
+    # but, the builings are pretty small, so a slight shift in centroid is maybe OK?
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
     nearest_pixels = da.sel(
-        x=xr.DataArray(x_coords, dims='points'),
-        y=xr.DataArray(y_coords, dims='points'),
+        longitude=xr.DataArray(x_coords, dims='points'),
+        latitude=xr.DataArray(y_coords, dims='points'),
         method='nearest',
     )
 
