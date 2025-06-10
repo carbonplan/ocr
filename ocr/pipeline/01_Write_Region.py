@@ -85,15 +85,11 @@ def run_wind_region(region_id: str):
     # should we add the EPSG / spatial ref here in the template creation?
     icechunk_config = template_config.init_icechunk_repo()
 
-    climate_run = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[
-        ['BP']
-    ]  # .to_dataset().isel(latitude=slice(60000,66000), longitude=slice(100000,104500))
+    climate_run = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
         ['BP', 'CRPS', 'RPS']
-    ]  # .isel(y=y_slice, x=x_slice)
-    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[
-        ['sfcWindfromdir']
-    ]  # .isel(y=y_slice, x=x_slice)
+    ]
+    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[['sfcWindfromdir']]
     important_days = lon_to_180(important_days)
 
     y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
@@ -121,12 +117,6 @@ def run_wind_region(region_id: str):
     # add in USFS 30m 4326 risk score (burn probability)
     risk_4326['USFS_RPS'] = rps_30_subset['RPS']
 
-    # assign crs and reproject EPSG:5070
-    # risk_4326 = assign_crs(risk_4326, crs='EPSG:4326')
-    # risk_5070 = xr_reproject(risk_4326, how='EPSG:5070')
-    import ipdb
-
-    ipdb.set_trace()
     risk_4326.to_zarr(
         icechunk_config['session'].store,
         mode='w',
@@ -141,7 +131,7 @@ def run_wind_region(region_id: str):
 def main(region_id: str):
     """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
     print(region_id)
-    # run_wind_region(region_id)
+    run_wind_region(region_id)
     sample_risk_region(region_id)
 
 
