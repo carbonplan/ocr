@@ -23,16 +23,19 @@ def main(
     run_on_coiled: bool = False,
     batch_size: int = 10,
 ):
-    # TODO: Add option for --all-regions. This can be sent to BatchJobs
-    """Steps:
-    1. init template - config.TemplateConfig().init_icechunk_repo()
-    2. Check template ancestry - TODO: config.TemplateConfig().check_icechunk_ancestry()
-    3. diff of regions to already written regions - TODO:
-    """
+    # Create icechunk repo
+    # Maybe we should add another create only method instead
     from ocr.config import BatchJobs
+    from ocr.template import TemplateConfig
 
-    coiled_batch_cmds = BatchJobs(region_id, run_on_coiled=run_on_coiled)
-    batch_commands = coiled_batch_cmds.generate_batch_commands()
+    template_config = TemplateConfig()
+    # should we add the EPSG / spatial ref here in the template creation?
+
+    template_config.init_icechunk_repo()
+    template_config.create_template()
+
+    batch_jobs = BatchJobs(region_id, run_on_coiled=run_on_coiled)
+    batch_commands = batch_jobs.generate_batch_commands()
     print(batch_commands)
     for submit_command in batch_commands:
         print(f'submitting to coiled batch: {submit_command}')
@@ -41,11 +44,3 @@ def main(
 
 if __name__ == '__main__':
     main()
-
-
-# NEXT
-# - try icechunk repo creation func
-# - add click to 02_ (b/c 02 should still be an AU calc)
-# - test running pipeline again
-# - refactor ChunkingConfig to generalize to any dataset, not tied to USFS dataset
-# - Start adding in Wind. 1. seperate out start. 2. ...

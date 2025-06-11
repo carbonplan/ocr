@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import dask
@@ -16,10 +17,7 @@ def create_template(
     prefix: str = 'intermediate/fire-risk/tensor/TEST/atomic_unit_risk_test',
 ):
     """
-    WIP conviencnce function to create CONUS template and write it to an icechunk store.
-    potential helpful flags/inputs:
-    - overwrite if exists (what should default behavior be, open or create? or create only)
-    - potential chunking modification
+    TODO: TO BE DEPRECIATED
 
     """
     import dask
@@ -65,6 +63,83 @@ def create_template(
     )
 
     session.commit('template')
+
+
+@dataclass
+class TemplateConfig:
+    bucket: str = 'carbonplan-ocr'
+    prefix: str = 'intermediate/fire-risk/tensor/TEST/TEMPLATE.icechunk'
+    uri: str = None
+
+    def init_icechunk_repo(self) -> dict:
+        """Creates an icechunk repo.
+
+        Args:
+            bucket (str, optional): aws bucket name. Defaults to 'carbonplan-ocr'.
+            prefix (str, optional): bucket prefix. Defaults to f'intermediate/fire-risk/tensor/TEST/TEMPLATE.icechunk'.
+
+        """
+        storage = icechunk.s3_storage(bucket=self.bucket, prefix=self.prefix, from_env=True)
+        icechunk.Repository.create(storage)
+
+    def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
+        storage = icechunk.s3_storage(bucket=self.bucket, prefix=self.prefix, from_env=True)
+        repo = icechunk.Repository.open(storage)
+        if readonly:
+            session = repo.readonly_session()
+        else:
+            session = repo.writable_session(branch=branch)
+        return {'repo': repo, 'session': session}
+
+    def wipe_icechunk_repo(self):
+        # TODO: It might be nice to be able to wipe the template
+        raise NotImplementedError("This functionality isn't added yet.")
+
+    def create_template(self):
+        import numpy as np
+        import xarray as xr
+
+        from ocr.chunking_config import ChunkingConfig
+        # NOTE: This is hardcoded as using the USFS 30m chunking scheme!
+
+        config = ChunkingConfig()
+
+        ds = config.ds
+        ds['CRPS'].encoding = {}
+
+        repo_session = self.repo_and_session()
+        template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
+        var_encoding_dict = {
+            'chunks': ((config.chunks['longitude'], config.chunks['latitude'])),
+            'fill_value': np.nan,
+        }
+        template_data_array = xr.DataArray(
+            dask.array.zeros(
+                (config.ds.sizes['latitude'], config.ds.sizes['longitude']),
+                dtype='float32',
+                chunks=-1,
+            ),
+            dims=('latitude', 'longitude'),
+        )
+        template['wind_risk'] = template_data_array
+        template['USFS_RPS'] = template_data_array
+        # Should we modify the encoding var name to match the output of wind: 'risk'?
+        template.to_zarr(
+            repo_session['session'].store,
+            compute=False,
+            mode='w',
+            encoding={'wind_risk': var_encoding_dict, 'USFS_RPS': var_encoding_dict},
+            consolidated=False,
+        )
+
+        repo_session['session'].commit('template')
+
+    def check_icechunk_ancestry():
+        raise NotImplementedError('TODO: Not complete')
+
+    def __post_init__(self):
+        # TODO: Make this more robust with cloudpathlib or UPath?
+        self.uri = 's3://' + self.bucket + '/' + self.prefix
 
 
 def get_commit_messages_ancestry(repo: icechunk.repository) -> list:

@@ -1,7 +1,7 @@
 # COILED n-tasks 1
 # COILED --region us-west-2
 # COILED --forward-aws-credentials
-# COILED --vm-type r7a.xlarge
+# COILED --vm-type m8g.medium
 # COILED --tag project=OCR
 
 
@@ -14,7 +14,7 @@ def sample_risk_region(region_id: str):
     import xarray as xr
 
     from ocr import catalog
-    from ocr.config import TemplateConfig
+    from ocr.template import TemplateConfig
     from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
     # TODO: We should use logging here!
@@ -24,11 +24,13 @@ def sample_risk_region(region_id: str):
     # config = ChunkingConfig()
 
     template_config = TemplateConfig()
-    icechunk_config = template_config.init_icechunk_repo(readonly=True)
+    icechunk_repo_and_session = template_config.repo_and_session()
 
-    ds = xr.open_zarr(icechunk_config['session'].store, consolidated=False, chunks={})
+    ds = xr.open_zarr(icechunk_repo_and_session['session'].store, consolidated=False, chunks={})
 
     # Note: get a bbox subset of dataset extent - only in full extent template! For now we are circumventing that!
+    # WARNING: NOW THAT WE ARE WRITING THE WHOLE EXTENT, THIS EXTENT IS CONUS
+    # WE NEED TO BUILD IT FROM REGION_ID EXTENT
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     building_parquet = catalog.get_dataset('conus-overture-buildings')
 
@@ -67,7 +69,7 @@ def run_wind_region(region_id: str):
 
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
-    from ocr.config import TemplateConfig
+    from ocr.template import TemplateConfig
     from ocr.utils import (
         lon_to_180,
     )
@@ -80,10 +82,8 @@ def run_wind_region(region_id: str):
 
     config = ChunkingConfig()
 
-    # init icechunk repo
     template_config = TemplateConfig()
-    # should we add the EPSG / spatial ref here in the template creation?
-    icechunk_config = template_config.init_icechunk_repo()
+    icechunk_repo_and_session = template_config.repo_and_session()
 
     climate_run = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
@@ -123,22 +123,22 @@ def run_wind_region(region_id: str):
     # add in USFS 30m 4326 risk score (burn probability)
     risk_4326['USFS_RPS'] = rps_30_subset['RPS']
 
+    risk_4326 = risk_4326.drop_vars(['spatial_ref'])
     risk_4326.to_zarr(
-        icechunk_config['session'].store,
-        mode='w',
+        icechunk_repo_and_session['session'].store,
+        region='auto',
         consolidated=False,
     )
+
     # ValueError: failed to prevent overwriting existing key grid_mapping in attrs. This is probably an encoding field used by xarray to describe how a variable is serialized. To proceed, remove this key from the variable's attributes manually.
-    icechunk_config['session'].commit(f'{region_id}')
+    icechunk_repo_and_session['session'].commit(f'{region_id}')
 
 
 @click.command()
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 def main(region_id: str):
-    """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
-    print(region_id)
     run_wind_region(region_id)
-    sample_risk_region(region_id)
+    """We need a wrapper function like this to pass in CLI args, but this can call the wind process script.. I think"""
 
 
 if __name__ == '__main__':
