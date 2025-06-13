@@ -147,6 +147,8 @@ def get_commit_messages_ancestry(repo: icechunk.repository) -> list:
 
 
 def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
+    import icechunk
+
     from ocr.template import TemplateConfig
 
     template_config = TemplateConfig()
@@ -159,8 +161,11 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
                 region='auto',
                 consolidated=False,
             )
-
-            icechunk_repo_and_session['session'].commit(f'{region_id}')
+            # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
+            # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
+            icechunk_repo_and_session['session'].commit(
+                f'{region_id}', rebase_with=icechunk.ConflictDetector()
+            )
             print(f'Wrote region: {region_id}')
             break
 
