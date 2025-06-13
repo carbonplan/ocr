@@ -101,16 +101,22 @@ def convert_coords(
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     import xarray as xr
 
-    # ensure CRS alignment
-    if gdf.crs != da.rio.crs:
-        da = da.rio.reproject(gdf.crs)
-
+    # UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+    # The relatviely small size of a building footprint should account for a very very small shift in the centroid when calculating from EPSG:4326 vs EPSG:5070.
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
     nearest_pixels = da.sel(
-        x=xr.DataArray(x_coords, dims='points'),
-        y=xr.DataArray(y_coords, dims='points'),
+        longitude=xr.DataArray(x_coords, dims='points'),
+        latitude=xr.DataArray(y_coords, dims='points'),
         method='nearest',
     )
 
     return nearest_pixels.values
+
+
+def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y') -> tuple:
+    x_min = float(ds[x_name].min())
+    x_max = float(ds[x_name].max())
+    y_min = float(ds[y_name].min())
+    y_max = float(ds[y_name].max())
+    return (x_min, y_min, x_max, y_max)

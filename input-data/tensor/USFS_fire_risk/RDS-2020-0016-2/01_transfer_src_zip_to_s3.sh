@@ -42,6 +42,11 @@ curl -L https://usfs-public.box.com/shared/static/gwasv734wwcx77zc4wj4ntfhaxyt8m
 unzip RDS-2020-0016-02-FLEP8-CONUS.zip -d RDS-2020-0016-02-FLEP8-CONUS/ && rm *.zip
 s5cmd mv --sp 'RDS-2020-0016-02-FLEP8-CONUS/FLEP8_CONUS/FLEP8_CONUS.tif' 's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/FLEP8_CONUS.tif'
 
+# RPS
+curl -L https://usfs-public.box.com/shared/static/88tv8byot0t22o9p1eqlrfqco3z5ouvf.zip -o RDS-2020-0016-02-RPS-CONUS.zip
+unzip RDS-2020-0016-02-RPS-CONUS.zip -d RDS-2020-0016-02-RPS-CONUS/ && rm *.zip
+s5cmd mv --sp 'RDS-2020-0016-02-RPS-CONUS/RPS_CONUS/RPS_CONUS.tif' 's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/RPS_CONUS.tif'
+
 # WHP
 curl -L https://usfs-public.box.com/shared/static/jz74xh0eqdezblhexwu2s2at7fqgom8n.zip -o RDS-2020-0016-02-WHP-CONUS.zip
 unzip RDS-2020-0016-02-WHP-CONUS.zip -d RDS-2020-0016-02-WHP-CONUS/ && rm *.zip
