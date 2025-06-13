@@ -146,28 +146,51 @@ def get_commit_messages_ancestry(repo: icechunk.repository) -> list:
     return [commit.message for commit in list(repo.ancestry(branch='main'))]
 
 
-@dask.delayed
-def insert_region_uncoop(subset_ds: xr.Dataset, bucket: str, prefix: str, region_id: str):
-    storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
+def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
+    from ocr.template import TemplateConfig
 
-    repo = icechunk.Repository.open(storage)
+    template_config = TemplateConfig()
+    icechunk_repo_and_session = template_config.repo_and_session()
 
     while True:
         try:
-            session = repo.writable_session('main')
             subset_ds.to_zarr(
-                session.store,
+                icechunk_repo_and_session['session'].store,
                 region='auto',
                 consolidated=False,
             )
 
-            session.commit(f'{region_id}')
+            icechunk_repo_and_session['session'].commit(f'{region_id}')
             print(f'Wrote region: {region_id}')
             break
 
         except icechunk.ConflictError:
             print(f'conflict for region_commit_history {region_id}, retrying')
             pass
+
+
+# @dask.delayed
+# def insert_region_uncoop(subset_ds: xr.Dataset, bucket: str, prefix: str, region_id: str):
+#     storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
+
+#     repo = icechunk.Repository.open(storage)
+
+#     while True:
+#         try:
+#             session = repo.writable_session('main')
+#             subset_ds.to_zarr(
+#                 session.store,
+#                 region='auto',
+#                 consolidated=False,
+#             )
+
+#             session.commit(f'{region_id}')
+#             print(f'Wrote region: {region_id}')
+#             break
+
+#         except icechunk.ConflictError:
+#             print(f'conflict for region_commit_history {region_id}, retrying')
+#             pass
 
 
 def return_ds_subsets_from_region_dict(ds: xr.Dataset, region_dict: dict) -> dict:

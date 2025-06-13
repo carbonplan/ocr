@@ -28,4 +28,4 @@ tippecanoe -o aggregated.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest
 echo tippecanoe tiles done
 
 # schlep it back to s3
-s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/wind_layer_and_RPS.pmtiles'
+s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/wind_layer_and_RPS_3_region.pmtiles'

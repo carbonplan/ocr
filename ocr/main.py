@@ -3,6 +3,12 @@ import subprocess
 import click
 
 
+@click.option(
+    '--debug',
+    is_flag=True,
+    default=False,
+    help='Enable Debugging, default False',
+)
 @click.command()
 @click.option(
     '-r',
@@ -22,15 +28,13 @@ def main(
     all_regions: bool = False,
     run_on_coiled: bool = False,
     batch_size: int = 10,
+    debug: bool = False,
 ):
-    # Create icechunk repo
-    # Maybe we should add another create only method instead
     from ocr.config import BatchJobs
     from ocr.template import TemplateConfig
 
     template_config = TemplateConfig()
-    # should we add the EPSG / spatial ref here in the template creation?
-
+    # TODO: Add options for already initalized repo
     template_config.init_icechunk_repo()
     template_config.create_template()
 

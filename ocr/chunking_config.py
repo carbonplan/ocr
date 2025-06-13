@@ -180,7 +180,7 @@ class ChunkingConfig(pydantic.BaseModel):
             If True, color chunks based on their size (useful to identify irregularities)
         """
         # Create figure
-        fig, ax = plt.subplots(figsize=(16, 12), subplot_kw={'projection': ccrs.PlateCarree()})
+        fig, ax = plt.subplots(figsize=(24, 16), subplot_kw={'projection': ccrs.PlateCarree()})
 
         # Set extent to show CONUS
         print(self.extent_as_tuple)
