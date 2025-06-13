@@ -16,6 +16,8 @@ nav:
       - methods/fire_risk.md
   - Usage:
       - usage/data_pipeline.md
+  - Project Structure:
+      - layout/project_structure.md
   - API Reference:
       - api.md
 
@@ -23,18 +25,18 @@ theme:
   language: en
   name: material
   custom_dir: docs/overrides
+  logo: assets/monogram-dark-cropped.png
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
-      primary: grey
+      primary: default-dark
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
 
-    # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: grey
+      primary: default-dark
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
@@ -52,11 +54,9 @@ theme:
     - search.suggest
     - search.share
 
-# extra_css:
-#   - overrides/stylesheets/extra.css
+extra_css:
+  - overrides/extra.css
 
 markdown_extensions:
-  - codehilite:
-      guess_lang: true
   - toc:
       permalink: true

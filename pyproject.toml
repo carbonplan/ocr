@@ -205,5 +205,4 @@ adlfs = ">=2024.12.0,<2025"
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.14",
-
 ]
