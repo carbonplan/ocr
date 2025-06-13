@@ -200,3 +200,10 @@ adlfs = ">=2024.12.0,<2025"
     export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
     start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
+
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.14",
+
+]

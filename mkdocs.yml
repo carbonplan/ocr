@@ -1,0 +1,62 @@
+# inspired by: https://github.com/developmentseed/obstore & others
+site_name: OCR
+repo_name: carbonplan/ocr
+repo_url: https://github.com/carbonplan/ocr
+site_description: CarbonPlan's Open Climate Risk platform
+site_author: CarbonPlan
+# site_url: TODO
+docs_dir: docs
+
+nav:
+  - "index.md"
+  - Getting Started:
+      - getting_started/installation.md
+  - Methods:
+      - methods/input_datasets.md
+      - methods/fire_risk.md
+  - Usage:
+      - usage/data_pipeline.md
+  - API Reference:
+      - api.md
+
+theme:
+  language: en
+  name: material
+  custom_dir: docs/overrides
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: grey
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: grey
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tracking
+    - search.suggest
+    - search.share
+
+# extra_css:
+#   - overrides/stylesheets/extra.css
+
+markdown_extensions:
+  - codehilite:
+      guess_lang: true
+  - toc:
+      permalink: true
