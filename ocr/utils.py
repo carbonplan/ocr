@@ -102,8 +102,7 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     import xarray as xr
 
     # UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
-    # We could calculate centroids in 5070 space and save them in gpq
-    # but, the builings are pretty small, so a slight shift in centroid is maybe OK?
+    # The relatviely small size of a building footprint should account for a very very small shift in the centroid when calculating from EPSG:4326 vs EPSG:5070.
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
     nearest_pixels = da.sel(
