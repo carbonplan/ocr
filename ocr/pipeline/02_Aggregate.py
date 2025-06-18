@@ -3,6 +3,7 @@
 # COILED --forward-aws-credentials
 # COILED --vm-type m7a.xlarge
 # COILED --tag project=OCR
+# COILED --name Aggregate_Geoparquet
 
 
 # aggregate geoparquet regions, reproject and write
@@ -18,11 +19,7 @@ apply_s3_creds()
 risk = duckdb.sql("""
     SET preserve_insertion_order=false;
     COPY (
-    SELECT
-    wind_risk as wind_risk,
-    USFS_RPS as USFS_RPS,
-    bbox,
-    geometry
+    SELECT *
     FROM 's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/*.parquet')
     TO  's3://carbonplan-ocr/intermediate/fire-risk/vector/AGGREGATED_PARQUET_OUTPUT/aggregated_wind.parquet' (
     FORMAT 'parquet',

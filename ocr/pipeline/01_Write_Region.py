@@ -3,9 +3,14 @@
 # COILED --forward-aws-credentials
 # COILED --vm-type m7i.xlarge
 # COILED --tag project=OCR
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    import xarray as xr
 
 
 def sample_risk_region(region_id: str):
@@ -70,56 +75,19 @@ def sample_risk_region(region_id: str):
     )
 
 
-def run_wind_region(region_id: str):
-    """Given a 'region_id', calculate wind adjusted risk and write that region to Icechunk CONUS template.
-
-    Args:
-        region_id (str): Valid `region_id` defined in chunking_config.py. Ex: y2_x4
-    """
+def classify_wind(
+    climate_run_subset: xr.Dataset, direction_modes_sfc: xr.Dataset, rps_30_subset: xr.Dataset
+) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
-    from ocr import catalog
-    from ocr.chunking_config import ChunkingConfig
-    from ocr.template import insert_region_uncoop
-    from ocr.utils import (
-        lon_to_180,
-    )
     from ocr.wind import (
-        apply_mode_calc,
         apply_wind_directional_convolution,
-        classify_wind_directions,
         create_composite_bp_map,
     )
 
-    config = ChunkingConfig()
-
-    # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
-    climate_run = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
-    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
-        ['BP', 'CRPS', 'RPS']
-    ]
-    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[['sfcWindfromdir']]
-    # TODO: Input datasets should already be pre-processed, so this transform should be done upstream.
-    important_days = lon_to_180(important_days)
-
-    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
-    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
-    climate_run_subset = climate_run.sel(latitude=y_slice, longitude=x_slice)
-
-    # Since important_days / wind is a lower resolution (.25 degrees?), we add in spatial buffer to match the resolution.
-    wind_res = 0.25
-    buffer = wind_res * 2  # add in a 2x buffer of the resolution
-    buffered_y_slice = slice(y_slice.start + buffer, y_slice.stop - buffer, y_slice.step)
-    buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
-
-    wind_directions = important_days.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
-
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
-    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
-    direction_modes = apply_mode_calc(direction_indices).compute()
 
-    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
     blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
     # Switched to xarray interp_like to since both datasets have matching EPSG codes.
     # wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
@@ -141,17 +109,85 @@ def run_wind_region(region_id: str):
     wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
         latitude=rps_30_subset.latitude, longitude=rps_30_subset.longitude
     )
-    # Adjust USFS 30m CRPS with wind informed burn probability
-    risk_4326 = (wind_informed_bp_float_corrected * rps_30_subset['CRPS']).to_dataset(
-        name='wind_risk'
-    )
-    # Add in USFS 30m 4326 RPS (Risk to Potential Structures) for QA comparison
-    risk_4326['USFS_RPS'] = rps_30_subset['RPS']
+    return wind_informed_bp_float_corrected
 
-    risk_4326 = risk_4326.drop_vars(['spatial_ref'])
+
+def run_wind_region(region_id: str):
+    """Given a 'region_id', calculate wind adjusted risk and write that region to Icechunk CONUS template.
+
+    Args:
+        region_id (str): Valid `region_id` defined in chunking_config.py. Ex: y2_x4
+    """
+
+    from odc.geo.xr import assign_crs
+
+    from ocr import catalog
+    from ocr.chunking_config import ChunkingConfig
+    from ocr.template import insert_region_uncoop
+    from ocr.utils import (
+        lon_to_180,
+    )
+    from ocr.wind import (
+        apply_mode_calc,
+        classify_wind_directions,
+    )
+
+    config = ChunkingConfig()
+
+    # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
+    climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
+    climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
+
+    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
+        ['BP', 'CRPS', 'RPS']
+    ]
+    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[['sfcWindfromdir']]
+    # TODO: Input datasets should already be pre-processed, so this transform should be done upstream.
+    important_days = lon_to_180(important_days)
+
+    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
+    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
+    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
+    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
+
+    # Since important_days / wind is a lower resolution (.25 degrees?), we add in spatial buffer to match the resolution.
+    wind_res = 0.25
+    buffer = wind_res * 2  # add in a 2x buffer of the resolution
+    buffered_y_slice = slice(y_slice.start + buffer, y_slice.stop - buffer, y_slice.step)
+    buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
+
+    wind_directions = important_days.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
+    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
+    direction_modes = apply_mode_calc(direction_indices).compute()
+
+    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
+
+    wind_informed_bp_float_corrected_2011 = classify_wind(
+        climate_run_subset=climate_run_2011_subset,
+        direction_modes_sfc=direction_modes_sfc,
+        rps_30_subset=rps_30_subset,
+    )
+    wind_informed_bp_float_corrected_2047 = classify_wind(
+        climate_run_subset=climate_run_2047_subset,
+        direction_modes_sfc=direction_modes_sfc,
+        rps_30_subset=rps_30_subset,
+    )
+
+    # Add in USFS 30m 4326 RPS (Risk to Potential Structures) for QA comparison
+    risk_4326_combined = rps_30_subset['RPS'].to_dataset(name='USFS_RPS')
+
+    # Adjust USFS 30m CRPS with wind informed burn probability
+    risk_4326_combined['wind_risk_2011'] = (
+        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    )
+    risk_4326_combined['wind_risk_2047'] = (
+        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
+    )
+
+    risk_4326_combined = risk_4326_combined.drop_vars(['spatial_ref'])
     # Using the Icechunk uncooperative writes method: https://icechunk.io/en/latest/icechunk-python/parallel/#uncooperative-distributed-writes
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
-    insert_region_uncoop(subset_ds=risk_4326, region_id=region_id)
+    insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id)
 
 
 @click.command()
