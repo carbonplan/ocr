@@ -76,23 +76,18 @@ def sample_risk_region(region_id: str):
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset, wind_directions: xr.Dataset, rps_30_subset: xr.Dataset
+    climate_run_subset: xr.Dataset, direction_modes_sfc: xr.Dataset, rps_30_subset: xr.Dataset
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
     from ocr.wind import (
-        apply_mode_calc,
         apply_wind_directional_convolution,
-        classify_wind_directions,
         create_composite_bp_map,
     )
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
-    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
-    direction_modes = apply_mode_calc(direction_indices).compute()
 
-    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
     blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
     # Switched to xarray interp_like to since both datasets have matching EPSG codes.
     # wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
@@ -124,11 +119,17 @@ def run_wind_region(region_id: str):
         region_id (str): Valid `region_id` defined in chunking_config.py. Ex: y2_x4
     """
 
+    from odc.geo.xr import assign_crs
+
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
     from ocr.template import insert_region_uncoop
     from ocr.utils import (
         lon_to_180,
+    )
+    from ocr.wind import (
+        apply_mode_calc,
+        classify_wind_directions,
     )
 
     config = ChunkingConfig()
@@ -156,14 +157,19 @@ def run_wind_region(region_id: str):
     buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
 
     wind_directions = important_days.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
+    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
+    direction_modes = apply_mode_calc(direction_indices).compute()
+
+    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
+
     wind_informed_bp_float_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
-        wind_directions=wind_directions,
+        direction_modes_sfc=direction_modes_sfc,
         rps_30_subset=rps_30_subset,
     )
     wind_informed_bp_float_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
-        wind_directions=wind_directions,
+        direction_modes_sfc=direction_modes_sfc,
         rps_30_subset=rps_30_subset,
     )
 
@@ -179,7 +185,6 @@ def run_wind_region(region_id: str):
     )
 
     risk_4326_combined = risk_4326_combined.drop_vars(['spatial_ref'])
-
     # Using the Icechunk uncooperative writes method: https://icechunk.io/en/latest/icechunk-python/parallel/#uncooperative-distributed-writes
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
     insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id)
@@ -189,7 +194,7 @@ def run_wind_region(region_id: str):
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 def main(region_id: str):
     run_wind_region(region_id)
-    # sample_risk_region(region_id)
+    sample_risk_region(region_id)
 
 
 if __name__ == '__main__':

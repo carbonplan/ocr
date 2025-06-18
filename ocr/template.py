@@ -121,14 +121,17 @@ class TemplateConfig:
             ),
             dims=('latitude', 'longitude'),
         )
-        template['wind_risk'] = template_data_array
         template['USFS_RPS'] = template_data_array
+        template['wind_risk_2011'] = template_data_array
+        template['wind_risk_2047'] = template_data_array
+        vars = ['USFS_RPS', 'wind_risk_2011', 'wind_risk_2047']
         # Should we modify the encoding var name to match the output of wind: 'risk'?
+        template_encoding_dict = {var: var_encoding_dict for var in vars}
         template.to_zarr(
             repo_session['session'].store,
             compute=False,
             mode='w',
-            encoding={'wind_risk': var_encoding_dict, 'USFS_RPS': var_encoding_dict},
+            encoding=template_encoding_dict,
             consolidated=False,
         )
 
@@ -160,6 +163,7 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
                 icechunk_repo_and_session['session'].store,
                 region='auto',
                 consolidated=False,
+                # mode='a'
             )
             # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
             # We should be in the same position, where we don't have real conflicts, just write timing conflicts.

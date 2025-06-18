@@ -6,6 +6,7 @@
 # COILED --forward-aws-credentials
 # COILED --tag project=OCR
 # COILED --vm-type c7a.xlarge
+# COILED --name Create_PMTiles
 
 
 # maybe we should switch to gpq:
@@ -28,4 +29,4 @@ tippecanoe -o aggregated.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest
 echo tippecanoe tiles done
 
 # schlep it back to s3
-s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/wind_layer_and_RPS_3_region.pmtiles'
+s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/multi_year_wind.pmtiles'

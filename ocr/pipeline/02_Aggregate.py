@@ -3,6 +3,7 @@
 # COILED --forward-aws-credentials
 # COILED --vm-type m7a.xlarge
 # COILED --tag project=OCR
+# COILED --name Aggregate_Geoparquet
 
 
 # aggregate geoparquet regions, reproject and write
