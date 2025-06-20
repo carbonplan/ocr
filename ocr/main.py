@@ -17,17 +17,17 @@ import click
     help="region IDs. ex: 'y10_x2'",
 )
 @click.option('-c', '--run-on-coiled', is_flag=True, help='If True, run via coiled batch')
-@click.option('--prod', '-p', is_flag=True, help='If True, run on prod path. Default is QA path.')
+@click.option('--branch', '-b', default='QA', help='data branch path [QA, prod]. Default is QA')
 @click.option(
     '--wipe',
     '-w',
-    is_flag=False,
+    is_flag=True,
     help='If True, wipes icechunk repo and vector data before initializing.',
 )
 def main(
     region_id: tuple[str, ...],
     run_on_coiled: bool = False,
-    prod: bool = False,
+    branch: bool = False,
     wipe: bool = False,
     debug: bool = False,
 ):
@@ -35,11 +35,11 @@ def main(
     from ocr.template import IcechunkConfig, VectorConfig
 
     # config_init applies any wipe and re-init opts
-    IcechunkConfig(branch=prod, wipe=wipe).config_init()
-    VectorConfig(branch=prod, wipe=wipe).config_init()
+    IcechunkConfig(branch=branch, wipe=wipe).config_init()
+    VectorConfig(branch=branch, wipe=wipe).config_init()
 
     batch_jobs = BatchJobs(region_id, run_on_coiled=run_on_coiled)
-    batch_commands = batch_jobs.generate_batch_commands()
+    batch_commands = batch_jobs.generate_batch_commands(branch=branch)
     print(batch_commands)
     for submit_command in batch_commands:
         print(f'submitting: {submit_command}')

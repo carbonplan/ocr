@@ -14,10 +14,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class VectorConfig:
-    branch: str = 'prod'
-    bucket: str = 'carbonplan-scratch'
-
-    # bucket: str = 'carbonplan-ocr'
+    branch: str = 'QA'
+    bucket: str = 'carbonplan-ocr'
     prefix: str = None
     wipe: bool = False
     # these are defined in post_init since they depend on branch.
@@ -65,9 +63,8 @@ class VectorConfig:
 
 @dataclass
 class IcechunkConfig:
-    branch: str = 'prod'
-    # UPDATE!
-    bucket: str = 'carbonplan-scratch'
+    branch: str = 'QA'
+    bucket: str = 'carbonplan-ocr'
     prefix: str = None
     wipe: bool = False
     # icechunk_tag: str = 'main' # main=prod
@@ -192,12 +189,12 @@ def get_commit_messages_ancestry(repo: icechunk.repository) -> list:
     return [commit.message for commit in list(repo.ancestry(branch='main'))]
 
 
-def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
+def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
     import icechunk
 
     from ocr.template import IcechunkConfig
 
-    icechunk_config = IcechunkConfig()
+    icechunk_config = IcechunkConfig(branch=branch)
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
     while True:
@@ -217,6 +214,7 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
             break
 
         except icechunk.ConflictError:
+            # add logging
             print(f'conflict for region_commit_history {region_id}, retrying')
             pass
 
