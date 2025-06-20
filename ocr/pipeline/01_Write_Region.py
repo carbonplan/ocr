@@ -26,7 +26,7 @@ def sample_risk_region(region_id: str):
 
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
-    from ocr.template import TemplateConfig
+    from ocr.template import IcechunkConfig
     from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
     # TODO: We should use logging here!
@@ -34,9 +34,9 @@ def sample_risk_region(region_id: str):
 
     # Note: This is still hardcoded to USFS chunking config!
     config = ChunkingConfig()
-    template_config = TemplateConfig()
+    icechunk_config = IcechunkConfig()
 
-    icechunk_repo_and_session = template_config.repo_and_session()
+    icechunk_repo_and_session = icechunk_config.repo_and_session()
     y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
     ds = xr.open_zarr(
         icechunk_repo_and_session['session'].store, consolidated=False, chunks={}

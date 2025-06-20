@@ -12,75 +12,79 @@ if TYPE_CHECKING:
     import xarray as xr
 
 
-def create_template(
-    bucket: str = 'carbonplan-ocr',
-    prefix: str = 'intermediate/fire-risk/tensor/TEST/atomic_unit_risk_test',
-):
-    """
-    TODO: TO BE DEPRECIATED
+@dataclass
+class VectorConfig:
+    branch: str = 'prod'
+    bucket: str = 'carbonplan-scratch'
 
-    """
-    import dask
-    import icechunk
-    import numpy as np
-    import xarray as xr
+    # bucket: str = 'carbonplan-ocr'
+    prefix: str = None
+    wipe: bool = False
+    # these are defined in post_init since they depend on branch.
+    region_geoparquet_prefix: str = None
+    consolidated_geoparquet_prefix: str = None
+    pmtiles_prefix: str = None
 
-    from ocr import catalog
-    from ocr.chunking_config import ChunkingConfig
+    def delete_region_gpqs(self):
+        import boto3
 
-    config = ChunkingConfig()
+        if 'geoparquet_regions' not in self.region_geoparquet_prefix:
+            raise ValueError(
+                'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
+            )
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(self.bucket)
+        bucket.objects.filter(Prefix=self.region_geoparquet_prefix).delete()
 
-    # use the 30m projected space USFS risk as template
-    ds = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()[['BP']]
-    ds['BP'] = ds['BP'].astype('float32')
-    ds['BP'].encoding = {}
-    # y, x: 6000, 4500
+    def _gen_prefixes(self):
+        self.region_geoparquet_prefix = self.prefix + 'geoparquet_regions'
+        self.consolidated_geoparquet_prefix = self.prefix + 'consolidated_geoparquet.geoparquet'
+        self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
 
-    bucket = 'carbonplan-ocr'
-    prefix = 'intermediate/fire-risk/tensor/TEST/atomic_unit_risk_test'
-    storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
-    repo = icechunk.Repository.create(storage)
-    session = repo.writable_session('main')
+    def __post_init__(self):
+        self.region_geoparquet_prefix: str = None
+        self.consolidated_geoparquet_prefix: str = None
+        self.pmtiles_prefix: str = None
+        if self.branch == 'prod':
+            self.prefix = 'intermediate/fire-risk/vector/prod/'
+        elif self.branch == 'QA':
+            self.prefix = 'intermediate/fire-risk/vector/QA/'
+        else:
+            raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
 
-    template = xr.Dataset(config.ds.coords).drop_vars('spatial_ref')
-    template['BP'] = xr.DataArray(
-        dask.array.zeros(
-            (config.ds.sizes['y'], config.ds.sizes['x']),
-            dtype='float32',
-            chunks=-1,
-        ),
-        dims=('y', 'x'),
-    )
-
-    template.to_zarr(
-        session.store,
-        compute=False,
-        mode='w',
-        encoding={
-            'BP': {'chunks': ((config.chunks['x'], config.chunks['y'])), 'fill_value': np.nan}
-        },
-        consolidated=False,
-    )
-
-    session.commit('template')
+        self._gen_prefixes()
+        if self.wipe:
+            # TODO: add logging
+            # I think we only need to wipe the region_id
+            # geoparquet directory, since the consolidated
+            # and pmtiles will get overwritten.
+            self.delete_region_gpqs()
 
 
 @dataclass
-class TemplateConfig:
-    bucket: str = 'carbonplan-ocr'
-    prefix: str = 'intermediate/fire-risk/tensor/TEST/TEMPLATE.icechunk'
+class IcechunkConfig:
+    branch: str = 'prod'
+    # UPDATE!
+    bucket: str = 'carbonplan-scratch'
+    prefix: str = None
+    wipe: bool = False
+    # icechunk_tag: str = 'main' # main=prod
     uri: str = None
 
+    # ---------------------------------------------------------------------------
+
+    # Icechunk Template
+    # ---------------------------------------------------------------------------
     def init_icechunk_repo(self) -> dict:
-        """Creates an icechunk repo.
+        """Creates an icechunk repo or opens if does not exist
 
         Args:
             bucket (str, optional): aws bucket name. Defaults to 'carbonplan-ocr'.
-            prefix (str, optional): bucket prefix. Defaults to f'intermediate/fire-risk/tensor/TEST/TEMPLATE.icechunk'.
+
 
         """
         storage = icechunk.s3_storage(bucket=self.bucket, prefix=self.prefix, from_env=True)
-        icechunk.Repository.create(storage)
+        icechunk.Repository.open_or_create(storage)
 
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         storage = icechunk.s3_storage(bucket=self.bucket, prefix=self.prefix, from_env=True)
@@ -91,9 +95,18 @@ class TemplateConfig:
             session = repo.writable_session(branch=branch)
         return {'repo': repo, 'session': session}
 
-    def wipe_icechunk_repo(self):
-        # TODO: It might be nice to be able to wipe the template
-        raise NotImplementedError("This functionality isn't added yet.")
+    def delete_icechunk_repo(self):
+        # Note: Be careful! Big danger!
+        import boto3
+
+        if 'template.icechunk' not in self.prefix:
+            raise ValueError(
+                'It seems like the prefix specified is not the icechunk template. [safety switch]'
+            )
+
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(self.bucket)
+        bucket.objects.filter(Prefix=self.prefix).delete()
 
     def create_template(self):
         import numpy as np
@@ -141,7 +154,27 @@ class TemplateConfig:
         raise NotImplementedError('TODO: Not complete')
 
     def __post_init__(self):
-        # TODO: Make this more robust with cloudpathlib or UPath?
+        if self.branch == 'prod':
+            self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
+            if self.wipe:
+                # add logging that wipe flag cleared the existing repo and re-inited.
+                self.delete_icechunk_repo()
+                self.init_icechunk_repo()
+                self.create_template()
+
+        # TODO: edge case that prod isn't init, but wipe == False means no repo is created
+
+        elif self.branch == 'QA':
+            # add logging that QA branch cleared the existing repo and re-inited.
+            self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
+            self.delete_icechunk_repo()
+            self.init_icechunk_repo()
+            self.create_template()
+
+        else:
+            raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
+
+        # TODO: Make this more robust with cloudpathlib or UPath
         self.uri = 's3://' + self.bucket + '/' + self.prefix
 
 
@@ -152,10 +185,10 @@ def get_commit_messages_ancestry(repo: icechunk.repository) -> list:
 def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str):
     import icechunk
 
-    from ocr.template import TemplateConfig
+    from ocr.template import IcechunkConfig
 
-    template_config = TemplateConfig()
-    icechunk_repo_and_session = template_config.repo_and_session()
+    icechunk_config = IcechunkConfig()
+    icechunk_repo_and_session = icechunk_config.repo_and_session()
 
     while True:
         try:
