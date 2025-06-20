@@ -32,11 +32,11 @@ def main(
     debug: bool = False,
 ):
     from ocr.config import BatchJobs
-    from ocr.template import IcechunkConfig  # , VectorConfig
+    from ocr.template import IcechunkConfig, VectorConfig
 
-    IcechunkConfig(branch=prod, wipe=wipe)
-    # TODO
-    # vector_config = VectorConfig()
+    # config_init applies any wipe and re-init opts
+    IcechunkConfig(branch=prod, wipe=wipe).config_init()
+    VectorConfig(branch=prod, wipe=wipe).config_init()
 
     batch_jobs = BatchJobs(region_id, run_on_coiled=run_on_coiled)
     batch_commands = batch_jobs.generate_batch_commands()

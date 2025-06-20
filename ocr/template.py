@@ -41,6 +41,14 @@ class VectorConfig:
         self.consolidated_geoparquet_prefix = self.prefix + 'consolidated_geoparquet.geoparquet'
         self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
 
+    def config_init(self):
+        if self.wipe:
+            # TODO: add logging
+            # I think we only need to wipe the region_id
+            # geoparquet directory, since the consolidated
+            # and pmtiles will get overwritten.
+            self.delete_region_gpqs()
+
     def __post_init__(self):
         self.region_geoparquet_prefix: str = None
         self.consolidated_geoparquet_prefix: str = None
@@ -53,12 +61,6 @@ class VectorConfig:
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
 
         self._gen_prefixes()
-        if self.wipe:
-            # TODO: add logging
-            # I think we only need to wipe the region_id
-            # geoparquet directory, since the consolidated
-            # and pmtiles will get overwritten.
-            self.delete_region_gpqs()
 
 
 @dataclass
@@ -153,9 +155,8 @@ class IcechunkConfig:
     def check_icechunk_ancestry():
         raise NotImplementedError('TODO: Not complete')
 
-    def __post_init__(self):
+    def config_init(self):
         if self.branch == 'prod':
-            self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
             if self.wipe:
                 # add logging that wipe flag cleared the existing repo and re-inited.
                 self.delete_icechunk_repo()
@@ -165,13 +166,22 @@ class IcechunkConfig:
         # TODO: edge case that prod isn't init, but wipe == False means no repo is created
 
         elif self.branch == 'QA':
-            # add logging that QA branch cleared the existing repo and re-inited.
             self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
             self.delete_icechunk_repo()
             self.init_icechunk_repo()
             self.create_template()
 
         else:
+            raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
+
+    def __post_init__(self):
+        if self.branch == 'prod':
+            self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
+        elif self.branch == 'QA':
+            # add logging that QA branch cleared the existing repo and re-inited.
+            self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
+        else:
+            # this is shared, so we could make it a type
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
 
         # TODO: Make this more robust with cloudpathlib or UPath
