@@ -26,7 +26,7 @@ def sample_risk_region(region_id: str, branch: str):
 
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
-    from ocr.template import IcechunkConfig
+    from ocr.template import IcechunkConfig, VectorConfig
     from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
     # TODO: We should use logging here!
@@ -35,6 +35,7 @@ def sample_risk_region(region_id: str, branch: str):
     # Note: This is still hardcoded to USFS chunking config!
     config = ChunkingConfig()
     icechunk_config = IcechunkConfig(branch=branch)
+    vector_config = VectorConfig(branch=branch)
 
     icechunk_repo_and_session = icechunk_config.repo_and_session()
     y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
@@ -67,7 +68,7 @@ def sample_risk_region(region_id: str, branch: str):
 
     # NOTE / TODO : UPDATE BASED ON VectorConfig()
     buildings_subset_gdf[data_var_list + geom_cols].to_parquet(
-        f's3://carbonplan-ocr/intermediate/fire-risk/vector/PIPELINE/{region_id}_2var.parquet',
+        vector_config.region_geoparquet_uri,
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,
@@ -102,7 +103,7 @@ def run_wind_region(region_id: str, branch: str):
 @click.option('-b', '--branch', help='data branch: [QA, prod]. Default QA')
 def main(region_id: str, branch: str):
     run_wind_region(region_id, branch)
-    # sample_risk_region(region_id, branch)
+    sample_risk_region(region_id, branch)
 
 
 if __name__ == '__main__':

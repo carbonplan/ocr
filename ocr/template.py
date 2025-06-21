@@ -20,8 +20,13 @@ class VectorConfig:
     wipe: bool = False
     # these are defined in post_init since they depend on branch.
     region_geoparquet_prefix: str = None
+    region_geoparquet_uri: str = None
+
     consolidated_geoparquet_prefix: str = None
+    consolidated_geoparquet_uri: str = None
+
     pmtiles_prefix: str = None
+    pmtiles_prefix_uri: str = None
 
     def delete_region_gpqs(self):
         import boto3
@@ -36,8 +41,16 @@ class VectorConfig:
 
     def _gen_prefixes(self):
         self.region_geoparquet_prefix = self.prefix + 'geoparquet_regions'
-        self.consolidated_geoparquet_prefix = self.prefix + 'consolidated_geoparquet.geoparquet'
+        self.consolidated_geoparquet_prefix = self.prefix + 'consolidated_geoparquet.parquet'
         self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
+
+    def _gen_uris(self):
+        # TODO: Make this more robust with cloudpathlib or UPath
+        self.region_geoparquet_uri = 's3://' + self.bucket + '/' + self.region_geoparquet_prefix
+        self.consolidated_geoparquet_uri = (
+            's3://' + self.bucket + '/' + self.consolidated_geoparquet_prefix
+        )
+        self.pmtiles_prefix_uri = 's3://' + self.bucket + '/' + self.pmtiles_prefix
 
     def config_init(self):
         if self.wipe:
@@ -59,6 +72,7 @@ class VectorConfig:
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
 
         self._gen_prefixes()
+        self._gen_uris()
 
 
 @dataclass
