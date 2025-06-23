@@ -65,10 +65,10 @@ def sample_risk_region(region_id: str, branch: str):
         buildings_subset_gdf[var] = extract_points(buildings_subset_gdf, ds[var])
 
     geom_cols = ['geometry']
+    outpath = vector_config.region_geoparquet_uri + f'{region_id}.parquet'
 
-    # NOTE / TODO : UPDATE BASED ON VectorConfig()
     buildings_subset_gdf[data_var_list + geom_cols].to_parquet(
-        vector_config.region_geoparquet_uri,
+        outpath,
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,
@@ -83,19 +83,14 @@ def run_wind_region(region_id: str, branch: str):
         region_id (str): Valid `region_id` defined in chunking_config.py. Ex: y2_x4
     """
 
-    from distributed import Client
-
     from ocr.template import insert_region_uncoop
     from ocr.wind import run_wind_adjustment
-
-    client = Client()
 
     risk_4326_combined = run_wind_adjustment(region_id=region_id)
     # Using the Icechunk uncooperative writes method: https://icechunk.io/en/latest/icechunk-python/parallel/#uncooperative-distributed-writes
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
     insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id, branch=branch)
     # only use dask for xarray, shutdown for duckdb wind sample
-    client.shutdown()
 
 
 @click.command()

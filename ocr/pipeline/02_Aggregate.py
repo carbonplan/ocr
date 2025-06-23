@@ -24,7 +24,7 @@ def aggregated_gpq(branch: str):
         SET preserve_insertion_order=false;
         COPY (
         SELECT *
-        FROM '{vector_config.region_geoparquet_prefix}/*.parquet')
+        FROM '{vector_config.region_geoparquet_uri}*.parquet')
         TO  '{vector_config.consolidated_geoparquet_uri}' (
         FORMAT 'parquet',
         COMPRESSION 'zstd',
@@ -32,7 +32,7 @@ def aggregated_gpq(branch: str):
 
 
 @click.command()
-@click.option('-b', '--branch', help='data branch: [QA, prod]. Default QA')
+@click.option('-b', '--branch', default='QA', help='data branch: [QA, prod]. Default QA')
 def main(branch: str):
     aggregated_gpq(branch)
 

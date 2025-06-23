@@ -40,7 +40,7 @@ class VectorConfig:
         bucket.objects.filter(Prefix=self.region_geoparquet_prefix).delete()
 
     def _gen_prefixes(self):
-        self.region_geoparquet_prefix = self.prefix + 'geoparquet_regions'
+        self.region_geoparquet_prefix = self.prefix + 'geoparquet_regions/'
         self.consolidated_geoparquet_prefix = self.prefix + 'consolidated_geoparquet.parquet'
         self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
 
