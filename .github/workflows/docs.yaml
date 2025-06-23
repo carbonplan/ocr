@@ -1,6 +1,6 @@
 #lightly modified boilerplate from https://squidfunk.github.io/mkdocs-material/publishing-your-site/#github-pages
 
-name: ci
+name: docs
 
 on:
   push:
