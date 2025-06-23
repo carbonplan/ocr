@@ -185,6 +185,7 @@ adlfs = ">=2024.12.0,<2025"
     jupyterlab = ">=4.3.6,<5"
     patool     = ">=4.0.0,<5"
 
+
 [tool.pixi.feature.test.tasks]
     tests = { cmd = "pytest" }
 
@@ -203,6 +204,11 @@ adlfs = ">=2024.12.0,<2025"
 
 [dependency-groups]
 docs = [
+    "markdown-exec>=1.10.3",
     "mkdocs>=1.6.1",
+    "mkdocs-click>=0.9.0",
     "mkdocs-material>=9.6.14",
+    "mkdocstrings>=0.29.1",
+    "mkdocstrings-python>=1.16.12",
+    "ruff>=0.12.0",
 ]

@@ -8,9 +8,11 @@
 
 `ocr/main.py` is a click CLI that can be used to dispatch parallel batch jobs of `01_write_region`.
 
+<!-- prettier-ignore-start -->
 ::: mkdocs-click
-:module: ocr.main
-:command: main
+    :module: ocr.main
+    :command: main
+<!-- prettier-ignore-end -->
 
 ## 01_Write_Regions
 
