@@ -11,7 +11,6 @@ from icechunk.xarray import to_icechunk
 from odc.geo.xr import assign_crs, xr_reproject
 
 from ocr import catalog
-from ocr.utils import interpolate_to_30
 
 
 def load_climate_run_ds(climate_run_year: str):
@@ -43,7 +42,9 @@ def interpolate_and_reproject(climate_run_year: str):
         .to_dataset()
     )
     # interpolate to 30m & chunk
-    interp_30 = interpolate_to_30(climate_run_ds, rps_30).chunk({'y': 6000, 'x': 4500})
+    interp_30 = climate_run_ds.interp_like(
+        rps_30, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
+    )
 
     # assign crs and reproject to lat/lon EPSG:4326
     interp_30 = assign_crs(interp_30, crs='EPSG:5070')

@@ -9,7 +9,7 @@
 
 
 # Download the zip(s)
-# Should we have a async bash loop - probably..
+# Should we have a async bash loop?
 
 # bp
 curl -L https://usfs-public.box.com/shared/static/7itw7p56vje2m0u3kqh91lt6kqq1i9l1.zip -o RDS-2020-0016-02-BP-CONUS.zip

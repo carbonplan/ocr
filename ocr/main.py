@@ -3,13 +3,13 @@ import subprocess
 import click
 
 
+@click.command(name='uv run main.py')
 @click.option(
     '--debug',
     is_flag=True,
     default=False,
     help='Enable Debugging, default False',
 )
-@click.command()
 @click.option(
     '-r',
     '--region-id',
@@ -26,8 +26,8 @@ import click
 )
 def main(
     region_id: tuple[str, ...],
+    branch: str = 'QA',
     run_on_coiled: bool = False,
-    branch: bool = False,
     wipe: bool = False,
     debug: bool = False,
 ):

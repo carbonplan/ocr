@@ -1,0 +1,102 @@
+# inspired by: https://github.com/developmentseed/obstore & others
+site_name: OCR
+repo_name: carbonplan/ocr
+repo_url: https://github.com/carbonplan/ocr
+site_description: CarbonPlan's Open Climate Risk platform
+site_author: CarbonPlan
+# site_url: TODO
+docs_dir: docs
+
+nav:
+  - "index.md"
+  - Getting Started:
+      - getting_started/installation.md
+  - Methods:
+      - methods/input_datasets.md
+      - methods/fire_risk.md
+  - Usage:
+      - usage/data_pipeline.md
+  - Project Structure:
+      - layout/project_structure.md
+  - API Reference:
+      - api.md
+
+theme:
+  language: en
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/monogram-dark-cropped.png
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: default-dark
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: default-dark
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tracking
+    - search.suggest
+    - search.share
+
+extra_css:
+  - overrides/extra.css
+
+plugins:
+  - search
+  - markdown-exec
+  - mkdocstrings:
+      enable_inventory: true
+      handlers:
+        python:
+          paths: [ocr]
+          options:
+            show_if_no_docstring: false
+
+            show_root_members_full_path: false
+            merge_init_into_class: true
+            show_labels: true
+            allow_inspection: false
+            docstring_style: numpy
+            docstring_section_style: list
+            line_length: 80
+            separate_signature: true
+            show_root_heading: true
+            show_signature_annotations: true
+            show_source: false
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            group_by_category: true
+            show_category_heading: true
+            heading_level: 2
+
+          inventories:
+            - https://docs.python.org/3/objects.inv
+
+markdown_extensions:
+  - mkdocs-click
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+  - toc:
+      permalink: true

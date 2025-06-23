@@ -135,8 +135,8 @@ class ChunkingConfig(pydantic.BaseModel):
 
         Parameters
         ----------
-        chunk_id : tuple
-            The chunk identifier as a tuple (iy, ix)
+        region_id : tuple
+            The region_id for chunk_id lookup.
 
         Returns
         -------

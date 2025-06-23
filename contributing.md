@@ -70,4 +70,17 @@ Once you have pushed your changes to your forked repository, you can submit a pu
 
 ## Contributing documentation
 
+!Note: Directions for uv, we can update to pixi.
+
+Our documentation is built with `mkdocs`.
+
+To build the docs:
+
+1.
+
+```
+uv run --group docs mkdocs serve
 ...
+
+2. Navigate to localhost:8000
+```

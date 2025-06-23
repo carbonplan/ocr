@@ -520,14 +520,14 @@ datasets = [
     ),
     Dataset(
         name='USFS-wildfire-risk-communities',
-        description='Wildfire Risk to Communites - RDS-2020-0016-2',
+        description='Wildfire Risk to Communities - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_all_vars_merge_icechunk/',
         data_format='zarr',
     ),
     Dataset(
         name='USFS-wildfire-risk-communities-4326',
-        description='Wildfire Risk to Communites - RDS-2020-0016-2',
+        description='Wildfire Risk to Communities - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
         data_format='zarr',
