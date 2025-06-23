@@ -3,8 +3,6 @@ from dataclasses import dataclass
 
 @dataclass
 class BatchJobs:
-    """Dataclass that generates and stores batch commands"""
-
     region_id: tuple[str, ...]
     run_on_coiled: bool = False
 

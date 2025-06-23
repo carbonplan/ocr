@@ -1,10 +1,17 @@
-from collections.abc import Iterable
-
 import geopandas as gpd
 import xarray as xr
 
 
-def apply_s3_creds(region: str = 'us-west-2'):
+def apply_s3_creds(region: str = 'us-west-2') -> None:
+    """
+    Applies duckdb region and access credentials to session.
+
+    Parameters
+    ----------
+    region : str, optional
+        AWS Region, by default 'us-west-2'
+
+    """
     import boto3
     import duckdb
 
@@ -18,6 +25,19 @@ def apply_s3_creds(region: str = 'us-west-2'):
 
 
 def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool = True):
+    """
+    Installs and applies duckdb extensions.
+
+    Parameters
+    ----------
+    aws : bool, optional
+        Install and load AWS extension, by default True
+    spatial : bool, optional
+        Install and load SPATIAL extension, by default True
+    httpfs : bool, optional
+        Install and load HTTPFS extension, by default True
+
+    """
     import duckdb
 
     ext_str = ''
@@ -31,28 +51,97 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
 
 
 def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
+    """
+    Convert longitude values from 0-360 to -180-180.
+
+    Note: `longitude` is required dim/coord.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Input Xarray dataset
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with longitude coordinates converted to -180-180 range
+    """
     lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
     ds = ds.assign_coords(longitude=lon)
     return ds
 
 
-def subset_region_latlon(ds: xr.Dataset, lon_range: Iterable, lat_range: Iterable) -> xr.Dataset:
-    import geopandas as gpd
+# TODO: unused DEPRECIATE?
 
-    points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
-    points = points.to_crs('EPSG:5070')
-    region = ds.sel(x=slice(points.x[0], points.x[1]), y=slice(points.y[1], points.y[0]))
-    return region
+# def subset_region_latlon(ds: xr.Dataset, lon_range: Iterable, lat_range: Iterable) -> xr.Dataset:
+#     """Subset an Xarray dataset by a lat / lon range.
+
+#     Parameters
+#     ----------
+#     ds : xr.Dataset
+#         Input Xarray dataset
+#     lon_range : Iterable
+#         Longitude range as [min_lon, max_lon]
+#     lat_range : Iterable
+#         Latitude range as [min_lat, max_lat]
+
+#     Returns
+#     -------
+#     xr.Dataset
+#         Dataset subset to the specified lat/lon range
+#     """
+#     import geopandas as gpd
+
+#     points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
+#     points = points.to_crs('EPSG:5070')
+#     region = ds.sel(x=slice(points.x[0], points.x[1]), y=slice(points.y[1], points.y[0]))
+#     return region
+
+# TODO: unused DEPRECIATE?
+# def subset_region_xy(ds: xr.Dataset, x_range, y_range) -> xr.Dataset:
+#     """
+#     Subset an Xarray dataset by x/y coordinate range.
+
+#     Parameters
+#     ----------
+#     ds : xr.Dataset
+#         Input Xarray dataset
+#     x_range : tuple or list
+#         X coordinate range as [min_x, max_x]
+#     y_range : tuple or list
+#         Y coordinate range as [min_y, max_y]
+
+#     Returns
+#     -------
+#     xr.Dataset
+#         Dataset subset to the specified x/y range
+#     """
+#     region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
+#     return region
 
 
-def subset_region_xy(ds: xr.Dataset, x_range, y_range) -> xr.Dataset:
-    region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
-    return region
+# TODO: single line function DEPRECIATE?
+# def interpolate_to_30(da, target):
+#     """
+#     Interpolate DataArray to match target coordinates.
 
+#     Parameters
+#     ----------
+#     da : xr.DataArray
+#         Input DataArray to interpolate
+#     target : xr.DataArray
+#         Target DataArray with desired coordinates
 
-def interpolate_to_30(da, target):
-    # TODO - prevent the interpolation from making negative risk values
-    return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
+#     Returns
+#     -------
+#     xr.DataArray
+#         Interpolated DataArray
+
+#     Notes
+#     -----
+#     TODO - prevent the interpolation from making negative risk values
+#     """
+#     return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
 
 
 def convert_coords(
@@ -61,18 +150,27 @@ def convert_coords(
     """
     Convert coordinates between xy and latlon using GeoPandas.
 
-    Parameters:
-    - coords: list of tuples or GeoDataFrame
+    Parameters
+    ----------
+    coords : list of tuple or gpd.GeoDataFrame
         The coordinates to convert. Can be a list of (x, y) or (lon, lat) tuples,
-        or a GeoDataFrame with a geometry column.
-    - from_crs: str
-        The CRS of the input coordinates (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy).
-    - to_crs: str
-        The CRS to convert the coordinates to (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy).
+        or a GeoDataFrame with a geometry column
+    from_crs : str
+        The CRS of the input coordinates (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy)
+    to_crs : str
+        The CRS to convert the coordinates to (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy)
 
-    Returns:
-    - converted_coords: list of tuples or GeoDataFrame
-        The converted coordinates in the target CRS.
+    Returns
+    -------
+    list of tuple or gpd.GeoDataFrame
+        The converted coordinates in the target CRS
+
+    Raises
+    ------
+    ValueError
+        If input GeoDataFrame does not have a CRS defined
+    TypeError
+        If input is not a list of tuples or a GeoDataFrame
     """
     import geopandas as gpd
     from shapely.geometry import Point
@@ -99,10 +197,34 @@ def convert_coords(
 
 
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
+    """
+    Extract/sample points from a GeoDataFrame to an Xarray DataArray.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        Input geopandas GeoDataFrame. Geometry should be points
+    da : xr.DataArray
+        Input Xarray DataArray
+
+    Returns
+    -------
+    xr.DataArray
+        DataArray with geometry sampled
+
+    Notes
+    -----
+    UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are
+    likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a
+    projected CRS before this operation.
+
+    The relatively small size of a building footprint should account for a very
+    small shift in the centroid when calculating from EPSG:4326 vs EPSG:5070.
+
+    TODO: Should/can this be a DataArray for typing
+    """
     import xarray as xr
 
-    # UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
-    # The relatviely small size of a building footprint should account for a very very small shift in the centroid when calculating from EPSG:4326 vs EPSG:5070.
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
     nearest_pixels = da.sel(
@@ -110,11 +232,27 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
         latitude=xr.DataArray(y_coords, dims='points'),
         method='nearest',
     )
-
     return nearest_pixels.values
 
 
 def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y') -> tuple:
+    """
+    Creates a bounding box from an Xarray Dataset extent.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Input Xarray Dataset
+    x_name : str, optional
+        Name of x coordinate, by default 'x'
+    y_name : str, optional
+        Name of y coordinate, by default 'y'
+
+    Returns
+    -------
+    tuple
+        Bounding box tuple in the form: (x_min, y_min, x_max, y_max)
+    """
     x_min = float(ds[x_name].min())
     x_max = float(ds[x_name].max())
     y_min = float(ds[y_name].min())
