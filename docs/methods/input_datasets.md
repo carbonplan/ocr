@@ -1,6 +1,6 @@
 # Input Datasets
 
-Input data province can be tracked through the ingestion scripts in `input-data/`. These datasets are added to the `ocr catalog` and can be accessed programmatically.
+Input data provenance can be tracked through the ingestion scripts in `input-data/`. These datasets are added to the `ocr catalog` and can be accessed programmatically.
 
 The catalog **repr** will list available datasets.
 

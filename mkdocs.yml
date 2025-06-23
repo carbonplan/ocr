@@ -89,6 +89,7 @@ plugins:
             - https://docs.python.org/3/objects.inv
 
 markdown_extensions:
+  - mkdocs-click
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
