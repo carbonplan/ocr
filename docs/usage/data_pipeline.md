@@ -19,6 +19,10 @@
 1. `run_wind_region` - for a given region_id, applies wind adjustment and writes that region to an icechunk template.
 2. `sample_risk_region` - for a given region_id, samples the building centroids to the wind adjusted risk raster to get building level risks and writes those to region_specific geoparquet files.
 
+## 02_Pyramid
+
+python script that uses ndpyramid to create multi-scale zarr stores for visualization.
+
 ## 02_Aggregate
 
 python script that uses duckdb spatial to aggregate region_id specific geoparquet files into a single geoparquet file.
@@ -32,3 +36,6 @@ bash script that uses GDAL and tippecanoe to create PMTiles from geoparquet.
 - run a single region on coiled batch: `uv run python main.py -c -r y2_x4`
 - run multiple regions on coiled batch in parallel: `uv run python main.py -c -r y2_x4 -r y2_x5 -r y2_x6`
 - run a single region on prod branch on coiled batch: `uv run python main.py -c -b prod -r y2_x4`
+- create multi-scale zarr pyramids from region_id filled icechunk template: `uv run coiled batch run pipeline/02_Pyramid.py`
+- aggregate region_id geoparquet files: `uv run coiled batch run pipeline/02_Aggregate.py`
+- create PMTiles vector layer from aggregated geoparquet: `uv run coiled batch run pipeline/03_Tiles.py`
