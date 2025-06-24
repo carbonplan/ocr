@@ -10,7 +10,7 @@ class BatchJobs:
         batch_command_list = []
         for rid in self.region_id:
             if self.run_on_coiled:
-                cmd_str = f'uv run coiled batch run --name {rid} pipeline/01_Write_Region.py -r {rid} -b {branch} -t project=OCR'
+                cmd_str = f'uv run coiled batch run --name {rid}_{branch} pipeline/01_Write_Region.py -r {rid} -b {branch} -t project=OCR'
             else:
                 cmd_str = f'uv run python pipeline/01_Write_Region.py -r {rid} -b {branch}'
 

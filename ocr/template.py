@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     import xarray as xr
 
 
+# ---------------------------------------------------------------------------
+# Vector Config
+# ---------------------------------------------------------------------------
 @dataclass
 class VectorConfig:
     branch: str = 'QA'
@@ -75,6 +78,33 @@ class VectorConfig:
         self._gen_uris()
 
 
+# ---------------------------------------------------------------------------
+# Pyramid Config
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PyramidConfig:
+    branch: str = 'QA'
+    bucket: str = 'carbonplan-ocr'
+    prefix: str = None
+    uri: str = None
+
+    def __post_init__(self):
+        if self.branch == 'prod':
+            self.prefix = 'intermediate/fire-risk/tensor/prod/pyramid.zarr'
+        elif self.branch == 'QA':
+            self.prefix = 'intermediate/fire-risk/tensor/QA/pyramid.zarr'
+        else:
+            raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
+
+        # TODO: Make this more robust with cloudpathlib or UPath
+        self.uri = 's3://' + self.bucket + '/' + self.prefix
+
+
+# ---------------------------------------------------------------------------
+# Icechunk Template Config
+# ---------------------------------------------------------------------------
 @dataclass
 class IcechunkConfig:
     branch: str = 'QA'
@@ -84,10 +114,6 @@ class IcechunkConfig:
     # icechunk_tag: str = 'main' # main=prod
     uri: str = None
 
-    # ---------------------------------------------------------------------------
-
-    # Icechunk Template
-    # ---------------------------------------------------------------------------
     def init_icechunk_repo(self) -> dict:
         """Creates an icechunk repo or opens if does not exist
 
@@ -103,7 +129,7 @@ class IcechunkConfig:
         storage = icechunk.s3_storage(bucket=self.bucket, prefix=self.prefix, from_env=True)
         repo = icechunk.Repository.open(storage)
         if readonly:
-            session = repo.readonly_session()
+            session = repo.readonly_session(branch=branch)
         else:
             session = repo.writable_session(branch=branch)
         return {'repo': repo, 'session': session}
