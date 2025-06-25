@@ -3,10 +3,11 @@
 ::: ocr.pipeline.01_Write_Region
 ::: ocr.pipeline.02_Aggregate
 
+::: ocr.batch
 ::: ocr.chunking_config
 ::: ocr.config
 ::: ocr.datasets
-::: ocr.main
+::: ocr.deploy
 ::: ocr.template
 ::: ocr.utils
 ::: ocr.wind
