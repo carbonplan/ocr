@@ -3,7 +3,14 @@
 name: deploy
 on:
   workflow_dispatch:
-  pull_request:
+    inputs:
+      branch:
+        description: "branch: QA or prod"
+        default: "QA"
+      region_ids:
+        description: "region_ids(s)"
+        required: true
+  # pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,7 +33,21 @@ jobs:
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
 
-      - name: Install the latest version of uv and activate the environment
-        uses: astral-sh/setup-uv@v6
-      - run: uv sync
-      - run: uv pip list
+      # seems like using the python setup version is cached by GH, so might be faster
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v1
+        with:
+          version: "latest"
+
+      - name: installs libs with uv sync, then lists
+        run: |
+          uv sync
+          uv pip list
+
+      - name: Try using inputs
+      - run: echo ${{ github.event.inputs.branch }}
+      - run: echo ${{ github.event.inputs.region_ids }}
