@@ -10,7 +10,6 @@ on:
       region_ids:
         description: "region_ids(s)"
         required: true
-  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
