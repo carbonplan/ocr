@@ -75,10 +75,10 @@ def main(
     # ------------- 03  Tiles ---------------
     batch_manager_03 = CoiledBatchManager(debug=debug)
     batch_manager_03.submit_job(
-        command='pipeline/03_Tiles.sh',
+        command=f'pipeline/03_Tiles.sh {branch}',
         name=f'create-pmtiles-{branch}',
     )
-    # We probably don't need this, but we do get reporting, which is kind of nice.
+    # We probably don't need this, but we do get reporting with it, which is kind of nice.
     batch_manager_03.wait_for_completion()
 
 
