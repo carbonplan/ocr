@@ -13,7 +13,7 @@
 # ex: gpq convert --to=geojson in.geoparquet | tippecanoe -o out.pmtiles
 
 # NOTE/TODO! BRANCH IS HARDCODED
-s5cmd cp --sp 's3://carbonplan-ocr/intermediate/fire-risk/vector/prod/consolidated_geoparquet.parquet' 'region.parquet'
+s5cmd cp --sp "s3://carbonplan-ocr/intermediate/fire-risk/vector/$1/consolidated_geoparquet.parquet" "region.parquet"
 
 # convert to FGB
 ogr2ogr -progress -f FlatGeobuf \
@@ -30,4 +30,4 @@ tippecanoe -o aggregated.pmtiles -l risk -n "USFS BP Risk" -f -P --drop-smallest
 echo tippecanoe tiles done
 
 # schlep it back to s3
-s5cmd cp --sp 'aggregated.pmtiles' 's3://carbonplan-ocr/intermediate/fire-risk/vector/prod/aggregated.pmtiles'
+s5cmd cp --sp "aggregated.pmtiles" "s3://carbonplan-ocr/intermediate/fire-risk/vector/$1/aggregated.pmtiles"

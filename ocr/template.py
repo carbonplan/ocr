@@ -173,10 +173,11 @@ class IcechunkConfig:
             ),
             dims=('latitude', 'longitude'),
         )
-        template['USFS_RPS'] = template_data_array
+        template['risk_2011'] = template_data_array
+        template['risk_2047'] = template_data_array
         template['wind_risk_2011'] = template_data_array
         template['wind_risk_2047'] = template_data_array
-        vars = ['USFS_RPS', 'wind_risk_2011', 'wind_risk_2047']
+        vars = ['risk_2011', 'risk_2047', 'wind_risk_2011', 'wind_risk_2047']
         # Should we modify the encoding var name to match the output of wind: 'risk'?
         template_encoding_dict = {var: var_encoding_dict for var in vars}
         template.to_zarr(

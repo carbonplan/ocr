@@ -1,0 +1,52 @@
+# manual dispatch via github actions of deploy.py pipeline orchestration
+
+name: deploy
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "branch: QA or prod"
+        default: "QA"
+      region_ids:
+        description: "region_ids(s)"
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      # seems like using the python setup version is cached by GH, so might be faster
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v1
+        with:
+          version: "latest"
+
+      - name: installs libs with uv sync, then lists
+        run: |
+          uv sync
+          uv pip list
+
+      - name: Try using inputs
+      - run: echo ${{ github.event.inputs.branch }}
+      - run: echo ${{ github.event.inputs.region_ids }}

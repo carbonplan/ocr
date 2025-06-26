@@ -19,6 +19,7 @@
     "ipdb>=0.13.13",
     "jupyter>=1.1.1",
     "jupyter-server-proxy>=4.4.0",
+    "ndpyramid>=0.4.0",
     "numba>=0.61.2",
     "numbagg>=0.9.0",
     "obstore>=0.6.0",
