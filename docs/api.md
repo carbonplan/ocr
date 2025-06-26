@@ -5,7 +5,6 @@
 
 ::: ocr.batch
 ::: ocr.chunking_config
-::: ocr.config
 ::: ocr.datasets
 ::: ocr.deploy
 ::: ocr.template

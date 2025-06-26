@@ -9,7 +9,7 @@
 <!-- prettier-ignore-start -->
 ::: mkdocs-click
     :module: ocr.deploy
-    :command: deploy
+    :command: main
 <!-- prettier-ignore-end -->
 
 ## 01_Write_Regions
