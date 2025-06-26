@@ -281,8 +281,12 @@ def run_wind_adjustment(region_id: str) -> xr.Dataset:
 
     y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
-    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
-    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
+    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice).chunk(
+        {'latitude': 6000, 'longitude': 4500}
+    )
+    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice).chunk(
+        {'latitude': 6000, 'longitude': 4500}
+    )
 
     # Since important_days / wind is a lower resolution (.25 degrees?), we add in spatial buffer to match the resolution.
     wind_res = 0.25
@@ -307,8 +311,24 @@ def run_wind_adjustment(region_id: str) -> xr.Dataset:
         rps_30_subset=rps_30_subset,
     )
 
-    # Add in USFS 30m 4326 RPS (Risk to Potential Structures) for QA comparison
-    risk_4326_combined = rps_30_subset['RPS'].to_dataset(name='USFS_RPS')
+    # Add in non-wind-adjusted 2011 and 2047 BP*CRPS score for QA comparison
+
+    climate_run_2011_subset_float_corrected = climate_run_2011_subset.assign_coords(
+        latitude=wind_informed_bp_float_corrected_2011.latitude,
+        longitude=wind_informed_bp_float_corrected_2011.longitude,
+    )
+    climate_run_2047_subset_float_corrected = climate_run_2047_subset.assign_coords(
+        latitude=wind_informed_bp_float_corrected_2047.latitude,
+        longitude=wind_informed_bp_float_corrected_2047.longitude,
+    )
+
+    risk_4326_combined = (
+        climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
+    ).to_dataset(name='risk_2011')
+
+    risk_4326_combined['risk_2047'] = (
+        climate_run_2047_subset_float_corrected['BP'] * rps_30_subset['CRPS']
+    )
 
     # Adjust USFS 30m CRPS with wind informed burn probability
     risk_4326_combined['wind_risk_2011'] = (
