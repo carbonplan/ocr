@@ -16,7 +16,7 @@
     "fsspec>=2025.5.1",
     "gcsfs>=2025.5.1",
     "geopandas>=1.0.1",
-    "icechunk==0.2.16",
+    "icechunk==0.2.17",
     "ipdb>=0.13.13",
     "jupyter>=1.1.1",
     "jupyter-server-proxy>=4.4.0",
@@ -151,7 +151,6 @@
     fsspec        = ">=2025.3.0,<2026"
     geodatasets   = ">=2024.8.0,<2025"
     geopandas     = ">=1.0.1,<2"
-    icechunk      = ">=0.2.8,<0.3"
     netcdf4       = ">=1.7.2,<2"
     numba         = ">=0.54"
     numbagg       = ">=0.9.0,<0.10"
@@ -169,6 +168,7 @@
     earthengine-api = ">=1.5.11,<2"
     planetary-computer = ">=1.0.0,<2"
     adlfs = ">=2024.12.0,<2025"
+icechunk = ">=0.2.17,<0.3"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
