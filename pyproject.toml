@@ -14,12 +14,14 @@
     "duckdb>=1.3.0",
     "flox>=0.10.4",
     "fsspec>=2025.5.1",
+    "gcsfs>=2025.5.1",
     "geopandas>=1.0.1",
-    "icechunk==0.2.16",
+    "icechunk==0.2.17",
     "ipdb>=0.13.13",
     "jupyter>=1.1.1",
     "jupyter-server-proxy>=4.4.0",
-    "ndpyramid>=0.4.0",
+    "mapclassify>=2.9.0",
+    "matplotlib>=3.10.3",
     "numba>=0.61.2",
     "numbagg>=0.9.0",
     "obstore>=0.6.0",
@@ -29,10 +31,11 @@
     "pyarrow>=20.0.0",
     "pydantic>=2.11.5",
     "rasterio>=1.4.3",
+    "regionmask>=0.13.0",
     "rioxarray>=0.19.0",
     "s3fs>=2025.5.1",
     "ty>=0.0.1a7",
-    "xarray[accel,io]>=2025.4.0",
+    "xarray>=2025.4.0",
     "zarr>=3.0.8",
 ]
     dynamic         = ["version"]
@@ -148,7 +151,6 @@
     fsspec        = ">=2025.3.0,<2026"
     geodatasets   = ">=2024.8.0,<2025"
     geopandas     = ">=1.0.1,<2"
-    icechunk      = ">=0.2.8,<0.3"
     netcdf4       = ">=1.7.2,<2"
     numba         = ">=0.54"
     numbagg       = ">=0.9.0,<0.10"
@@ -161,11 +163,12 @@
     windrose      = ">=1.9.2 ,<2"
     xarray        = ">=2025.3.0,<2026"
     zarr          = ">=3.0.8,<4"
-jupyterlab = ">=4.4.0,<5"
-geemap = ">=0.35.3,<0.36"
-earthengine-api = ">=1.5.11,<2"
-planetary-computer = ">=1.0.0,<2"
-adlfs = ">=2024.12.0,<2025"
+    jupyterlab = ">=4.4.0,<5"
+    geemap = ">=0.35.3,<0.36"
+    earthengine-api = ">=1.5.11,<2"
+    planetary-computer = ">=1.0.0,<2"
+    adlfs = ">=2024.12.0,<2025"
+icechunk = ">=0.2.17,<0.3"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
@@ -203,6 +206,9 @@ adlfs = ">=2024.12.0,<2025"
     start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
 
+[tool.uv.sources]
+ocr = { workspace = true }
+
 [dependency-groups]
 docs = [
     "markdown-exec>=1.10.3",
@@ -211,5 +217,6 @@ docs = [
     "mkdocs-material>=9.6.14",
     "mkdocstrings>=0.29.1",
     "mkdocstrings-python>=1.16.12",
+    "ocr",
     "ruff>=0.12.0",
 ]
