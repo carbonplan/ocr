@@ -16,13 +16,6 @@ import click
     help='If True, wipes icechunk repo and vector data before initializing.',
 )
 @click.option(
-    '-p',
-    '--pyramid',
-    is_flag=True,
-    default=False,
-    help='Generate ndpyramid, default False',
-)
-@click.option(
     '--debug',
     is_flag=True,
     default=False,
@@ -31,7 +24,6 @@ import click
 def main(
     region_id: tuple[str, ...],
     branch: str = 'QA',
-    pyramid: bool = False,
     wipe: bool = False,
     debug: bool = False,
 ):
@@ -57,13 +49,14 @@ def main(
     batch_manager_01.wait_for_completion()
 
     # ----------- 02 Pyramid -------------
+    # NOTE: We need to do more work on pyramiding - currently excluded
     # This is non-blocking, since there are no post-pyramid dependent operations, so no wait_for_completion (I think)
-    if pyramid:
-        batch_manager_pyarmid_02 = CoiledBatchManager(debug=debug)
-        batch_manager_pyarmid_02.submit_job(
-            command=f'python pipeline/02_Pyramid.py -b {branch}',
-            name=f'create-pyramid-{branch}',
-        )
+    # if pyramid:
+    #     batch_manager_pyarmid_02 = CoiledBatchManager(debug=debug)
+    #     batch_manager_pyarmid_02.submit_job(
+    #         command=f'python pipeline/02_Pyramid.py -b {branch}',
+    #         name=f'create-pyramid-{branch}',
+    #     )
     # ----------- 02 Aggregate -------------
     batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
     batch_manager_aggregate_02.submit_job(
