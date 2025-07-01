@@ -37,7 +37,7 @@ def sample_risk_region(region_id: str, branch: str):
     icechunk_config = IcechunkConfig(branch=branch)
     vector_config = VectorConfig(branch=branch)
 
-    icechunk_repo_and_session = icechunk_config.repo_and_session()
+    icechunk_repo_and_session = icechunk_config.repo_and_session(readonly=True)
     y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
     ds = xr.open_zarr(
         icechunk_repo_and_session['session'].store, consolidated=False, chunks={}
