@@ -9,6 +9,7 @@
 # conda specific deps
 [dependencies]
 python = ">=3.12"
+libgdal = ">=3.8"
 
 [tool.pixi.pypi-options]
 only-binary = ["rasterio", "geopandas", "cartopy"]
