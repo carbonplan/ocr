@@ -28,6 +28,16 @@ jobs:
           cache: false # no pixi.lock
           locked: false
           activate-environment: true
+          run-install: false  
+          
+      - name: Debug platform detection
+        run: |
+          echo "System info:"
+          uname -a
+          echo "Pixi info:"
+          pixi info
+          echo "Available platforms in pixi.toml:"
+          cat pixi.toml | grep platforms
           
       - name: Install with explicit platform
         run: pixi install --platform linux-64
