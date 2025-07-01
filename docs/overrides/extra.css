@@ -1,9 +1,0 @@
-:root,
-[data-md-color-scheme="default-light"] {
-  --md-primary-fg-color: #f07071;
-  --md-default-fg-color: #ebebec;
-}
-[data-md-color-scheme="default-dark"] {
-  --md-primary-fg-color: #f07071;
-  --md-default-fg-color: #f07071;
-}

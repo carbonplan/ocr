@@ -24,7 +24,6 @@ nav:
 theme:
   language: en
   name: material
-  custom_dir: docs/overrides
   logo: assets/monogram-dark-cropped.png
   palette:
     # Palette toggle for light mode
@@ -53,9 +52,6 @@ theme:
     - navigation.tracking
     - search.suggest
     - search.share
-
-extra_css:
-  - overrides/extra.css
 
 plugins:
   - search
