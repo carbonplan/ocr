@@ -9,7 +9,7 @@
     "bottleneck>=1.5.0",
     "cartopy>=0.24.1",
     "click>=8.2.1",
-    "coiled>=1.101.0",
+    "coiled==1.101.1",
     "distributed>=2025.5.1",
     "duckdb>=1.3.0",
     "flox>=0.10.4",
@@ -146,7 +146,6 @@
 
 [tool.pixi.dependencies]
     bottleneck    = ">=1.4.2,<2"
-    coiled        = ">=1.89.0,<2"
     distributed   = ">=2025.2.0,<2026"
     flox          = ">=0.10.1,<0.11"
     fsspec        = ">=2025.3.0,<2026"
@@ -155,7 +154,6 @@
     netcdf4       = ">=1.7.2,<2"
     numba         = ">=0.54"
     numbagg       = ">=0.9.0,<0.10"
-    opencv        = ">=4.10.0,<5"
     opt-einsum    = ">=3.4.0,<4"
     pooch         = ">=1.8.2,<2"
     pydantic      = ">=2.10.6,<3"
@@ -169,7 +167,7 @@
     earthengine-api = ">=1.5.11,<2"
     planetary-computer = ">=1.0.0,<2"
     adlfs = ">=2024.12.0,<2025"
-icechunk = ">=0.2.17,<0.3"
+coiled = "==1.101.1"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
