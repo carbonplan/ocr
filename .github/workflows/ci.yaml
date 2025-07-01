@@ -28,8 +28,7 @@ jobs:
           cache: false # no pixi.lock
           locked: false
           activate-environment: true
-          environment: test
-
+          
       - name: Install with explicit platform
         run: pixi install --platform linux-64
 
