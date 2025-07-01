@@ -10,6 +10,9 @@
 [dependencies]
 python = ">=3.12"
 
+[tool.pixi.pypi-options]
+only-binary = ["rasterio", "geopandas", "cartopy"]
+
 [environments]
     default = { solve-group = "default" }
     data-mgmt = { features = ["data-mgmt"], solve-group = "default" }
