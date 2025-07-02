@@ -9,6 +9,8 @@
 # conda specific deps
 [dependencies]
 python = ">=3.12"
+libgdal = ">=3.11.1,<4"
+
 
 [environments]
     default = { solve-group = "default" }

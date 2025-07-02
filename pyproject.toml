@@ -18,7 +18,6 @@ dependencies    = [
     "jupyter-server-proxy>=4.4.0",
     "jupyter>=1.1.1",
     "jupyterlab>=4.4.0",
-    "numba>=0.61.2",
     "numbagg>=0.9.0",
     "obstore>=0.6.0",
     "odc-geo>=0.4.10",
@@ -32,6 +31,7 @@ dependencies    = [
     "xarray>=2025.4.0",
     "zarr>=3.0.8",
     "pre-commit>=4.2.0",
+    "numpy>=2.2.6",
 ]
 
 
