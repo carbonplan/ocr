@@ -34,12 +34,21 @@ def main(
     # config_init applies any wipe and re-init opts
     IcechunkConfig(branch=branch, wipe=wipe).config_init()
     VectorConfig(branch=branch, wipe=wipe).config_init()
-
+    # chunking_config = ChunkingConfig()
     # ------------- 01 AU ---------------
+    # valid_region_ids = [rid for rid in region_id if not chunking_config.check_region_id_empty(rid)]
+    # invalid_region = set(valid_region_ids) ^ set(region_id)
+
+    # log diff
+    # print(f'valid regions are: {valid_region_ids}')
+    # print(f'invalid regions are: {invalid_region}')
 
     batch_manager_01 = CoiledBatchManager(debug=debug)
+    # this will scale pretty poorly. Should this be a saved list?
+
     # region_id is tuple
     for rid in region_id:
+        # ie. if region_id isn't just all nan's
         batch_manager_01.submit_job(
             command=f'python pipeline/01_Write_Region.py -r {rid} -b {branch}',
             name=f'process-region-{rid}-{branch}',
@@ -58,21 +67,21 @@ def main(
     #         name=f'create-pyramid-{branch}',
     #     )
     # ----------- 02 Aggregate -------------
-    batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
-    batch_manager_aggregate_02.submit_job(
-        command=f'python pipeline/02_Aggregate.py -b {branch}',
-        name=f'aggregate-geoparuqet-{branch}',
-    )
-    batch_manager_aggregate_02.wait_for_completion()
+    # batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
+    # batch_manager_aggregate_02.submit_job(
+    #     command=f'python pipeline/02_Aggregate.py -b {branch}',
+    #     name=f'aggregate-geoparuqet-{branch}',
+    # )
+    # batch_manager_aggregate_02.wait_for_completion()
 
-    # ------------- 03  Tiles ---------------
-    batch_manager_03 = CoiledBatchManager(debug=debug)
-    batch_manager_03.submit_job(
-        command=f'pipeline/03_Tiles.sh {branch}',
-        name=f'create-pmtiles-{branch}',
-    )
-    # We probably don't need this, but we do get reporting with it, which is kind of nice.
-    batch_manager_03.wait_for_completion()
+    # # ------------- 03  Tiles ---------------
+    # batch_manager_03 = CoiledBatchManager(debug=debug)
+    # batch_manager_03.submit_job(
+    #     command=f'pipeline/03_Tiles.sh {branch}',
+    #     name=f'create-pmtiles-{branch}',
+    # )
+    # # We probably don't need this, but we do get reporting with it, which is kind of nice.
+    # batch_manager_03.wait_for_completion()
 
 
 if __name__ == '__main__':

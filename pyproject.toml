@@ -25,12 +25,13 @@ dependencies    = [
     "pyarrow>=20.0.0",
     "pydantic>=2.11.5",
     "rasterio>=1.4.3",
-    "rioxarray>=0.19.0",
     "s3fs>=2025.5.1",
-    "xarray>=2025.4.0",
-    "zarr>=3.0.8",
     "pre-commit>=4.2.0",
     "numpy>=2.2.6",
+    "netcdf4>=1.7.2",
+    "xproj>=0.2.0",
+    "zarr==3.0.8",
+    "xarray==2025.6.1",
 ]
 
 
@@ -61,6 +62,12 @@ data-mgmt = [
     "gcsfs>=2025.5.1",
     "patool>=4.0.0",
     "awscli>=1.40.26",
+    "folium>=0.20.0",
+    "matplotlib>=3.10.3",
+    "mapclassify>=2.9.0",
+    "regionmask>=0.13.0",
+    "scipy>=1.16.0",
+    "tqdm>=4.67.1",
 ]
 
 # Docs includes lint tools for code formatting in docs

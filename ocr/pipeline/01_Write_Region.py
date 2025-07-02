@@ -1,7 +1,7 @@
 # COILED n-tasks 1
 # COILED --region us-west-2
 # COILED --forward-aws-credentials
-# COILED --vm-type m8g.large
+# COILED --vm-type m8g.xlarge
 # COILED --tag project=OCR
 from __future__ import annotations
 

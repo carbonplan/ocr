@@ -67,6 +67,11 @@ class ChunkingConfig(pydantic.BaseModel):
             'x_starts': x_starts,
         }
 
+    def check_region_id_empty(self, region_id: str) -> bool:
+        region_slice = self.region_id_slice_lookup(region_id=region_id)
+        subds = self.ds.isel(latitude=region_slice[1], longitude=region_slice[0])
+        return bool(subds.CRPS.isnull().all().values)
+
     def index_to_coords(self, x_idx, y_idx):
         """Convert array indices to EPSG:4326 coordinates"""
         x, y = self.transform * (x_idx, y_idx)
