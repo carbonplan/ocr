@@ -37,6 +37,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - name: Install docs dependencies
-        run: uv sync --group docs
+        run: uv sync
       - name: Deploy docs
         run: uv run mkdocs gh-deploy --force
