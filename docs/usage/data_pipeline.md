@@ -35,11 +35,37 @@ Python script that uses `duckdb` spatial to aggregate region_id specific geoparq
 
 Bash script that uses `GDAL` and `tippecanoe` to create PMTiles from aggregated geoparquet.
 
+## Choosing valid `region_id`'s
+
+Our input 30 meter dataset and chunking schema contains multiple empty regions. To avoid running regions with no source data, there are some helper utilities to see the available `valid` region_ids.
+
+```python
+
+from ocr.chunking_config import ChunkingConfig
+config = ChunkingConfig()
+
+config.valid_region_ids
+```
+
+Should return a list of valid `region_ids`. ex: `['y1_x3', 'y1_x4', ...]`.
+
 # Example usage:
 
 - run a single region: `uv run python deploy.py -r y2_x4`
 - run multiple regions in parallel: `uv run python deploy.py -r y2_x4 -r y2_x5 -r y2_x6`
 - run a single region on the prod branch with the wipe flag enabled: `uv run python deploy.py -w -b prod -r y2_x4`
+
+## Running CONUS
+
+Running this command should return a CLI string containing all of the valid region_ids. You should check the other flags and alter them as needed.
+
+```python
+
+from ocr.chunking_config import ChunkingConfig
+config = ChunkingConfig()
+
+config.generate_click_all_region_deploy_command
+```
 
 ## Usage notes:
 

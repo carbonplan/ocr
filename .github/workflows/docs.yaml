@@ -36,7 +36,5 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - name: Install docs dependencies
-        run: uv sync --group docs
       - name: Deploy docs
-        run: uv run mkdocs gh-deploy --force
+        run: uv run --extra docs mkdocs gh-deploy --force
