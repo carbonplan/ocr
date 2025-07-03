@@ -226,8 +226,32 @@ class IcechunkConfig:
         self.uri = 's3://' + self.bucket + '/' + self.prefix
 
 
-def get_commit_messages_ancestry(repo: icechunk.repository) -> list:
-    return [commit.message for commit in list(repo.ancestry(branch='main'))]
+def get_commit_messages_ancestry(repo: icechunk.repository, icechunk_branch: str = 'main') -> list:
+    commit_messages = [commit.message for commit in list(repo.ancestry(branch=icechunk_branch))]
+    # separate commits by ',' and handle case of single length ancestry commit history
+    split_commits = [
+        msg
+        for message in commit_messages
+        for msg in (message.split(',') if ',' in message else [message])
+    ]
+    return split_commits
+
+
+def region_id_exists_in_repo(region_id: str, branch: str):
+    from ocr.template import IcechunkConfig
+
+    icechunk_config = IcechunkConfig(branch=branch)
+    icechunk_repo_and_session = icechunk_config.repo_and_session()
+
+    region_ids_in_ancestry = get_commit_messages_ancestry(icechunk_repo_and_session['repo'])
+
+    # check if region_id is already in icechunk commit history
+    if region_id in region_ids_in_ancestry:
+        return True
+    else:
+        # switch to logging
+        print(f'{region_id} already exists in Icechunk ancestry')
+        return False
 
 
 def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
@@ -260,70 +284,22 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
             pass
 
 
-# @dask.delayed
-# def insert_region_uncoop(subset_ds: xr.Dataset, bucket: str, prefix: str, region_id: str):
+# def write_regions(ds: xr.Dataset, bucket: str, prefix: str, region_dict: dict):
 #     storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
-
 #     repo = icechunk.Repository.open(storage)
+#     session = repo.writable_session('main')
 
-#     while True:
-#         try:
-#             session = repo.writable_session('main')
-#             subset_ds.to_zarr(
-#                 session.store,
-#                 region='auto',
-#                 consolidated=False,
+#     # filter out regions that have already been commited
+
+#     uncommited_dict = filter_region_duplicates(repo, region_dict=region_dict)
+
+#     # create dataset subsets
+#     ds_subsets_uncommited = return_ds_subsets_from_region_dict(ds=ds, region_dict=uncommited_dict)
+#     with session.allow_pickling():
+#         tasks = [
+#             insert_region_uncoop(
+#                 subset_ds=subset_ds, bucket=bucket, prefix=prefix, region_id=region_id
 #             )
-
-#             session.commit(f'{region_id}')
-#             print(f'Wrote region: {region_id}')
-#             break
-
-#         except icechunk.ConflictError:
-#             print(f'conflict for region_commit_history {region_id}, retrying')
-#             pass
-
-
-def return_ds_subsets_from_region_dict(ds: xr.Dataset, region_dict: dict) -> dict:
-    return {
-        region_id: ds.sel(x=x_slice, y=y_slice)
-        for region_id, (x_slice, y_slice) in region_dict.items()
-    }
-
-
-def filter_region_duplicates(repo: icechunk.Repository, region_dict) -> dict:
-    commit_messages = get_commit_messages_ancestry(repo)
-    already_commited_messages = [
-        msg
-        for message in commit_messages
-        for msg in (message.split(',') if ',' in message else [message])
-    ]
-    uncommited_dict = {
-        key: subset for key, subset in region_dict.items() if key not in already_commited_messages
-    }
-    if not uncommited_dict:
-        # ie empty dict
-        raise ValueError('No new regions to commit')
-    else:
-        return uncommited_dict
-
-
-def write_regions(ds: xr.Dataset, bucket: str, prefix: str, region_dict: dict):
-    storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
-    repo = icechunk.Repository.open(storage)
-    session = repo.writable_session('main')
-
-    # filter out regions that have already been commited
-
-    uncommited_dict = filter_region_duplicates(repo, region_dict=region_dict)
-
-    # create dataset subsets
-    ds_subsets_uncommited = return_ds_subsets_from_region_dict(ds=ds, region_dict=uncommited_dict)
-    with session.allow_pickling():
-        tasks = [
-            insert_region_uncoop(
-                subset_ds=subset_ds, bucket=bucket, prefix=prefix, region_id=region_id
-            )
-            for region_id, subset_ds in ds_subsets_uncommited.items()
-        ]
-        dask.compute(*tasks)
+#             for region_id, subset_ds in ds_subsets_uncommited.items()
+#         ]
+#         dask.compute(*tasks)
