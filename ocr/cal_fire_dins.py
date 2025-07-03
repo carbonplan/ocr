@@ -5,6 +5,7 @@ import geopandas as gpd
 from ocr.datasets import catalog
 
 
+# Depreciate? - potentially unused
 def load_structures_destroyed(
     fire_name: str,
     columns: list[str] | None = None,
