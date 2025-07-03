@@ -4,6 +4,7 @@ import numpy as np
 import xarray as xr
 
 
+# Depreciate? - potentially unused
 def generate_angles() -> dict[str, float]:
     """Generate a dictionary mapping cardinal/ordinal directions to their starting angles in degrees.
 
@@ -188,6 +189,7 @@ def apply_mode_calc(direction_indices_ds: xr.Dataset) -> xr.Dataset:
     )
 
 
+# Depreciate? - potentially unused
 def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) -> xr.Dataset:
     from rasterio.warp import Resampling
 
