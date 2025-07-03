@@ -3,41 +3,80 @@
     requires      = ["setuptools-scm[toml]>=6.2", "setuptools>=64", "wheel"]
 
 [project]
-
-    dependencies    = [
+dependencies    = [
     "bokeh>=3.7.3",
     "bottleneck>=1.5.0",
     "cartopy>=0.24.1",
     "click>=8.2.1",
-    "coiled>=1.101.0",
+    "coiled==1.101.1",
     "distributed>=2025.5.1",
     "duckdb>=1.3.0",
     "flox>=0.10.4",
     "fsspec>=2025.5.1",
     "geopandas>=1.0.1",
-    "icechunk==0.2.16",
-    "ipdb>=0.13.13",
-    "jupyter>=1.1.1",
+    "icechunk",
     "jupyter-server-proxy>=4.4.0",
-    "ndpyramid>=0.4.0",
-    "numba>=0.61.2",
-    "numbagg>=0.9.0",
+    "jupyter>=1.1.1",
+    "jupyterlab>=4.4.0",
     "obstore>=0.6.0",
     "odc-geo>=0.4.10",
+    "opencv-python>=4.11.0.86",
     "opt-einsum>=3.4.0",
-    "pre-commit>=4.2.0",
     "pyarrow>=20.0.0",
     "pydantic>=2.11.5",
     "rasterio>=1.4.3",
     "rioxarray>=0.19.0",
     "s3fs>=2025.5.1",
-    "ty>=0.0.1a7",
-    "xarray[accel,io]>=2025.4.0",
+    "xarray>=2025.4.0",
     "zarr>=3.0.8",
+    "pre-commit>=4.2.0",
+    "numpy>=2.2.6",
 ]
-    dynamic         = ["version"]
-    name            = "ocr"
-    requires-python = ">= 3.12"
+
+
+dynamic         = ["version"]
+name            = "ocr"
+requires-python = ">= 3.12"
+
+
+[project.optional-dependencies]
+lint = [
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.0",
+    "ty>=0.0.1a7",
+    "pre-commit>=4.2.0"
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "ipdb>=0.13.13"
+]
+data-mgmt = [
+    "boto3>=1.37.1",
+    "jupyterlab>=4.3.6",
+    "planetary-computer>=1.0.0",
+    "geemap>=0.35.3",
+    "earthengine-api>=1.5.11",
+    "adlfs>=2024.12.0",
+    "gcsfs>=2025.5.1",
+    "patool>=4.0.0",
+    "awscli>=1.40.26",
+]
+
+# Docs includes lint tools for code formatting in docs
+docs = [
+    "ocr[lint]",
+    "markdown-exec>=1.10.3",
+    "mkdocs>=1.6.1",
+    "mkdocs-click>=0.9.0",
+    "mkdocs-material>=9.6.14",
+    "mkdocstrings>=0.29.1",
+    "mkdocstrings-python>=1.16.12",
+]
+
+
+dev = ["ocr[test,lint,docs]"]
+
 
 [tool.setuptools.packages.find]
     include = ["ocr*"]
@@ -86,6 +125,7 @@
         "site-packages",
         "venv",
     ]
+
 [tool.ruff.lint]
     ignore = [
         "E501", # Conflicts with ruff format
@@ -132,84 +172,5 @@
     ]
     console_output_style = "count"
 
-[tool.pixi.project]
-    channels  = ["conda-forge"]
-    name      = "ocr"
-    platforms = ["linux-64", "osx-arm64", "osx-64"]
-
-[tool.pixi.pypi-dependencies]
-    ocr = { path = ".", editable = true }
-
-[tool.pixi.dependencies]
-    bottleneck    = ">=1.4.2,<2"
-    coiled        = ">=1.89.0,<2"
-    distributed   = ">=2025.2.0,<2026"
-    flox          = ">=0.10.1,<0.11"
-    fsspec        = ">=2025.3.0,<2026"
-    geodatasets   = ">=2024.8.0,<2025"
-    geopandas     = ">=1.0.1,<2"
-    icechunk      = ">=0.2.8,<0.3"
-    netcdf4       = ">=1.7.2,<2"
-    numba         = ">=0.54"
-    numbagg       = ">=0.9.0,<0.10"
-    opencv        = ">=4.10.0,<5"
-    opt-einsum    = ">=3.4.0,<4"
-    pooch         = ">=1.8.2,<2"
-    pydantic      = ">=2.10.6,<3"
-    python-duckdb = ">=1.2.1,<2"
-    s3fs          = ">=2025.3.0,<2026"
-    windrose      = ">=1.9.2 ,<2"
-    xarray        = ">=2025.3.0,<2026"
-    zarr          = ">=3.0.8,<4"
-jupyterlab = ">=4.4.0,<5"
-geemap = ">=0.35.3,<0.36"
-earthengine-api = ">=1.5.11,<2"
-planetary-computer = ">=1.0.0,<2"
-adlfs = ">=2024.12.0,<2025"
-
-[tool.pixi.environments]
-    data-mgmt = ["data-mgmt"]
-    lint      = ["lint"]
-    test      = ["test"]
-
-[tool.pixi.feature.test.dependencies]
-    pytest     = ">=8.3.5,<9"
-    pytest-cov = ">=6.0.0,<7"
-
-[tool.pixi.feature.lint.dependencies]
-    pre-commit = ">=4.2.0,<5"
-    ruff       = ">=0.11.0,<0.12"
-
-[tool.pixi.feature.data-mgmt.dependencies]
-    awscli     = ">=2.25.1,<3"
-    boto3      = ">=1.37.1,<2"
-    jupyterlab = ">=4.3.6,<5"
-    patool     = ">=4.0.0,<5"
-
-
-[tool.pixi.feature.test.tasks]
-    tests = { cmd = "pytest" }
-
-[tool.pixi.feature.lint.tasks]
-    format    = { cmd = "ruff format" }
-    lint      = { cmd = "ruff" }
-    precommit = { cmd = "pre-commit run" }
-
-[tool.pixi.feature.data-mgmt.tasks]
-    jupyter = { cmd = "jupyter lab" }
-
-[tool.pixi.tasks]
-    export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
-    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
-    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
-
-[dependency-groups]
-docs = [
-    "markdown-exec>=1.10.3",
-    "mkdocs>=1.6.1",
-    "mkdocs-click>=0.9.0",
-    "mkdocs-material>=9.6.14",
-    "mkdocstrings>=0.29.1",
-    "mkdocstrings-python>=1.16.12",
-    "ruff>=0.12.0",
-]
+[tool.uv.sources]
+ocr = { workspace = true }
