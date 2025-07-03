@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 import click
 
+from ocr.template import region_id_exists_in_repo
+
 if TYPE_CHECKING:
     pass
 
@@ -90,6 +92,7 @@ def run_wind_region(region_id: str, branch: str):
     # Using the Icechunk uncooperative writes method: https://icechunk.io/en/latest/icechunk-python/parallel/#uncooperative-distributed-writes
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
     insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id, branch=branch)
+
     # only use dask for xarray, shutdown for duckdb wind sample
 
 
@@ -97,8 +100,13 @@ def run_wind_region(region_id: str, branch: str):
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 @click.option('-b', '--branch', help='data branch: [QA, prod]. Default QA')
 def main(region_id: str, branch: str):
-    run_wind_region(region_id, branch)
-    sample_risk_region(region_id, branch)
+    if region_id_exists_in_repo(region_id=region_id, branch=branch):
+        # switch to logging
+        print(f'{region_id} already exists in Icechunk store')
+
+    else:
+        run_wind_region(region_id, branch)
+        sample_risk_region(region_id, branch)
 
 
 if __name__ == '__main__':

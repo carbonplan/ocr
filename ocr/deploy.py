@@ -29,29 +29,17 @@ def main(
 ):
     # from ocr.config import BatchJobs
     from ocr.batch import CoiledBatchManager
-    from ocr.chunking_config import ChunkingConfig
     from ocr.template import IcechunkConfig, VectorConfig
 
     # config_init applies any wipe and re-init opts
     IcechunkConfig(branch=branch, wipe=wipe).config_init()
     VectorConfig(branch=branch, wipe=wipe).config_init()
-    config = ChunkingConfig()
-
-    valid_region_ids = set(config.valid_region_ids)
-    # the overlapping values from the full valid region_id list and the submitted region_ids
-    submitted_valid_region_ids = valid_region_ids.intersection(set(region_id))
-    # invalid region_ids
-    invalid_region_ids = set(region_id).difference(submitted_valid_region_ids)
-
-    print(
-        f'Skipping these submitted region_ids because they are missing source data: {invalid_region_ids}'
-    )
 
     # ------------- 01 AU ---------------
 
     batch_manager_01 = CoiledBatchManager(debug=debug)
     # region_id is tuple
-    for rid in submitted_valid_region_ids:
+    for rid in region_id:
         batch_manager_01.submit_job(
             command=f'python pipeline/01_Write_Region.py -r {rid} -b {branch}',
             name=f'process-region-{rid}-{branch}',
