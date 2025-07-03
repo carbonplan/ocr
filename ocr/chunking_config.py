@@ -67,6 +67,455 @@ class ChunkingConfig(pydantic.BaseModel):
             'x_starts': x_starts,
         }
 
+    def generate_click_all_region_deploy_command(self):
+        region_ids = self.valid_region_ids()
+        deploy_str = 'uv run python deploy.py '
+        for rid in region_ids:
+            deploy_str += f'-r {rid} '
+        return deploy_str
+
+    def valid_region_ids(self) -> list:
+        # generated and saved from generate_valid_region_ids()
+        return [
+            'y1_x3',
+            'y1_x4',
+            'y1_x5',
+            'y1_x6',
+            'y1_x7',
+            'y1_x8',
+            'y1_x9',
+            'y1_x10',
+            'y1_x11',
+            'y1_x12',
+            'y1_x13',
+            'y1_x14',
+            'y1_x15',
+            'y1_x16',
+            'y1_x17',
+            'y1_x18',
+            'y1_x19',
+            'y1_x20',
+            'y1_x21',
+            'y1_x22',
+            'y1_x23',
+            'y1_x24',
+            'y2_x2',
+            'y2_x3',
+            'y2_x4',
+            'y2_x5',
+            'y2_x6',
+            'y2_x7',
+            'y2_x8',
+            'y2_x9',
+            'y2_x10',
+            'y2_x11',
+            'y2_x12',
+            'y2_x13',
+            'y2_x14',
+            'y2_x15',
+            'y2_x16',
+            'y2_x17',
+            'y2_x18',
+            'y2_x19',
+            'y2_x20',
+            'y2_x21',
+            'y2_x22',
+            'y2_x23',
+            'y2_x24',
+            'y2_x25',
+            'y2_x26',
+            'y2_x27',
+            'y2_x28',
+            'y2_x29',
+            'y2_x30',
+            'y2_x31',
+            'y2_x42',
+            'y2_x43',
+            'y3_x2',
+            'y3_x3',
+            'y3_x4',
+            'y3_x5',
+            'y3_x6',
+            'y3_x7',
+            'y3_x8',
+            'y3_x9',
+            'y3_x10',
+            'y3_x11',
+            'y3_x12',
+            'y3_x13',
+            'y3_x14',
+            'y3_x15',
+            'y3_x16',
+            'y3_x17',
+            'y3_x18',
+            'y3_x19',
+            'y3_x20',
+            'y3_x21',
+            'y3_x22',
+            'y3_x23',
+            'y3_x24',
+            'y3_x25',
+            'y3_x26',
+            'y3_x27',
+            'y3_x28',
+            'y3_x29',
+            'y3_x30',
+            'y3_x31',
+            'y3_x32',
+            'y3_x33',
+            'y3_x41',
+            'y3_x42',
+            'y3_x43',
+            'y3_x44',
+            'y4_x2',
+            'y4_x3',
+            'y4_x4',
+            'y4_x5',
+            'y4_x6',
+            'y4_x7',
+            'y4_x8',
+            'y4_x9',
+            'y4_x10',
+            'y4_x11',
+            'y4_x12',
+            'y4_x13',
+            'y4_x14',
+            'y4_x15',
+            'y4_x16',
+            'y4_x17',
+            'y4_x18',
+            'y4_x19',
+            'y4_x20',
+            'y4_x21',
+            'y4_x22',
+            'y4_x23',
+            'y4_x24',
+            'y4_x25',
+            'y4_x26',
+            'y4_x27',
+            'y4_x28',
+            'y4_x29',
+            'y4_x30',
+            'y4_x31',
+            'y4_x32',
+            'y4_x33',
+            'y4_x35',
+            'y4_x36',
+            'y4_x37',
+            'y4_x38',
+            'y4_x39',
+            'y4_x40',
+            'y4_x41',
+            'y4_x42',
+            'y4_x43',
+            'y4_x44',
+            'y5_x2',
+            'y5_x3',
+            'y5_x4',
+            'y5_x5',
+            'y5_x6',
+            'y5_x7',
+            'y5_x8',
+            'y5_x9',
+            'y5_x10',
+            'y5_x11',
+            'y5_x12',
+            'y5_x13',
+            'y5_x14',
+            'y5_x15',
+            'y5_x16',
+            'y5_x17',
+            'y5_x18',
+            'y5_x19',
+            'y5_x20',
+            'y5_x21',
+            'y5_x22',
+            'y5_x23',
+            'y5_x24',
+            'y5_x25',
+            'y5_x26',
+            'y5_x27',
+            'y5_x28',
+            'y5_x29',
+            'y5_x30',
+            'y5_x31',
+            'y5_x32',
+            'y5_x33',
+            'y5_x34',
+            'y5_x35',
+            'y5_x36',
+            'y5_x37',
+            'y5_x38',
+            'y5_x39',
+            'y5_x40',
+            'y5_x41',
+            'y5_x42',
+            'y6_x2',
+            'y6_x3',
+            'y6_x4',
+            'y6_x5',
+            'y6_x6',
+            'y6_x7',
+            'y6_x8',
+            'y6_x9',
+            'y6_x10',
+            'y6_x11',
+            'y6_x12',
+            'y6_x13',
+            'y6_x14',
+            'y6_x15',
+            'y6_x16',
+            'y6_x17',
+            'y6_x18',
+            'y6_x19',
+            'y6_x20',
+            'y6_x21',
+            'y6_x22',
+            'y6_x23',
+            'y6_x24',
+            'y6_x25',
+            'y6_x26',
+            'y6_x27',
+            'y6_x28',
+            'y6_x29',
+            'y6_x30',
+            'y6_x31',
+            'y6_x32',
+            'y6_x33',
+            'y6_x34',
+            'y6_x35',
+            'y6_x36',
+            'y6_x37',
+            'y6_x38',
+            'y6_x39',
+            'y6_x40',
+            'y6_x41',
+            'y6_x42',
+            'y7_x3',
+            'y7_x4',
+            'y7_x5',
+            'y7_x6',
+            'y7_x7',
+            'y7_x8',
+            'y7_x9',
+            'y7_x10',
+            'y7_x11',
+            'y7_x12',
+            'y7_x13',
+            'y7_x14',
+            'y7_x15',
+            'y7_x16',
+            'y7_x17',
+            'y7_x18',
+            'y7_x19',
+            'y7_x20',
+            'y7_x21',
+            'y7_x22',
+            'y7_x23',
+            'y7_x24',
+            'y7_x25',
+            'y7_x26',
+            'y7_x27',
+            'y7_x28',
+            'y7_x29',
+            'y7_x30',
+            'y7_x31',
+            'y7_x32',
+            'y7_x33',
+            'y7_x34',
+            'y7_x35',
+            'y7_x36',
+            'y7_x37',
+            'y7_x38',
+            'y7_x39',
+            'y8_x3',
+            'y8_x4',
+            'y8_x5',
+            'y8_x6',
+            'y8_x7',
+            'y8_x8',
+            'y8_x9',
+            'y8_x10',
+            'y8_x11',
+            'y8_x12',
+            'y8_x13',
+            'y8_x14',
+            'y8_x15',
+            'y8_x16',
+            'y8_x17',
+            'y8_x18',
+            'y8_x19',
+            'y8_x20',
+            'y8_x21',
+            'y8_x22',
+            'y8_x23',
+            'y8_x24',
+            'y8_x25',
+            'y8_x26',
+            'y8_x27',
+            'y8_x28',
+            'y8_x29',
+            'y8_x30',
+            'y8_x31',
+            'y8_x32',
+            'y8_x33',
+            'y8_x34',
+            'y8_x35',
+            'y8_x36',
+            'y8_x37',
+            'y8_x38',
+            'y9_x4',
+            'y9_x5',
+            'y9_x6',
+            'y9_x7',
+            'y9_x8',
+            'y9_x9',
+            'y9_x10',
+            'y9_x11',
+            'y9_x12',
+            'y9_x13',
+            'y9_x14',
+            'y9_x15',
+            'y9_x16',
+            'y9_x17',
+            'y9_x18',
+            'y9_x19',
+            'y9_x20',
+            'y9_x21',
+            'y9_x22',
+            'y9_x23',
+            'y9_x24',
+            'y9_x25',
+            'y9_x26',
+            'y9_x27',
+            'y9_x28',
+            'y9_x29',
+            'y9_x30',
+            'y9_x31',
+            'y9_x32',
+            'y9_x33',
+            'y9_x34',
+            'y9_x35',
+            'y9_x36',
+            'y9_x37',
+            'y9_x38',
+            'y10_x5',
+            'y10_x6',
+            'y10_x7',
+            'y10_x8',
+            'y10_x9',
+            'y10_x10',
+            'y10_x11',
+            'y10_x12',
+            'y10_x13',
+            'y10_x14',
+            'y10_x15',
+            'y10_x16',
+            'y10_x17',
+            'y10_x18',
+            'y10_x19',
+            'y10_x20',
+            'y10_x21',
+            'y10_x22',
+            'y10_x23',
+            'y10_x24',
+            'y10_x25',
+            'y10_x26',
+            'y10_x27',
+            'y10_x28',
+            'y10_x29',
+            'y10_x30',
+            'y10_x31',
+            'y10_x32',
+            'y10_x33',
+            'y10_x34',
+            'y10_x35',
+            'y10_x36',
+            'y11_x10',
+            'y11_x11',
+            'y11_x12',
+            'y11_x13',
+            'y11_x14',
+            'y11_x15',
+            'y11_x16',
+            'y11_x17',
+            'y11_x18',
+            'y11_x19',
+            'y11_x20',
+            'y11_x21',
+            'y11_x22',
+            'y11_x23',
+            'y11_x24',
+            'y11_x25',
+            'y11_x26',
+            'y11_x27',
+            'y11_x28',
+            'y11_x29',
+            'y11_x30',
+            'y11_x31',
+            'y11_x32',
+            'y11_x33',
+            'y11_x34',
+            'y12_x17',
+            'y12_x18',
+            'y12_x19',
+            'y12_x20',
+            'y12_x21',
+            'y12_x22',
+            'y12_x23',
+            'y12_x24',
+            'y12_x25',
+            'y12_x26',
+            'y12_x27',
+            'y12_x28',
+            'y12_x29',
+            'y12_x30',
+            'y12_x31',
+            'y12_x32',
+            'y12_x33',
+            'y12_x34',
+            'y13_x20',
+            'y13_x21',
+            'y13_x22',
+            'y13_x23',
+            'y13_x32',
+            'y13_x33',
+            'y13_x34',
+            'y14_x21',
+            'y14_x22',
+            'y14_x33',
+            'y14_x34',
+            'y15_x32',
+            'y15_x33',
+            'y15_x34',
+        ]
+
+    def generate_valid_region_ids(self) -> list:
+        # could be refactored - gets all the region_ids and their lat_lon slices
+        # This was used once to generate the stored list in `valid_region_ids()`
+        from tqdm import tqdm
+
+        region_id_chunk_slices = {}
+        chunk_info = self.chunk_info
+        y_starts = chunk_info['y_starts']
+        x_starts = chunk_info['x_starts']
+        for iy, _ in enumerate(y_starts):
+            for ix, _ in enumerate(x_starts):
+                region_id = f'y{iy}_x{ix}'
+                y_slice, x_slice = self.region_id_to_latlon_slices(region_id=region_id)
+                region_id_chunk_slices[region_id] = (y_slice, x_slice)
+
+        # For a given region_id, this will check if the data array is empty.
+        empty_region_ids = []
+        valid_region_ids = []
+        for region_id, region_slice in tqdm(region_id_chunk_slices.items()):
+            subds = self.ds.sel(latitude=region_slice[0], longitude=region_slice[1])
+            all_null = bool(subds.CRPS.isnull().all().values)
+            if not all_null:
+                valid_region_ids.append(region_id)
+            else:
+                empty_region_ids.append(region_id)
+
     def index_to_coords(self, x_idx, y_idx):
         """Convert array indices to EPSG:4326 coordinates"""
         x, y = self.transform * (x_idx, y_idx)
@@ -274,502 +723,3 @@ class ChunkingConfig(pydantic.BaseModel):
 
         plt.tight_layout()
         plt.show()
-
-
-#
-# class ChunkingConfig(pydantic.BaseModel):
-#     chunks: dict | None = None
-
-#     def model_post_init(self, __context):
-#         self.chunks = self.chunks or dict(zip(['x', 'y'], self.ds.CRPS.data.chunksize))
-
-#     def __repr__(self):
-#         # TODO: Should this be the tuple rep and/or the lat/lon repr
-#         return self.extent.__repr__()
-
-#     @functools.cached_property
-#     def extent(self):
-#         # TODO: float or int
-#         return box(
-#             minx=int(self.ds.x.min()),
-#             maxx=int(self.ds.x.max()),
-#             miny=int(self.ds.y.min()),
-#             maxy=int(self.ds.y.max()),
-#         )
-
-#     @functools.cached_property
-#     def extent_as_tuple(self):
-#         bounds = self.extent.bounds
-#         return (bounds[0], bounds[2], bounds[1], bounds[3])
-
-#     @functools.cached_property
-#     def ds(self):
-#         dataset = (
-#             catalog.get_dataset('USFS-wildfire-risk-communities')
-#             .to_xarray()
-#             .astype('float32')[['CRPS']]
-#         )
-#         dataset = dataset.odc.assign_crs('epsg:5070')
-#         return dataset
-
-#     @functools.cached_property
-#     def transform(self):
-#         return self.ds.odc.geobox.transform
-
-#     @functools.cached_property
-#     def chunk_info(self) -> dict:
-#         """Get information about the dataset's chunks"""
-#         y_chunks, x_chunks = self.ds.CRPS.data.chunks
-#         y_starts = np.cumsum([0] + list(y_chunks[:-1]))
-#         x_starts = np.cumsum([0] + list(x_chunks[:-1]))
-
-#         return {
-#             'y_chunks': y_chunks,
-#             'x_chunks': x_chunks,
-#             'y_starts': y_starts,
-#             'x_starts': x_starts,
-#         }
-
-#     def bbox_from_wgs84(self, xmin, ymin, xmax, ymax):
-#         "https://observablehq.com/@rdmurphy/u-s-state-bounding-boxes"
-
-#         # Create GeoDataFrame with bounding box
-#         bbox_wgs84 = gpd.GeoDataFrame(geometry=[box(xmin, ymin, xmax, ymax)], crs='EPSG:4326')
-
-#         # Reproject to EPSG:5070
-#         bbox_5070 = bbox_wgs84.to_crs(epsg=5070)
-
-#         # Output new bounds
-#         # print(bbox_5070.total_bounds)  # [xmin, ymin, xmax, ymax] in EPSG:5070
-#         bbox = box(*bbox_5070.total_bounds)
-#         return bbox
-
-#     def index_to_coords(self, x_idx, y_idx):
-#         """Convert array indices to EPSG:5070 coordinates"""
-#         x, y = self.transform * (x_idx, y_idx)
-#         return x, y
-
-#     def chunks_to_slices(self, chunks: dict) -> dict:
-#         """Create a dict of chunk_ids and slices from input chunk dict"""
-#         return {key: self.chunk_id_to_slice(value) for key, value in chunks.items()}
-
-#     def region_id_chunk_lookup(self, region_id: str) -> tuple:
-#         """given a region_id, ex: 'y5_x14, returns the corresponding chunk (5, 14)"""
-#         return self.get_chunk_mapping()[region_id]
-
-#     def region_id_slice_lookup(self, region_id: str) -> tuple:
-#         """given a region_id, ex: 'y5_x14, returns the corresponding x,y slices. ex:
-#         (slice(np.int64(30000), np.int64(36000), None),
-#         slice(np.int64(85500), np.int64(90000), None))"""
-#         return self.chunk_id_to_slice(self.region_id_chunk_lookup(region_id))
-
-#     def chunk_id_to_slice(self, chunk_id):
-#         """
-#         Convert a chunk ID (iy, ix) to corresponding array slices
-
-#         Parameters
-#         ----------
-#         chunk_id : tuple
-#             The chunk identifier as a tuple (iy, ix) where:
-#             - iy is the index along y-dimension
-#             - ix is the index along x-dimension
-
-#         Returns
-#         -------
-#         tuple[slice]
-#             A tuple of slices (y_slice, x_slice) to extract data for this chunk
-#         """
-#         iy, ix = chunk_id
-
-#         # Get chunk info
-#         chunk_info = self.chunk_info
-#         y_chunks = chunk_info['y_chunks']
-#         x_chunks = chunk_info['x_chunks']
-#         y_starts = chunk_info['y_starts']
-#         x_starts = chunk_info['x_starts']
-
-#         # Validate chunk indices
-#         if iy < 0 or iy >= len(y_chunks) or ix < 0 or ix >= len(x_chunks):
-#             raise ValueError(f'Invalid chunk ID: {chunk_id}. Out of bounds.')
-
-#         # Get start positions for this chunk
-#         y_start = y_starts[iy]
-#         x_start = x_starts[ix]
-
-#         # Get sizes for this chunk
-#         y_size = y_chunks[iy]
-#         x_size = x_chunks[ix]
-
-#         # Create and return the slices
-#         y_slice = slice(y_start, y_start + y_size)
-#         x_slice = slice(x_start, x_start + x_size)
-
-#         return (y_slice, x_slice)
-
-#     def chunk_id_to_bounds(self, chunk_id):
-#         """
-#         Get the geographic bounds of a chunk in EPSG:5070 coordinates
-
-#         Parameters
-#         ----------
-#         chunk_id : tuple
-#             The chunk identifier as a tuple (iy, ix)
-
-#         Returns
-#         -------
-#         tuple
-#             (x_min, y_min, x_max, y_max) bounds in EPSG:5070 coordinates
-#         """
-#         # Get array slices for this chunk
-#         y_slice, x_slice = self.chunk_id_to_slice(chunk_id)
-
-#         # Convert corners to coordinates
-#         x_min, y_max = self.index_to_coords(x_slice.start, y_slice.start)  # upper-left
-#         x_max, y_min = self.index_to_coords(x_slice.stop, y_slice.stop)  # lower-right
-
-#         return box(x_min, y_min, x_max, y_max)
-
-#     def get_chunk_mapping(self):
-#         """Returns a dict of region_ids and their corresponding chunk_indexes."""
-#         chunk_info = self.chunk_info
-#         y_starts = chunk_info['y_starts']
-#         x_starts = chunk_info['x_starts']
-
-#         chunk_mapping = {}
-#         for iy, y0 in enumerate(y_starts):
-#             for ix, x0 in enumerate(x_starts):
-#                 chunk_mapping[f'y{iy}_x{ix}'] = (iy, ix)
-
-#         return chunk_mapping
-
-#     # def get_chunks_for_bbox(self, bbox):
-#     #     """
-#     #     Find all chunks that intersect with the given bounding box
-
-#     #     Parameters
-#     #     ----------
-#     #     bbox : BoundingBox or tuple
-#     #         Bounding box to check for intersection. If tuple, format is (minx, miny, maxx, maxy)
-
-#     #     Returns
-#     #     -------
-#     #     list of tuples
-#     #         List of (iy, ix) tuples identifying the intersecting chunks
-#     #     """
-#     #     # Convert tuple to BoundingBox if needed
-#     #     if isinstance(bbox, tuple):
-#     #         if len(bbox) == 4:
-#     #             bbox = box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
-#     #         else:
-#     #             raise ValueError('Bounding box tuple must have 4 elements (minx, miny, maxx, maxy)')
-
-#     #     # Get chunk info
-#     #     chunk_info = self.chunk_info
-#     #     y_chunks = chunk_info['y_chunks']
-#     #     x_chunks = chunk_info['x_chunks']
-#     #     y_starts = chunk_info['y_starts']
-#     #     x_starts = chunk_info['x_starts']
-
-#     #     # Find intersecting chunks
-#     #     intersecting_chunks = {}
-
-#     #     for iy, y0 in enumerate(y_starts):
-#     #         h = y_chunks[iy]
-#     #         for ix, x0 in enumerate(x_starts):
-#     #             w = x_chunks[ix]
-
-#     #             # Get chunk boundaries in geographic coordinates
-#     #             xx0, yy0 = self.index_to_coords(x0, y0)
-#     #             xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
-
-#     #             # Create a box for this chunk (note Y axis flip)
-#     #             chunk_box = box(xx0, yy1, xx1, yy0)
-
-#     #             # Check for intersection
-#     #             if bbox.intersects(chunk_box):
-#     #                 intersecting_chunks[f'y{iy}_x{ix}'] = (iy, ix)
-
-#     #     return intersecting_chunks
-
-#     def combine_chunk_slices(self, chunk_slices_dict):
-#         """
-#         Combine multiple chunk slices into a single y_slice and x_slice
-#         that spans the entire region.
-#         Usage:
-#         y_slice, x_slice = config.combine_chunk_slices(chunk_slices_ca)
-#         y_slice, x_slice
-#         Parameters
-#         ----------
-#         chunk_slices_dict : dict
-#             Dictionary mapping chunk IDs to (y_slice, x_slice) tuples
-#         Returns
-#         -------
-#         tuple
-#             (y_slice, x_slice) covering the entire region
-#         """
-#         # Initialize with extreme values
-#         y_min = float('inf')
-#         y_max = float('-inf')
-#         x_min = float('inf')
-#         x_max = float('-inf')
-
-#         # Find min start and max stop for both dimensions
-#         for chunk_id, (y_slice, x_slice) in chunk_slices_dict.items():
-#             y_min = min(y_min, y_slice.start)
-#             y_max = max(y_max, y_slice.stop)
-#             x_min = min(x_min, x_slice.start)
-#             x_max = max(x_max, x_slice.stop)
-
-#         # Create combined slices
-#         y_slice = slice(np.int64(y_min), np.int64(y_max), None)
-#         x_slice = slice(np.int64(x_min), np.int64(x_max), None)
-
-#         return y_slice, x_slice
-
-#     def plot_all_chunks(self, color_by_size=False):
-#         """
-#         Plot all data chunks across the entire CONUS with their indices as labels
-
-#         Parameters
-#         ----------
-#         color_by_size : bool, default False
-#             If True, color chunks based on their size (useful to identify irregularities)
-#         """
-#         # Create figure
-#         fig, ax = plt.subplots(figsize=(16, 12), subplot_kw={'projection': ccrs.epsg(5070)})
-
-#         # Set extent to show CONUS
-#         print(self.extent_as_tuple)
-#         ax.set_extent(self.extent_as_tuple, crs=ccrs.epsg(5070))
-
-#         # Get chunk information
-#         chunk_info = self.chunk_info
-#         y_chunks = chunk_info['y_chunks']
-#         x_chunks = chunk_info['x_chunks']
-#         y_starts = chunk_info['y_starts']
-#         x_starts = chunk_info['x_starts']
-
-#         # Track chunk sizes for coloring if needed
-#         if color_by_size:
-#             sizes = [
-#                 y_chunks[iy] * x_chunks[ix]
-#                 for iy in range(len(y_chunks))
-#                 for ix in range(len(x_chunks))
-#             ]
-#             min_size = min(sizes)
-#             max_size = max(sizes)
-
-#             norm = mcolors.Normalize(vmin=min_size, vmax=max_size)
-#             cmap = cm.viridis
-
-#         # Draw each chunk with label
-#         for iy, y0 in enumerate(y_starts):
-#             h = y_chunks[iy]
-#             for ix, x0 in enumerate(x_starts):
-#                 w = x_chunks[ix]
-
-#                 # Get chunk boundaries in geographic coordinates
-#                 xx0, yy0 = self.index_to_coords(x0, y0)
-#                 xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
-
-#                 # Choose color based on size or use default cycle
-#                 if color_by_size:
-#                     size = h * w
-#                     color = cmap(norm(size))
-
-#                 else:
-#                     # Use a simple coloring scheme based on indices
-#                     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-#                     color = colors[(iy * len(x_starts) + ix) % len(colors)]
-
-#                 # Draw rectangle around the chunk
-#                 rect = Rectangle(
-#                     (xx0, yy1),  # lower left (x, y)
-#                     xx1 - xx0,  # width
-#                     yy0 - yy1,  # height
-#                     transform=ccrs.epsg(5070),
-#                     fill=True,
-#                     facecolor=color,
-#                     alpha=0.3,
-#                     edgecolor=color,
-#                     linewidth=1.5,
-#                     zorder=10,
-#                 )
-#                 ax.add_patch(rect)
-
-#         # Add geographic features
-#         ax.coastlines(resolution='10m')
-#         ax.add_feature(cfeature.BORDERS, linewidth=0.8)
-#         ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
-
-#         # Add a colorbar if coloring by size
-#         if color_by_size:
-#             sm = cm.ScalarMappable(norm=norm, cmap=cmap)
-#             cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.01)
-#             cbar.set_label('Chunk Size (pixels)')
-
-#         # Set title
-#         ax.set_title(
-#             f'All Chunks ({len(y_chunks)}×{len(x_chunks)} = {len(y_chunks) * len(x_chunks)})'
-#         )
-
-#         plt.tight_layout()
-#         plt.show()
-
-#     def visualize_chunks_on_conus(
-#         self, chunks=None, color_by_size=False, highlight_chunks=None, include_all_chunks=False
-#     ):
-#         """
-#         Visualize specified chunks on CONUS map
-
-#         Parameters
-#         ----------
-#         chunks : list of tuples, optional
-#             List of (iy, ix) tuples specifying chunks to visualize
-#             If None, will show all chunks
-#         color_by_size : bool, default False
-#             If True, color chunks based on their size
-#         highlight_chunks : list of tuples, optional
-#             List of (iy, ix) tuples specifying chunks to highlight
-#         include_all_chunks : bool, default False
-#             If True, show all chunks in background with low opacity
-#         """
-#         # Create figure
-#         fig, ax = plt.subplots(figsize=(16, 12), subplot_kw={'projection': ccrs.epsg(5070)})
-
-#         # Set extent - either full CONUS or custom extent
-#         ax.set_extent(self.extent_as_tuple, crs=ccrs.epsg(5070))
-
-#         # Get chunk information
-#         chunk_info = self.chunk_info
-#         y_chunks = chunk_info['y_chunks']
-#         x_chunks = chunk_info['x_chunks']
-#         y_starts = chunk_info['y_starts']
-#         x_starts = chunk_info['x_starts']
-
-#         # Set up colors
-#         if color_by_size:
-#             sizes = [
-#                 y_chunks[iy] * x_chunks[ix]
-#                 for iy in range(len(y_chunks))
-#                 for ix in range(len(x_chunks))
-#             ]
-#             min_size = min(sizes)
-#             max_size = max(sizes)
-
-#             norm = mcolors.Normalize(vmin=min_size, vmax=max_size)
-#             cmap = cm.viridis
-
-#         # Default to all chunks if none specified
-#         if chunks is None:
-#             chunks = [(iy, ix) for iy in range(len(y_chunks)) for ix in range(len(x_chunks))]
-
-#         # Draw background chunks if requested
-#         if include_all_chunks and chunks != [
-#             (iy, ix) for iy in range(len(y_chunks)) for ix in range(len(x_chunks))
-#         ]:
-#             for iy, y0 in enumerate(y_starts):
-#                 h = y_chunks[iy]
-#                 for ix, x0 in enumerate(x_starts):
-#                     # Skip chunks that are in the main visualization
-#                     if (iy, ix) in chunks:
-#                         continue
-
-#                     w = x_chunks[ix]
-#                     xx0, yy0 = self.index_to_coords(x0, y0)
-#                     xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
-
-#                     rect = Rectangle(
-#                         (xx0, yy1),
-#                         xx1 - xx0,
-#                         yy0 - yy1,
-#                         transform=ccrs.epsg(5070),
-#                         fill=True,
-#                         facecolor='lightgray',
-#                         alpha=0.2,
-#                         edgecolor='gray',
-#                         linewidth=0.5,
-#                         zorder=5,
-#                     )
-#                     ax.add_patch(rect)
-
-#         # Draw the specified chunks with proper styling
-#         for iy, ix in chunks:
-#             y0 = y_starts[iy]
-#             h = y_chunks[iy]
-#             x0 = x_starts[ix]
-#             w = x_chunks[ix]
-
-#             # Get chunk boundaries in geographic coordinates
-#             xx0, yy0 = self.index_to_coords(x0, y0)
-#             xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
-
-#             # Determine styling
-#             is_highlighted = highlight_chunks is not None and (iy, ix) in highlight_chunks
-
-#             # Choose color based on size or use default cycle
-#             if is_highlighted:
-#                 color = 'red'
-#                 fill_alpha = 0.4
-#                 linewidth = 2.0
-#                 zorder = 15
-#             elif color_by_size:
-#                 size = h * w
-#                 color = cmap(norm(size))
-#                 # edge_alpha = 0.8
-#                 fill_alpha = 0.3
-#                 linewidth = 1.5
-#                 zorder = 10
-#             else:
-#                 # Use a simple coloring scheme based on indices
-#                 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-#                 color = colors[(iy * len(x_starts) + ix) % len(colors)]
-#                 fill_alpha = 0.3
-#                 linewidth = 1.5
-#                 zorder = 10
-
-#             # Draw rectangle around the chunk
-#             rect = Rectangle(
-#                 (xx0, yy1),  # lower left (x, y)
-#                 xx1 - xx0,  # width
-#                 yy0 - yy1,  # height
-#                 transform=ccrs.epsg(5070),
-#                 fill=True,
-#                 facecolor=color,
-#                 alpha=fill_alpha,
-#                 edgecolor=color,
-#                 linewidth=linewidth,
-#                 zorder=zorder,
-#             )
-#             ax.add_patch(rect)
-
-#         # Add geographic features
-#         ax.coastlines(resolution='10m')
-#         ax.add_feature(cfeature.BORDERS, linewidth=0.8)
-#         ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
-
-#         # Add a colorbar if coloring by size
-#         if color_by_size:
-#             sm = cm.ScalarMappable(norm=norm, cmap=cmap)
-#             cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.01)
-#             cbar.set_label('Chunk Size (pixels)')
-
-#         # Set title
-#         if len(chunks) == len(y_chunks) * len(x_chunks):
-#             ax.set_title(f'All Chunks ({len(y_chunks)}×{len(x_chunks)} = {len(chunks)})')
-#         else:
-#             ax.set_title(
-#                 f'Selected Chunks ({len(chunks)} of {len(y_chunks)}×{len(x_chunks)} total)'
-#             )
-
-#         # Add a legend
-#         legend_elements = [Line2D([0], [0], color='blue', lw=2, label='Selected Chunks')]
-#         if highlight_chunks:
-#             legend_elements.append(Line2D([0], [0], color='red', lw=2, label='Highlighted Chunks'))
-#         if include_all_chunks:
-#             legend_elements.append(Line2D([0], [0], color='gray', lw=1, label='Other Chunks'))
-
-#         ax.legend(handles=legend_elements, loc='lower right')
-
-#         plt.tight_layout()
-#         plt.show()
