@@ -14,7 +14,7 @@ dependencies    = [
     "flox>=0.10.4",
     "fsspec>=2025.5.1",
     "geopandas>=1.0.1",
-    "icechunk",
+    "icechunk>=1.0.0",
     "jupyter-server-proxy>=4.4.0",
     "jupyter>=1.1.1",
     "jupyterlab>=4.4.0",
