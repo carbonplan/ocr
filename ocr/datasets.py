@@ -476,7 +476,7 @@ datasets = [
         name='conus-overture-buildings',
         description='CONUS Overture Buildings',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/CONUS_overture_buildings_2025-03-19.1.parquet',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings_2025-06-25.0.parquet',
         data_format='geoparquet',
         version='v2025-03-19.1',
     ),
