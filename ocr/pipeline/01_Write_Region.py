@@ -69,7 +69,12 @@ def sample_risk_region(region_id: str, branch: str):
     geom_cols = ['geometry']
     outpath = vector_config.region_geoparquet_uri + f'{region_id}.parquet'
 
-    buildings_subset_gdf[data_var_list + geom_cols].to_parquet(
+    # Try removing any nan values that may exist outside of CONUS sample data.
+    buildings_subset_gdf = buildings_subset_gdf[data_var_list + geom_cols].dropna(
+        subset=data_var_list
+    )
+
+    buildings_subset_gdf.to_parquet(
         outpath,
         compression='zstd',
         geometry_encoding='WKB',
