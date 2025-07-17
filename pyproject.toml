@@ -200,4 +200,5 @@
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
 
 [tool.pixi.dependencies]
-    esmf = ">=8.8.1,<9"
+    esmf    = ">=8.8.1,<9"
+    libgdal = ">=3.11.3,<4"
