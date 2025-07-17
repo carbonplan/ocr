@@ -37,11 +37,16 @@ WORKDIR /tmp/tippecanoe-src
 RUN cp tippecanoe /usr/local/bin/
 RUN cp tile-join /usr/local/bin/
 
+
 # Download and install the pre-built s5cmd binary
 WORKDIR /tmp
 RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz -o /tmp/s5cmd.tar.gz \
     && tar -xvzf /tmp/s5cmd.tar.gz -C /usr/local/bin/ \
     && rm /tmp/s5cmd.tar.gz
+
+# Install duckdb
+RUN curl https://install.duckdb.org | sh
+
 
 # install gpq
 RUN curl -L https://github.com/planetlabs/gpq/releases/download/v0.24.0/gpq-linux-amd64.tar.gz -o /tmp/gpq.tar.gz \
