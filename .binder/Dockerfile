@@ -45,8 +45,9 @@ RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_L
     && rm /tmp/s5cmd.tar.gz
 
 # Install duckdb
-RUN curl https://install.duckdb.org | sh
+RUN curl -L https://github.com/duckdb/duckdb/releases/download/v1.3.2/duckdb_cli-linux-amd64.zip -o duckdb_cli-linux.zip && unzip duckdb_cli-linux.zip -d /usr/local/bin/ && rm duckdb_cli-linux.zip
 
+RUN duckdb -c "install httpfs; install spatial;"
 
 # install gpq
 RUN curl -L https://github.com/planetlabs/gpq/releases/download/v0.24.0/gpq-linux-amd64.tar.gz -o /tmp/gpq.tar.gz \
