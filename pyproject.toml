@@ -25,7 +25,6 @@
         "opt-einsum>=3.4.0",
         "pyarrow>=20.0.0",
         "pydantic>=2.11.5",
-        "rasterio>=1.4.3",
         "rioxarray>=0.19.0",
         "s3fs>=2025.5.1",
         "xarray>=2025.4.0",
@@ -200,5 +199,8 @@
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
 
 [tool.pixi.dependencies]
-    esmf    = ">=8.8.1,<9"
-    libgdal = ">=3.11.3,<4"
+    esmf     = ">=8.8.1,<9"
+    netcdf4  = ">=1.7.2,<2"
+    numba    = ">=0.61.2,<0.62"
+    pyproj   = ">=3.7.1,<4"
+    rasterio = ">=1.4.3,<2"
