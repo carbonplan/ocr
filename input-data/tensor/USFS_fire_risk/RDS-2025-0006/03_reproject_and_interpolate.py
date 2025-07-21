@@ -45,6 +45,8 @@ def interpolate_and_reproject(climate_run_year: str):
     interp_30 = climate_run_ds.interp_like(
         rps_30, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
     )
+    # interp_like produces values slightly less then 0, which causes downstream issues. We are clipping to 0 as a min of burn probability.
+    interp_30 = interp_30.clip(min=0)
 
     # assign crs and reproject to lat/lon EPSG:4326
     interp_30 = assign_crs(interp_30, crs='EPSG:5070')
