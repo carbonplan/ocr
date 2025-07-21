@@ -86,6 +86,11 @@ config.generate_click_all_region_deploy_command
 - `region(s)` must be in the format `y{n}_x{n}` and correspond to valid region_ids in the Icechunk template.
 - You can visualize the available regions:
 
+**-s, --summary-stats**
+
+- The default for this flag is `False`.
+- If enabled, this will create a county level summary stats geoparquet and PMTiles.
+
 ```python
 from ocr.chunking_config import ChunkingConfig
 

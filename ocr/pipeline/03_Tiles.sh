@@ -12,7 +12,6 @@
 # maybe we should switch to gpq:
 # ex: gpq convert --to=geojson in.geoparquet | tippecanoe -o out.pmtiles
 
-# NOTE/TODO! BRANCH IS HARDCODED
 s5cmd cp --sp "s3://carbonplan-ocr/intermediate/fire-risk/vector/$1/consolidated_geoparquet.parquet" "region.parquet"
 
 # convert to FGB
