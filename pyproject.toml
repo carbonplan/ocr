@@ -195,8 +195,8 @@
 
 [tool.pixi.tasks]
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
-    start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
-    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
+    start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m8g.xlarge --sync-ignore .pixi" }
+    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m8g.2xlarge --sync-ignore .pixi" }
 
 [tool.pixi.dependencies]
     esmf     = ">=8.8.1,<9"
