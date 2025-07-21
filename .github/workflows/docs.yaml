@@ -3,6 +3,7 @@
 name: docs
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "docs/**"
+
 
 permissions:
   contents: write
