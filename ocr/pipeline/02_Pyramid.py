@@ -2,7 +2,7 @@
 # # COILED --region us-west-2
 # # COILED --forward-aws-credentials
 # # COILED --vm-type r7a.2xlarge
-# # COILED --tag project=OCR
+# # COILED --tag Project=OCR
 # # COILED --name Create_Pyramid
 # from __future__ import annotations
 

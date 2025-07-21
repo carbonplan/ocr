@@ -10,7 +10,7 @@ cluster = coiled.Cluster(
     name='ocr_RDS_2020-0016-02',
     region='us-west-2',
     n_workers=10,
-    tags={'project': 'OCR'},
+    tags={'Project': 'OCR'},
     worker_vm_types='m8g.large',
     scheduler_vm_types='m8g.2xlarge',
 )

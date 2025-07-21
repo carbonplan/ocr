@@ -2,7 +2,7 @@
 # COILED --region us-west-2
 # COILED --forward-aws-credentials
 # COILED --vm-type m8g.large
-# COILED --tag project=OCR
+# COILED --tag Project=OCR
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
