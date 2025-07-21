@@ -2,7 +2,7 @@
 # COILED --region us-west-2
 # COILED --forward-aws-credentials
 # COILED --vm-type r8g.2xlarge
-# COILED --tag project=OCR
+# COILED --tag Project=OCR
 
 import duckdb
 
