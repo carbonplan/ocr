@@ -1,4 +1,3 @@
-# should these go in the class?
 import time
 from dataclasses import dataclass, field
 
@@ -12,7 +11,7 @@ class CoiledBatchManager:
     job_limit: int = 1000  # set in https://docs.coiled.io/_modules/coiled/batch.html#status - any downside to a big #?
     job_ids: list = field(default_factory=list)
 
-    def submit_job(self, command, name, **kwargs):
+    def submit_job(self, command, name, kwargs):
         batch_result = coiled.batch.run(command=command, name=name, **kwargs)
         job_id = batch_result['job_id']
         self.job_ids.append(job_id)

@@ -1,8 +1,3 @@
-# COILED n-tasks 1
-# COILED --region us-west-2
-# COILED --forward-aws-credentials
-# COILED --vm-type m8g.8xlarge
-# COILED --tag Project=OCR
 # peak 96GB!
 
 import click

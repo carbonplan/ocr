@@ -1,12 +1,3 @@
-#!/bin/bash
-
-# COILED container quay.io/carbonplan/ocr:latest
-# COILED n-tasks 1
-# COILED region us-west-2
-# COILED --forward-aws-credentials
-# COILED --tag Project=OCR
-# COILED --vm-type c7a.xlarge
-# COILED --name Create_PMTiles
 
 
 # maybe we should switch to gpq:
