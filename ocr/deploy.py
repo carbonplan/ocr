@@ -21,13 +21,20 @@ import click
     default=False,
     help='Enable Debugging, default False',
 )
+@click.option(
+    '--summary-stats',
+    '-s',
+    is_flag=True,
+    default=False,
+    help='Adds in spatial summary aggregations.',
+)
 def main(
     region_id: tuple[str, ...],
     branch: str = 'QA',
     wipe: bool = False,
     debug: bool = False,
+    summary_stats: bool = False,
 ):
-    # from ocr.config import BatchJobs
     from ocr.batch import CoiledBatchManager
     from ocr.template import IcechunkConfig, VectorConfig
 
@@ -65,13 +72,27 @@ def main(
     )
     batch_manager_aggregate_02.wait_for_completion()
 
-    # ------------- 03  Tiles ---------------
+    if summary_stats:
+        batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
+        batch_manager_county_aggregation_01.submit_job(
+            command=f'python pipeline/02_county_summary_stats.py -b {branch}',
+            name=f'create-county-summary-stats-{branch}',
+        )
+        batch_manager_county_aggregation_01.wait_for_completion()
+        # create county summary stats PMTiles layer
+        batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
+        batch_manager_county_tiles_02.submit_job(
+            command=f'pipeline/03_county_pmtiles.sh {branch}',
+            name=f'create-county-pmtiles-{branch}',
+        )
+
+    # # ------------- 03  Tiles ---------------
     batch_manager_03 = CoiledBatchManager(debug=debug)
     batch_manager_03.submit_job(
         command=f'pipeline/03_Tiles.sh {branch}',
         name=f'create-pmtiles-{branch}',
     )
-    # We probably don't need this, but we do get reporting with it, which is kind of nice.
+
     batch_manager_03.wait_for_completion()
 
 

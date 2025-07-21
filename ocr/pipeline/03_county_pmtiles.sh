@@ -7,7 +7,6 @@
 # COILED --forward-aws-credentials
 # COILED --tag project=OCR
 # COILED --vm-type c7a.xlarge
-# COILED --name tiles_duckdb_test
 
 
 duckdb -c "
@@ -46,11 +45,11 @@ COPY (
              ) AS properties,
         json(ST_AsGeoJson(geometry)) AS geometry
 
-    FROM read_parquet('s3://carbonplan-ocr/intermediate/fire-risk/vector/county/county_summary_stats.parquet')
+    FROM read_parquet('s3://carbonplan-ocr/intermediate/fire-risk/vector/$1/region_aggregation/county/county_summary_stats.parquet')
 ) TO STDOUT (FORMAT json);" | tippecanoe -o aggregated.pmtiles -l risk -n "county" -f -P --drop-smallest-as-needed -q --extend-zooms-if-still-dropping -zg
 
 
 
 echo tippecanoe tiles done
 
-s5cmd cp --sp "aggregated.pmtiles" "s3://carbonplan-ocr/intermediate/fire-risk/vector/QA/counties.pmtiles"
+s5cmd cp --sp "aggregated.pmtiles" "s3://carbonplan-ocr/intermediate/fire-risk/vector/$1/region_aggregation/county/counties.pmtiles"
