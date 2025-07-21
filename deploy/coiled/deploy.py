@@ -48,7 +48,7 @@ def main(
     # region_id is tuple
     for rid in region_id:
         batch_manager_01.submit_job(
-            command=f'python pipeline/01_Write_Region.py -r {rid} -b {branch}',
+            command=f'python ../../ocr/pipeline/01_Write_Region.py -r {rid} -b {branch}',
             name=f'process-region-{rid}-{branch}',
         )
 
@@ -61,13 +61,13 @@ def main(
     # if pyramid:
     #     batch_manager_pyarmid_02 = CoiledBatchManager(debug=debug)
     #     batch_manager_pyarmid_02.submit_job(
-    #         command=f'python pipeline/02_Pyramid.py -b {branch}',
+    #         command=f'python ../../ocr/pipeline/02_Pyramid.py -b {branch}',
     #         name=f'create-pyramid-{branch}',
     #     )
     # ----------- 02 Aggregate -------------
     batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
     batch_manager_aggregate_02.submit_job(
-        command=f'python pipeline/02_Aggregate.py -b {branch}',
+        command=f'python ../../ocr/pipeline/02_Aggregate.py -b {branch}',
         name=f'aggregate-geoparuqet-{branch}',
     )
     batch_manager_aggregate_02.wait_for_completion()
@@ -75,21 +75,21 @@ def main(
     if summary_stats:
         batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
         batch_manager_county_aggregation_01.submit_job(
-            command=f'python pipeline/02_county_summary_stats.py -b {branch}',
+            command=f'python ../../ocr/pipeline/02_county_summary_stats.py -b {branch}',
             name=f'create-county-summary-stats-{branch}',
         )
         batch_manager_county_aggregation_01.wait_for_completion()
         # create county summary stats PMTiles layer
         batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
         batch_manager_county_tiles_02.submit_job(
-            command=f'pipeline/03_county_pmtiles.sh {branch}',
+            command=f'../../ocr/pipeline/03_county_pmtiles.sh {branch}',
             name=f'create-county-pmtiles-{branch}',
         )
 
     # # ------------- 03  Tiles ---------------
     batch_manager_03 = CoiledBatchManager(debug=debug)
     batch_manager_03.submit_job(
-        command=f'pipeline/03_Tiles.sh {branch}',
+        command=f'../../ocr/pipeline/03_Tiles.sh {branch}',
         name=f'create-pmtiles-{branch}',
     )
 
