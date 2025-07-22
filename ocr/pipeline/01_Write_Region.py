@@ -93,20 +93,26 @@ def run_wind_region(region_id: str, branch: str):
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
     insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id, branch=branch)
 
-    # only use dask for xarray, shutdown for duckdb wind sample
-
 
 @click.command()
 @click.option('-r', '--region-id', required=True, help='region_id. ex: y5_x12')
 @click.option('-b', '--branch', help='data branch: [QA, prod]. Default QA')
 def main(region_id: str, branch: str):
-    if region_id_exists_in_repo(region_id=region_id, branch=branch):
-        # switch to logging
-        print(f'{region_id} already exists in Icechunk store')
+    from ocr.chunking_config import ChunkingConfig
 
-    else:
-        run_wind_region(region_id, branch)
-        sample_risk_region(region_id, branch)
+    config = ChunkingConfig()
+
+    if region_id not in config.valid_region_ids:
+        raise ValueError(f"""{region_id} is an invalid region_id. You can get valid region_ids with: \n
+            from ocr.chunking_config import ChunkingConfig  \n
+            config = ChunkingConfig()  \n
+            config.valid_region_id""")
+
+    if region_id_exists_in_repo(region_id=region_id, branch=branch):
+        raise ValueError(f'{region_id} already exists in Icechunk store. Skipping')
+
+    run_wind_region(region_id, branch)
+    sample_risk_region(region_id, branch)
 
 
 if __name__ == '__main__':

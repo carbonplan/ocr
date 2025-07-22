@@ -100,12 +100,23 @@ def main(
     summary_stats: bool = False,
 ):
     from ocr.chunking_config import ChunkingConfig
-    from ocr.template import IcechunkConfig, VectorConfig
+    from ocr.template import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
 
     # ------------- CONFIG ---------------
     config = ChunkingConfig()
-    IcechunkConfig(branch=branch, wipe=wipe)
     VectorConfig(branch=branch, wipe=wipe)
+    icechunk_config = IcechunkConfig(branch=branch, wipe=wipe)
+
+    icechunk_repo_and_session = icechunk_config.repo_and_session()
+    valid_region_ids = set(region_id).intersection(config.valid_region_ids)
+    region_ids_in_ancestry = get_commit_messages_ancestry(icechunk_repo_and_session['repo'])
+    valid_region_ids = valid_region_ids.difference(region_ids_in_ancestry)
+
+    if len(valid_region_ids) == 0:
+        raise ValueError(
+            f'There are no valid region_ids present. Supplied region_ids: {region_id} are already in the icechunk ancestry or are invalid region ids.'
+        )
+
     shared_coiled_kwargs = {
         'ntasks': 1,
         'region': 'us-west-2',
@@ -114,9 +125,7 @@ def main(
     }
 
     # ------------- 01 AU ---------------
-    valid_region_ids = set(region_id).intersection(config.valid_region_ids)
-    # we should add logging for valid/invalid regions
-    # we should add logic if no valid regions are found (sys.exit?)
+
     batch_manager_01 = CoiledBatchManager(debug=debug)
 
     # region_id is tuple
