@@ -65,9 +65,11 @@ class VectorConfig:
             self.prefix = 'intermediate/fire-risk/vector/QA/'
         else:
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
-
         if self.wipe:
+            self._gen_prefixes()
+            self._gen_uris()
             self.delete_region_gpqs()
+
         self._gen_prefixes()
         self._gen_uris()
 

@@ -114,8 +114,9 @@ def main(
     }
 
     # ------------- 01 AU ---------------
-
-    valid_region_ids = set(region_id).difference(config.valid_region_ids)
+    valid_region_ids = set(region_id).intersection(config.valid_region_ids)
+    # we should add logging for valid/invalid regions
+    # we should add logic if no valid regions are found (sys.exit?)
     batch_manager_01 = CoiledBatchManager(debug=debug)
 
     # region_id is tuple
@@ -126,7 +127,7 @@ def main(
             kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
         )
 
-    # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
+    # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
     batch_manager_01.wait_for_completion()
 
     # ----------- 02 Pyramid -------------
