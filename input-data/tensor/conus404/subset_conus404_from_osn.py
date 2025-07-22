@@ -23,7 +23,7 @@ console = rich.console.Console()
 DEFAULT_CLUSTER_ARGS = {
     'name': 'ocr-conus404-hourly-osn',
     'region': 'us-west-2',
-    'n_workers': 50,
+    'n_workers': 60,
     'tags': {'Project': 'OCR'},
     'worker_vm_types': 'c6a.large',
     'scheduler_vm_types': 'c6a.large',
