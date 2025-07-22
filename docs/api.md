@@ -5,7 +5,6 @@
 
 ::: ocr.chunking_config
 ::: ocr.datasets
-::: ocr.deploy
 ::: ocr.template
 ::: ocr.utils
 ::: ocr.wind
