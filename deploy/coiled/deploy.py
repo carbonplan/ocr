@@ -5,7 +5,7 @@ import click
 @click.option(
     '-r',
     '--region-id',
-    multiple=True,  # this allows for multiple inputs: ex: uv run python deploy.py -r y10_x0 -r y0_x10
+    multiple=True,  # this allows for multiple inputs: ex: uv run python deploy.py -r y2_x4 -r y2_x5
     help="region IDs. ex: 'y10_x2'",
 )
 @click.option('--branch', '-b', default='QA', help='data branch path [QA, prod]. Default is QA')
