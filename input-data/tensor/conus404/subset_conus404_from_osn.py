@@ -244,7 +244,7 @@ def process_jobs(ds: xr.Dataset, jobs: list[Job], repo: icechunk.Repository):
     total_jobs = len(jobs)
     console.log(f'Starting processing of {total_jobs} jobs')
 
-    for i, job in enumerate(jobs[:2], 1):
+    for i, job in enumerate(jobs, 1):
         session = repo.writable_session('main')
         start_time = time.time()
         console.log(f'Processing job {i}/{total_jobs}: {job.region_id}')

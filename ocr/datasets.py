@@ -532,6 +532,13 @@ datasets = [
         prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
         data_format='zarr',
     ),
+    Dataset(
+        name='conus404-hourly',
+        description='a subset of CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk',
+        data_format='zarr',
+    ),
 ]
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
