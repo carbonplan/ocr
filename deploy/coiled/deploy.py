@@ -163,7 +163,7 @@ def main(
         batch_manager_county_aggregation_01.submit_job(
             command=f'python ../../ocr/pipeline/02_county_summary_stats.py -b {branch}',
             name=f'create-county-summary-stats-{branch}',
-            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.8xlarge'},
+            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.xlarge'},
         )
         batch_manager_county_aggregation_01.wait_for_completion()
         # create county summary stats PMTiles layer
