@@ -15,6 +15,7 @@
         "fsspec>=2025.5.1",
         "geopandas>=1.0.1",
         "icechunk>=1.0.0",
+        "ipdb>=0.13.13",
         "jupyter-server-proxy>=4.4.0",
         "jupyterlab>=4.4.0",
         "ndpyramid>=0.4.0,<0.5",
@@ -32,7 +33,7 @@
         "xarray>=2025.4.0",
         "xesmf>=0.8.10",
         "zarr>=3.0.8",
-    ]
+]
 
     dynamic         = ["version"]
     name            = "ocr"
