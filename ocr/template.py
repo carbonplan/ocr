@@ -3,12 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import dask
 import icechunk
 
 if TYPE_CHECKING:
-    import dask
-    import icechunk
     import xarray as xr
 
 
@@ -19,17 +16,17 @@ if TYPE_CHECKING:
 class VectorConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
+    prefix: str | None = None
     wipe: bool = False
     # these are defined in post_init since they depend on branch.
-    region_geoparquet_prefix: str = None
-    region_geoparquet_uri: str = None
+    region_geoparquet_prefix: str | None = None
+    region_geoparquet_uri: str | None = None
 
-    consolidated_geoparquet_prefix: str = None
-    consolidated_geoparquet_uri: str = None
+    consolidated_geoparquet_prefix: str | None = None
+    consolidated_geoparquet_uri: str | None = None
 
-    pmtiles_prefix: str = None
-    pmtiles_prefix_uri: str = None
+    pmtiles_prefix: str | None = None
+    pmtiles_prefix_uri: str | None = None
 
     def delete_region_gpqs(self):
         import boto3
@@ -83,8 +80,8 @@ class VectorConfig:
 class PyramidConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
-    uri: str = None
+    prefix: str | None = None
+    uri: str | None = None
 
     def __post_init__(self):
         if self.branch == 'prod':
@@ -105,11 +102,11 @@ class PyramidConfig:
 class IcechunkConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
+    prefix: str | None = None
     wipe: bool = False
-    uri: str = None
+    uri: str | None = None
 
-    def init_icechunk_repo(self) -> dict:
+    def init_icechunk_repo(self):
         """Creates an icechunk repo or opens if does not exist
 
         Args:
@@ -143,6 +140,7 @@ class IcechunkConfig:
         bucket.objects.filter(Prefix=self.prefix).delete()
 
     def create_template(self):
+        import dask
         import numpy as np
         import xarray as xr
 
@@ -217,8 +215,6 @@ def get_commit_messages_ancestry(repo: icechunk.repository, icechunk_branch: str
 
 
 def region_id_exists_in_repo(region_id: str, branch: str):
-    from ocr.template import IcechunkConfig
-
     icechunk_config = IcechunkConfig(branch=branch)
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
@@ -235,8 +231,6 @@ def region_id_exists_in_repo(region_id: str, branch: str):
 
 def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str, wipe: bool = False):
     import icechunk
-
-    from ocr.template import IcechunkConfig
 
     icechunk_config = IcechunkConfig(branch=branch, wipe=wipe)
     icechunk_repo_and_session = icechunk_config.repo_and_session()
