@@ -14,7 +14,7 @@
         "flox>=0.10.4",
         "fsspec>=2025.5.1",
         "geopandas>=1.0.1",
-        "icechunk>=1.0.0",
+        "icechunk>1.0.1",
         "ipdb>=0.13.13",
         "jupyter-server-proxy>=4.4.0",
         "jupyterlab>=4.4.0",
