@@ -38,7 +38,7 @@ class CoiledBatchManager:
                     if state == 'done':
                         print(f'{job_id} success')
                         completed.add(job_id)
-                    elif state in ('failed', 'error'):
+                    elif state in ('failed', 'error', 'done (errors)'):
                         print(f'{job_id} failed')
                         failed.add(job_id)
                         if exit_on_failure:
@@ -161,7 +161,7 @@ def main(
     if summary_stats:
         batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
         batch_manager_county_aggregation_01.submit_job(
-            command=f'python ../../ocr/pipeline/02_county_summary_stats.py -b {branch}',
+            command=f'python ../../ocr/pipeline/02_aggregated_region_summary_stats.py -b {branch}',
             name=f'create-county-summary-stats-{branch}',
             kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.xlarge'},
         )
@@ -169,7 +169,7 @@ def main(
         # create county summary stats PMTiles layer
         batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
         batch_manager_county_tiles_02.submit_job(
-            command=f'../../ocr/pipeline/03_county_pmtiles.sh {branch}',
+            command=f'../../ocr/pipeline/03_aggregated_region_pmtiles.sh {branch}',
             name=f'create-county-pmtiles-{branch}',
             kwargs={
                 **shared_coiled_kwargs,
@@ -178,7 +178,7 @@ def main(
             },
         )
 
-    # # ------------- 03  Tiles ---------------
+    # ------------- 03  Tiles ---------------
     batch_manager_03 = CoiledBatchManager(debug=debug)
     batch_manager_03.submit_job(
         command=f'../../ocr/pipeline/03_Tiles.sh {branch}',
