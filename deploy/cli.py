@@ -61,25 +61,25 @@ def main(
     icechunk_config = IcechunkConfig(branch=branch_, wipe=wipe)
 
     icechunk_repo_and_session = icechunk_config.repo_and_session()
-    valid_region_ids = set(region_id).intersection(config.valid_region_ids)
-    region_ids_in_ancestry = get_commit_messages_ancestry(icechunk_repo_and_session['repo'])
-    valid_region_ids = valid_region_ids.difference(region_ids_in_ancestry)
+    provided_region_ids = set(region_id)
+    valid_region_ids = provided_region_ids.intersection(config.valid_region_ids)
+    processed_region_ids = set(get_commit_messages_ancestry(icechunk_repo_and_session['repo']))
+    unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
 
-    if len(valid_region_ids) == 0:
-        invalid_ids = set(region_id).difference(config.valid_region_ids)
-        already_processed_ids = set(region_id).intersection(region_ids_in_ancestry)
-
+    if len(unprocessed_valid_region_ids) == 0:
+        invalid_region_ids = provided_region_ids.difference(config.valid_region_ids)
+        previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
         error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
 
-        if invalid_ids:
-            error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_ids))}\n'
+        if invalid_region_ids:
+            error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_region_ids))}\n'
             error_message += (
                 f'  Valid region IDs: {", ".join(sorted(list(config.valid_region_ids)))}...\n'
             )
 
-        if already_processed_ids:
+        if previously_processed_ids:
             error_message += (
-                f'- Already processed region IDs: {", ".join(sorted(already_processed_ids))}\n'
+                f'- Already processed region IDs: {", ".join(sorted(previously_processed_ids))}\n'
             )
 
         error_message += "\nPlease provide valid region IDs that haven't been processed yet."
