@@ -17,7 +17,7 @@ class Platform(str, Enum):
 
 @app.command()
 def main(
-    region_id: str = typer.Option(
+    region_id: list[str] = typer.Option(
         ..., '-r', '--region-id', help='Region IDs to process, e.g., y10_x2'
     ),
     platform: Platform = typer.Option(
@@ -66,9 +66,25 @@ def main(
     valid_region_ids = valid_region_ids.difference(region_ids_in_ancestry)
 
     if len(valid_region_ids) == 0:
-        raise ValueError(
-            f'There are no valid region_ids present. Supplied region_ids: {region_id} are already in the icechunk ancestry or are invalid region ids.'
-        )
+        invalid_ids = set(region_id).difference(config.valid_region_ids)
+        already_processed_ids = set(region_id).intersection(region_ids_in_ancestry)
+
+        error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
+
+        if invalid_ids:
+            error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_ids))}\n'
+            error_message += (
+                f'  Valid region IDs: {", ".join(sorted(list(config.valid_region_ids)))}...\n'
+            )
+
+        if already_processed_ids:
+            error_message += (
+                f'- Already processed region IDs: {", ".join(sorted(already_processed_ids))}\n'
+            )
+
+        error_message += "\nPlease provide valid region IDs that haven't been processed yet."
+
+        raise ValueError(error_message)
 
     if platform == Platform.COILED:
         from managers import CoiledBatchManager
