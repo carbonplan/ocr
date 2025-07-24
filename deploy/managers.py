@@ -60,7 +60,7 @@ class CoiledBatchManager(AbstractBatchManager):
                     if state == 'done':
                         print(f'{job_id} success')
                         completed.add(job_id)
-                    elif state in ('failed', 'error'):
+                    elif state in ('failed', 'error', 'done (errors)'):
                         print(f'{job_id} failed')
                         failed.add(job_id)
                         if exit_on_failure:
