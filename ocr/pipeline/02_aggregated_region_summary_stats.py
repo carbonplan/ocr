@@ -48,7 +48,7 @@ def create_summary_stats(branch: str):
     con.execute("""
         CREATE TEMP TABLE temp_tracts AS
         SELECT GEOID, geometry
-        FROM read_parquet('s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties.parquet')
+        FROM read_parquet('s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet')
         """)
 
     # create spatial index on geom cols
