@@ -1,11 +1,3 @@
-# COILED n-tasks 1
-# COILED --region us-west-2
-# COILED --forward-aws-credentials
-# COILED --vm-type m8g.large
-# COILED --tag project=OCR
-# COILED --name Aggregate_Geoparquet
-
-
 # aggregate geoparquet regions, reproject and write
 import click
 import duckdb

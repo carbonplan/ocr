@@ -3,12 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import dask
 import icechunk
 
 if TYPE_CHECKING:
-    import dask
-    import icechunk
     import xarray as xr
 
 
@@ -19,17 +16,17 @@ if TYPE_CHECKING:
 class VectorConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
+    prefix: str | None = None
     wipe: bool = False
     # these are defined in post_init since they depend on branch.
-    region_geoparquet_prefix: str = None
-    region_geoparquet_uri: str = None
+    region_geoparquet_prefix: str | None = None
+    region_geoparquet_uri: str | None = None
 
-    consolidated_geoparquet_prefix: str = None
-    consolidated_geoparquet_uri: str = None
+    consolidated_geoparquet_prefix: str | None = None
+    consolidated_geoparquet_uri: str | None = None
 
-    pmtiles_prefix: str = None
-    pmtiles_prefix_uri: str = None
+    pmtiles_prefix: str | None = None
+    pmtiles_prefix_uri: str | None = None
 
     def delete_region_gpqs(self):
         import boto3
@@ -55,14 +52,6 @@ class VectorConfig:
         )
         self.pmtiles_prefix_uri = 's3://' + self.bucket + '/' + self.pmtiles_prefix
 
-    def config_init(self):
-        if self.wipe:
-            # TODO: add logging
-            # I think we only need to wipe the region_id
-            # geoparquet directory, since the consolidated
-            # and pmtiles will get overwritten.
-            self.delete_region_gpqs()
-
     def __post_init__(self):
         self.region_geoparquet_prefix: str = None
         self.consolidated_geoparquet_prefix: str = None
@@ -73,6 +62,10 @@ class VectorConfig:
             self.prefix = 'intermediate/fire-risk/vector/QA/'
         else:
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
+        if self.wipe:
+            self._gen_prefixes()
+            self._gen_uris()
+            self.delete_region_gpqs()
 
         self._gen_prefixes()
         self._gen_uris()
@@ -87,8 +80,8 @@ class VectorConfig:
 class PyramidConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
-    uri: str = None
+    prefix: str | None = None
+    uri: str | None = None
 
     def __post_init__(self):
         if self.branch == 'prod':
@@ -109,12 +102,11 @@ class PyramidConfig:
 class IcechunkConfig:
     branch: str = 'QA'
     bucket: str = 'carbonplan-ocr'
-    prefix: str = None
+    prefix: str | None = None
     wipe: bool = False
-    # icechunk_tag: str = 'main' # main=prod
-    uri: str = None
+    uri: str | None = None
 
-    def init_icechunk_repo(self) -> dict:
+    def init_icechunk_repo(self):
         """Creates an icechunk repo or opens if does not exist
 
         Args:
@@ -148,6 +140,7 @@ class IcechunkConfig:
         bucket.objects.filter(Prefix=self.prefix).delete()
 
     def create_template(self):
+        import dask
         import numpy as np
         import xarray as xr
 
@@ -190,28 +183,6 @@ class IcechunkConfig:
 
         repo_session['session'].commit('template')
 
-    def check_icechunk_ancestry():
-        raise NotImplementedError('TODO: Not complete')
-
-    def config_init(self):
-        if self.branch == 'prod':
-            if self.wipe:
-                # add logging that wipe flag cleared the existing repo and re-inited.
-                self.delete_icechunk_repo()
-                self.init_icechunk_repo()
-                self.create_template()
-
-        # TODO: edge case that prod isn't init, but wipe == False means no repo is created
-
-        elif self.branch == 'QA':
-            self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
-            self.delete_icechunk_repo()
-            self.init_icechunk_repo()
-            self.create_template()
-
-        else:
-            raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
-
     def __post_init__(self):
         if self.branch == 'prod':
             self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
@@ -221,6 +192,12 @@ class IcechunkConfig:
         else:
             # this is shared, so we could make it a type
             raise ValueError(f'{self.branch} is not a valid branch. Valid options are: [QA, prod]')
+
+        if self.wipe:
+            # add logging that wipe flag cleared the existing repo and re-inited.
+            self.delete_icechunk_repo()
+            self.init_icechunk_repo()
+            self.create_template()
 
         # TODO: Make this more robust with cloudpathlib or UPath
         self.uri = 's3://' + self.bucket + '/' + self.prefix
@@ -238,8 +215,6 @@ def get_commit_messages_ancestry(repo: icechunk.repository, icechunk_branch: str
 
 
 def region_id_exists_in_repo(region_id: str, branch: str):
-    from ocr.template import IcechunkConfig
-
     icechunk_config = IcechunkConfig(branch=branch)
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
@@ -254,12 +229,10 @@ def region_id_exists_in_repo(region_id: str, branch: str):
         return False
 
 
-def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
+def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str, wipe: bool = False):
     import icechunk
 
-    from ocr.template import IcechunkConfig
-
-    icechunk_config = IcechunkConfig(branch=branch)
+    icechunk_config = IcechunkConfig(branch=branch, wipe=wipe)
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
     while True:
@@ -268,7 +241,6 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
                 icechunk_repo_and_session['session'].store,
                 region='auto',
                 consolidated=False,
-                # mode='a'
             )
             # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
             # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
@@ -282,24 +254,3 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str):
             # add logging
             print(f'conflict for region_commit_history {region_id}, retrying')
             pass
-
-
-# def write_regions(ds: xr.Dataset, bucket: str, prefix: str, region_dict: dict):
-#     storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
-#     repo = icechunk.Repository.open(storage)
-#     session = repo.writable_session('main')
-
-#     # filter out regions that have already been commited
-
-#     uncommited_dict = filter_region_duplicates(repo, region_dict=region_dict)
-
-#     # create dataset subsets
-#     ds_subsets_uncommited = return_ds_subsets_from_region_dict(ds=ds, region_dict=uncommited_dict)
-#     with session.allow_pickling():
-#         tasks = [
-#             insert_region_uncoop(
-#                 subset_ds=subset_ds, bucket=bucket, prefix=prefix, region_id=region_id
-#             )
-#             for region_id, subset_ds in ds_subsets_uncommited.items()
-#         ]
-#         dask.compute(*tasks)

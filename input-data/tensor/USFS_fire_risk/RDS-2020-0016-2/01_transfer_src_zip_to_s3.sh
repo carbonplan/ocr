@@ -4,7 +4,7 @@
 # COILED --region us-west-2
 # COILED --vm-type m7a.4xlarge
 # COILED --forward-aws-credentials
-# COILED --tag project=OCR
+# COILED --tag Project=OCR
 # COILED --disk-size 500
 
 

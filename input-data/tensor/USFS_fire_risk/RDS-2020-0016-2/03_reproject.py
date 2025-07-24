@@ -2,10 +2,10 @@
 # COILED --region us-west-2
 # COILED --vm-type m7i.8xlarge
 # COILED --forward-aws-credentials
-# COILED --tag project=OCR
+# COILED --tag Project=OCR
 
 
-# Script to reproject the USFS 30m Community Risk dataset to EPSG:4326
+# Script to reProject the USFS 30m Community Risk dataset to EPSG:4326
 
 
 import icechunk

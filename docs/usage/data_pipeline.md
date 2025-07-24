@@ -4,15 +4,11 @@
 
 ## Deployment / Job Orchestration
 
-`ocr/deploy.py` is a click CLI coordination / orchestration script. It will launch multiple parallel jobs of `01_Write_Region.py`, monitor the jobs with blocking behavior before dispatching `02_Aggregate (blocking)` and `03_Tiles (blocking)`. You can monitor jobs in the [coiled dashboard](https://cloud.coiled.io/clusters?workspace=carbonplan).
+## Coiled Batch
 
-<!-- prettier-ignore-start -->
-::: mkdocs-click
-    :module: ocr.deploy
-    :command: main
-<!-- prettier-ignore-end -->
+`deploy/coiled/deploy.py` is a Coiled Batch / click CLI orchestration script. It will launch multiple parallel jobs of `01_Write_Region.py`, monitor the jobs with blocking behavior before dispatching `02_Aggregate (blocking)` and `03_Tiles (blocking)`. You can monitor jobs in the [coiled dashboard](https://cloud.coiled.io/clusters?workspace=carbonplan).
 
-## 01_Write_Region.py
+### 01_Write_Region.py
 
 `run_wind_region`
 
@@ -27,13 +23,21 @@ For a given region_id, samples the building centroids to the wind adjusted risk 
 
 python script that runs ndpyramid coarsen to create a single level multi-scale Zarr pyramid. Default is non-reprojecting (EPSG:4326), but has a boolean flag for reprojecting to web-mercator `-r`. Note: reprojecting uses significantly more resources, so a larger machine may be required (rec r8g or r7a series for high ram). -->
 
-## 02_Aggregate.py
+### 02_Aggregate.py
 
 Python script that uses `duckdb` spatial to aggregate region_id specific geoparquet files into a single geoparquet file.
 
-## 03_Tiles.sh
+### 03_Tiles.sh
 
 Bash script that uses `GDAL` and `tippecanoe` to create PMTiles from aggregated geoparquet.
+
+### 02_county_summary_stats.py
+
+Python script that builds summary stats per county.
+
+### 03_county_pm_tiles.sh
+
+Bash script that writes county aggregated summary stats to PMTiles.
 
 ## Choosing valid `region_id`'s
 
@@ -72,7 +76,7 @@ config.generate_click_all_region_deploy_command
 **-b, --branch**
 
 - The default for this flag is `QA`.
-- `QA`: The Icechunk store will be wiped as well as the individual geoparquet region_id files.
+- `QA`: The Icechunk store will be appended to and new geoparquet region_id files will be written.
 - `prod`: The Icechunk store will be appended to and new geoparquet region_id files will be written.
 
 **-w, --wipe**
@@ -85,6 +89,11 @@ config.generate_click_all_region_deploy_command
 - for multiple regions, you must supply a `-r` flag for each one. ex: `-r y2_x4 -r y3_x4`.
 - `region(s)` must be in the format `y{n}_x{n}` and correspond to valid region_ids in the Icechunk template.
 - You can visualize the available regions:
+
+**-s, --summary-stats**
+
+- The default for this flag is `False`.
+- If enabled, this will create a county level summary stats geoparquet and PMTiles.
 
 ```python
 from ocr.chunking_config import ChunkingConfig
