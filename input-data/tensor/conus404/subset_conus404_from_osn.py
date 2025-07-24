@@ -9,7 +9,6 @@ import time
 
 import coiled
 import icechunk
-import pydantic
 import rich
 import typer
 import xarray as xr
@@ -31,22 +30,6 @@ INPUT_ZARR_STORE_CONFIG = {
 
 DEFAULT_VARIABLES = ['Q2', 'TD2', 'PSFC', 'T2', 'V10', 'U10']
 DEFAULT_SPATIAL_TILE_SIZE = 10
-
-
-class Job(pydantic.BaseModel):
-    """Represents a processing job for a spatial tile of the dataset."""
-
-    tile_x: int
-    tile_y: int
-    x_start: int
-    x_end: int
-    y_start: int
-    y_end: int
-
-    @property
-    def region_id(self) -> str:
-        """Generate a unique identifier for this spatial region."""
-        return f'x{self.x_start:04d}_{self.x_end:04d}_y{self.y_start:04d}_{self.y_end:04d}'
 
 
 def setup_cluster(cluster_args: dict) -> Client:
@@ -181,6 +164,13 @@ def load_dataset(variable: str, spatial_tile_size: int = DEFAULT_SPATIAL_TILE_SI
 def process_dataset(ds: xr.Dataset, repo: icechunk.Repository):
     """
     Task to process a single job/tile and return the session with changes.
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+        The Xarray Dataset to process.
+    repo: icechunk.Repository
+        The icechunk repository to write the processed dataset to.
 
     """
     try:
