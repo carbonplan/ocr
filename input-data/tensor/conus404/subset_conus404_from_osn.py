@@ -6,6 +6,7 @@
 
 
 import time
+from enum import Enum
 
 import coiled
 import icechunk
@@ -28,7 +29,7 @@ INPUT_ZARR_STORE_CONFIG = {
     },
 }
 
-DEFAULT_VARIABLES = ['Q2', 'TD2', 'PSFC', 'T2', 'V10', 'U10']
+
 DEFAULT_SPATIAL_TILE_SIZE = 10
 
 
@@ -56,38 +57,6 @@ def setup_cluster(cluster_args: dict) -> Client:
     except Exception as exc:
         console.log(f'Error setting up cluster: {exc}')
         raise
-
-
-def get_commit_messages_ancestry(
-    repo: icechunk.Repository, icechunk_branch: str = 'main'
-) -> list[str]:
-    """Retrieve the commit message ancestry for the specified branch.
-
-    Parameters
-    ----------
-    repo: icechunk.Repository
-        The icechunk repository to query.
-    icechunk_branch: str
-        The branch to retrieve commit messages from. Defaults to 'main'.
-
-    Returns
-    -------
-    list[str]: A list of commit messages from the ancestry of the specified branch.
-    """
-    hist = repo.ancestry(branch=icechunk_branch)
-    commit_messages = []
-
-    for ancestor in hist:
-        commit_messages.append(ancestor.message)
-
-    # Separate commits by ',' and handle case of single length ancestry commit history
-    split_commits = [
-        msg
-        for message in commit_messages
-        for msg in (message.split(',') if ',' in message else [message])
-    ]
-
-    return split_commits
 
 
 def setup_repository(storage_config: dict) -> tuple:
@@ -185,9 +154,18 @@ def process_dataset(ds: xr.Dataset, repo: icechunk.Repository):
         raise
 
 
+class Variable(str, Enum):
+    Q2 = 'Q2'
+    TD2 = 'TD2'
+    PSFC = 'PSFC'
+    T2 = 'T2'
+    V10 = 'V10'
+    U10 = 'U10'
+
+
 @app.command()
 def main(
-    variable: str = typer.Argument(..., help='variable to process from the dataset'),
+    variable: Variable = typer.Argument(..., help='variable to process from the dataset'),
     worker_vm_type: str = typer.Option(
         'r6a.8xlarge', help='VM type for worker nodes in the Coiled cluster'
     ),
@@ -200,10 +178,11 @@ def main(
     ),
 ):
     """Main entry point for processing CONUS-404 dataset."""
-    console.log(f'Starting OCR CONUS-404 processing for variable: {variable}...')
+    variable_ = variable.value
+    console.log(f'Starting OCR CONUS-404 processing for variable: {variable_}...')
 
     DEFAULT_CLUSTER_ARGS = {
-        'name': f'ocr-conus404-hourly-osn-{variable}',
+        'name': f'ocr-conus404-hourly-osn-{variable_}',
         'region': 'us-west-2',
         'n_workers': [n_workers, n_workers, n_workers],
         'tags': {'Project': 'OCR'},
@@ -213,7 +192,7 @@ def main(
 
     DEFAULT_STORAGE_CONFIG = {
         'bucket': 'carbonplan-ocr',
-        'prefix': f'input/conus404-hourly-icechunk/{variable}',
+        'prefix': f'input/conus404-hourly-icechunk/{variable_}',
         'region': 'us-west-2',
     }
 
@@ -221,13 +200,13 @@ def main(
 
     repo, session = setup_repository(DEFAULT_STORAGE_CONFIG)
 
-    ds = load_dataset(variable, spatial_tile_size)
+    ds = load_dataset(variable_, spatial_tile_size)
 
     process_dataset(ds, repo)
 
     client.cluster.close()
 
-    console.log(f'OCR CONUS-404 processing for variable: {variable} complete.')
+    console.log(f'OCR CONUS-404 processing for variable: {variable_} complete.')
 
 
 if __name__ == '__main__':
