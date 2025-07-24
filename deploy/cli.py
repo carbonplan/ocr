@@ -17,14 +17,13 @@ class Platform(str, Enum):
 
 @app.command()
 def main(
-    region_id: list[str] = typer.Option(
-        ..., '-r', '--region-id', help='Region IDs to process, e.g., y10_x2'
+    region_id: list[str] | None = typer.Option(
+        None, '-r', '--region-id', help='Region IDs to process, e.g., y10_x2'
     ),
-    platform: Platform = typer.Option(
-        Platform.COILED,
-        '-p',
-        '--platform',
-        help='Platform to run the pipeline on',
+    all_region_ids: bool = typer.Option(
+        False,
+        '--all-region-ids',
+        help='Process all valid region IDs',
         show_default=True,
     ),
     branch: Branch = typer.Option(
@@ -47,10 +46,24 @@ def main(
         help='Adds in spatial summary aggregations.',
         show_default=True,
     ),
+    platform: Platform = typer.Option(
+        Platform.COILED,
+        '-p',
+        '--platform',
+        help='Platform to run the pipeline on',
+        show_default=True,
+    ),
 ):
     """
     Run the OCR deployment pipeline on Coiled.
     """
+    if all_region_ids and region_id:
+        raise typer.BadParameter(
+            'Cannot use --all-region-ids and -r/--region-id together. Please specify either one.'
+        )
+    if not all_region_ids and not region_id:
+        raise typer.BadParameter('You must specify either --region-id or --all-region-ids.')
+
     from ocr.chunking_config import ChunkingConfig
     from ocr.template import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
 
@@ -61,7 +74,10 @@ def main(
     icechunk_config = IcechunkConfig(branch=branch_, wipe=wipe)
 
     icechunk_repo_and_session = icechunk_config.repo_and_session()
-    provided_region_ids = set(region_id)
+    if all_region_ids:
+        provided_region_ids = set(config.valid_region_ids)
+    else:
+        provided_region_ids = set(region_id or [])
     valid_region_ids = provided_region_ids.intersection(config.valid_region_ids)
     processed_region_ids = set(get_commit_messages_ancestry(icechunk_repo_and_session['repo']))
     unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
@@ -101,7 +117,7 @@ def main(
         batch_manager_01 = CoiledBatchManager(debug=debug)
 
         # region_id is tuple
-        for rid in valid_region_ids:
+        for rid in unprocessed_valid_region_ids:
             batch_manager_01.submit_job(
                 command=f'python ../../ocr/pipeline/01_Write_Region.py -r {rid} -b {branch}',
                 name=f'process-region-{rid}-{branch}',

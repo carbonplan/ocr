@@ -68,14 +68,6 @@ class ChunkingConfig(pydantic.BaseModel):
         }
 
     @property
-    def generate_click_all_region_deploy_command(self):
-        region_ids = self.valid_region_ids
-        deploy_str = 'uv run python deploy.py '
-        for rid in region_ids:
-            deploy_str += f'-r {rid} '
-        return deploy_str
-
-    @property
     def valid_region_ids(self) -> list:
         # generated and saved from generate_valid_region_ids()
         return [
