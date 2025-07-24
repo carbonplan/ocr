@@ -1,0 +1,158 @@
+from enum import Enum
+
+import typer
+
+app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
+
+
+class Branch(str, Enum):
+    QA = 'QA'
+    PROD = 'prod'
+
+
+class Platform(str, Enum):
+    COILED = 'coiled'
+    LOCAL = 'local'
+
+
+@app.command()
+def main(
+    region_id: str = typer.Option(
+        ..., '-r', '--region-id', help='Region IDs to process, e.g., y10_x2'
+    ),
+    platform: Platform = typer.Option(
+        Platform.COILED,
+        '-p',
+        '--platform',
+        help='Platform to run the pipeline on',
+        show_default=True,
+    ),
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+    wipe: bool = typer.Option(
+        False,
+        '-w',
+        '--wipe',
+        help='If True, wipes icechunk repo and vector data before initializing.',
+        show_default=True,
+    ),
+    debug: bool = typer.Option(
+        False, '-d', '--debug', help='Enable Debugging Mode', show_default=True
+    ),
+    summary_stats: bool = typer.Option(
+        False,
+        '-s',
+        '--summary-stats',
+        help='Adds in spatial summary aggregations.',
+        show_default=True,
+    ),
+):
+    """
+    Run the OCR deployment pipeline on Coiled.
+    """
+    from ocr.chunking_config import ChunkingConfig
+    from ocr.template import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
+
+    # ------------- CONFIG ---------------
+    branch_ = branch.value
+    config = ChunkingConfig()
+    VectorConfig(branch=branch_, wipe=wipe)
+    icechunk_config = IcechunkConfig(branch=branch_, wipe=wipe)
+
+    icechunk_repo_and_session = icechunk_config.repo_and_session()
+    valid_region_ids = set(region_id).intersection(config.valid_region_ids)
+    region_ids_in_ancestry = get_commit_messages_ancestry(icechunk_repo_and_session['repo'])
+    valid_region_ids = valid_region_ids.difference(region_ids_in_ancestry)
+
+    if len(valid_region_ids) == 0:
+        raise ValueError(
+            f'There are no valid region_ids present. Supplied region_ids: {region_id} are already in the icechunk ancestry or are invalid region ids.'
+        )
+
+    if platform == Platform.COILED:
+        from managers import CoiledBatchManager
+
+        shared_coiled_kwargs = {
+            'ntasks': 1,
+            'region': 'us-west-2',
+            'forward_aws_credentials': True,
+            'tag': {'Project': 'OCR'},
+        }
+
+        # ------------- 01 AU ---------------
+
+        batch_manager_01 = CoiledBatchManager(debug=debug)
+
+        # region_id is tuple
+        for rid in valid_region_ids:
+            batch_manager_01.submit_job(
+                command=f'python ../../ocr/pipeline/01_Write_Region.py -r {rid} -b {branch}',
+                name=f'process-region-{rid}-{branch}',
+                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
+            )
+
+        # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
+        batch_manager_01.wait_for_completion()
+
+        # ----------- 02 Pyramid -------------
+        # NOTE: We need to do more work on pyramiding - currently excluded
+        # This is non-blocking, since there are no post-pyramid dependent operations, so no wait_for_completion (I think)
+        # if pyramid:
+        #     batch_manager_pyarmid_02 = CoiledBatchManager(debug=debug)
+        #     batch_manager_pyarmid_02.submit_job(
+        #         command=f'python ../../ocr/pipeline/02_Pyramid.py -b {branch}',
+        #         name=f'create-pyramid-{branch}',
+        #     )
+
+        # ----------- 02 Aggregate -------------
+        batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
+        batch_manager_aggregate_02.submit_job(
+            command=f'python ../../ocr/pipeline/02_Aggregate.py -b {branch}',
+            name=f'aggregate-geoparuqet-{branch}',
+            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
+        )
+        batch_manager_aggregate_02.wait_for_completion()
+
+        if summary_stats:
+            batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
+            batch_manager_county_aggregation_01.submit_job(
+                command=f'python ../../ocr/pipeline/02_county_summary_stats.py -b {branch}',
+                name=f'create-county-summary-stats-{branch}',
+                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.xlarge'},
+            )
+            batch_manager_county_aggregation_01.wait_for_completion()
+            # create county summary stats PMTiles layer
+            batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
+            batch_manager_county_tiles_02.submit_job(
+                command=f'../../ocr/pipeline/03_county_pmtiles.sh {branch}',
+                name=f'create-county-pmtiles-{branch}',
+                kwargs={
+                    **shared_coiled_kwargs,
+                    'vm_type': 'c7a.xlarge',
+                    'container': 'quay.io/carbonplan/ocr:latest',
+                },
+            )
+
+        # # ------------- 03  Tiles ---------------
+        batch_manager_03 = CoiledBatchManager(debug=debug)
+        batch_manager_03.submit_job(
+            command=f'../../ocr/pipeline/03_Tiles.sh {branch}',
+            name=f'create-pmtiles-{branch}',
+            kwargs={
+                **shared_coiled_kwargs,
+                'vm_type': 'c7a.xlarge',
+                'container': 'quay.io/carbonplan/ocr:latest',
+            },
+        )
+
+        batch_manager_03.wait_for_completion()
+
+    elif platform == Platform.LOCAL:
+        raise NotImplementedError(
+            'Local platform is not implemented yet. Please use Coiled for now.'
+        )
+
+
+if __name__ == '__main__':
+    typer.run(main)
