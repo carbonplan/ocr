@@ -1,8 +1,9 @@
 import time
 from dataclasses import dataclass, field
+from enum import Enum
 
-import click
 import coiled
+import typer
 
 
 @dataclass
@@ -65,47 +66,40 @@ class CoiledBatchManager:
         )
 
 
-@click.command(name='uv run deploy.py')
-@click.option(
-    '-r',
-    '--region-id',
-    multiple=True,  # this allows for multiple inputs: ex: uv run python deploy.py -r y2_x4 -r y2_x5
-    help="region IDs. ex: 'y10_x2'",
-)
-@click.option('--branch', '-b', default='QA', help='data branch path [QA, prod]. Default is QA')
-@click.option(
-    '--wipe',
-    '-w',
-    is_flag=True,
-    help='If True, wipes icechunk repo and vector data before initializing.',
-)
-@click.option(
-    '--debug',
-    is_flag=True,
-    default=False,
-    help='Enable Debugging, default False',
-)
-@click.option(
-    '--summary-stats',
-    '-s',
-    is_flag=True,
-    default=False,
-    help='Adds in spatial summary aggregations.',
-)
+app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
+
+
+class Branch(str, Enum):
+    QA = 'QA'
+    PROD = 'prod'
+
+
+@app.command()
 def main(
-    region_id: tuple[str, ...],
-    branch: str = 'QA',
-    wipe: bool = False,
-    debug: bool = False,
-    summary_stats: bool = False,
+    region_id: str = typer.Option(..., '-r', help='Region IDs to process, e.g., y10_x2'),
+    branch: Branch = typer.Option('QA', '-b', help='Data branch path', show_default=True),
+    wipe: bool = typer.Option(
+        False,
+        '-w',
+        help='If True, wipes icechunk repo and vector data before initializing.',
+        show_default=True,
+    ),
+    debug: bool = typer.Option(False, '-d', help='Enable Debugging Mode', show_default=True),
+    summary_stats: bool = typer.Option(
+        False, '-s', help='Adds in spatial summary aggregations.', show_default=True
+    ),
 ):
+    """
+    Run the OCR deployment pipeline on Coiled.
+    """
     from ocr.chunking_config import ChunkingConfig
     from ocr.template import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
 
     # ------------- CONFIG ---------------
+    branch_ = branch.value
     config = ChunkingConfig()
-    VectorConfig(branch=branch, wipe=wipe)
-    icechunk_config = IcechunkConfig(branch=branch, wipe=wipe)
+    VectorConfig(branch=branch_, wipe=wipe)
+    icechunk_config = IcechunkConfig(branch=branch_, wipe=wipe)
 
     icechunk_repo_and_session = icechunk_config.repo_and_session()
     valid_region_ids = set(region_id).intersection(config.valid_region_ids)
@@ -194,4 +188,4 @@ def main(
 
 
 if __name__ == '__main__':
-    main()
+    typer.run(main)
