@@ -4,6 +4,8 @@ import typing
 import coiled
 import pydantic
 
+from ocr.console import console
+
 
 class AbstractBatchManager(pydantic.BaseModel):
     """
@@ -35,6 +37,7 @@ class CoiledBatchManager(AbstractBatchManager):
     job_ids: list[str] = pydantic.Field(default_factory=list)
 
     def submit_job(self, command: str, name: str, kwargs: dict[str, typing.Any]) -> str:
+        console.log(f'Submitting job: {name} with command: {command} and kwargs: {kwargs}')
         batch_result = coiled.batch.run(command=command, name=name, **kwargs)
         job_id = batch_result['job_id']
         self.job_ids.append(job_id)
@@ -43,7 +46,7 @@ class CoiledBatchManager(AbstractBatchManager):
     def wait_for_completion(self, exit_on_failure: bool = False):
         """Wait for all tracked jobs to complete."""
 
-        print(f'Waiting for {len(self.job_ids)} jobs to complete...')
+        console.print(f'Waiting for {len(self.job_ids)} jobs to complete...')
 
         # sets instead of lists so we don't add duplicates on each check
         completed: set = set()
@@ -56,20 +59,20 @@ class CoiledBatchManager(AbstractBatchManager):
                 if job_id in self.job_ids and job_id not in completed and job_id not in failed:
                     # if job_id is one of submitted job_ids, incase someone else submits... and not in failed or completed.
                     state = job.get('state')
-                    print(f'job id: {job_id} and state: {state}')
+                    console.print(f'job id: {job_id} and state: {state}')
                     if state == 'done':
-                        print(f'{job_id} success')
+                        console.print(f'{job_id} success')
                         completed.add(job_id)
                     elif state in ('failed', 'error', 'done (errors)'):
-                        print(f'{job_id} failed')
+                        console.print(f'{job_id} failed')
                         failed.add(job_id)
                         if exit_on_failure:
                             raise Exception(f'{job_id} failed, and exit_on_failure == True. ')
 
                     elif state == 'queued':
-                        print(f'{job_id} is queued')
+                        console.print(f'{job_id} is queued')
                     elif state == 'running':
-                        print(f'{job_id} is running')
+                        console.print(f'{job_id} is running')
                     else:
                         raise NotImplementedError(
                             f'state: {state} for job_id: {job_id} is not done, failed, queued or running. We need to add more checks!'
@@ -81,7 +84,7 @@ class CoiledBatchManager(AbstractBatchManager):
             if len(completed) + len(failed) < len(self.job_ids):
                 print(f'{len(completed)} jobs have completed out of {len(self.job_ids)}')
                 time.sleep(self.status_check_int)
-        # TODO: switch to logging!
-        print(
+
+        console.print(
             f'\n ---------------- \n all jobs finished running \n completed: {len(completed)}, {completed} \n  failed: {len(failed)}, {failed} \n ------------'
         )

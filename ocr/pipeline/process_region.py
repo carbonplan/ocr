@@ -1,4 +1,5 @@
 import geopandas as gpd
+import typer
 import xarray as xr
 
 from ocr.chunking_config import ChunkingConfig
@@ -12,6 +13,8 @@ from ocr.template import (
 from ocr.types import Branch, RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 from ocr.wind import calculate_wind_adjusted_risk
+
+app = typer.Typer(help='Calculate and write risk for a given region to Icechunk CONUS template.')
 
 
 def write_region_to_icechunk(ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool):
@@ -81,7 +84,7 @@ def calculate_risk(region_id: str, risk_type: RiskType, branch: Branch, wipe: bo
     if region_id_exists_in_repo(region_id=region_id, branch=branch.value):
         raise ValueError(
             f'Region {region_id} already exists in Icechunk store.'
-            f' {branch.value} branch. Please provide a new region_id or use the --wipe flag to overwrite existing data.'
+            f' {branch.value} branch. Please provide a new region_id or use the wipe flag to overwrite existing data.'
         )
     if risk_type == RiskType.WIND:
         ds = calculate_wind_adjusted_risk(region_id=region_id)
@@ -90,3 +93,30 @@ def calculate_risk(region_id: str, risk_type: RiskType, branch: Branch, wipe: bo
 
     write_region_to_icechunk(ds=ds, region_id=region_id, branch=branch, wipe=wipe)
     sample_risk_to_buildings(region_id=region_id, branch=branch)
+
+
+@app.command()
+def cli(
+    region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
+    risk_type: RiskType = typer.Option(
+        RiskType.WIND, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
+    ),
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+    wipe: bool = typer.Option(
+        False,
+        '-w',
+        '--wipe',
+        help='If True, wipes icechunk repo and vector data before initializing.',
+        show_default=True,
+    ),
+):
+    """
+    Calculate and write risk for a given region to Icechunk CONUS template.
+    """
+    calculate_risk(region_id=region_id, risk_type=risk_type, branch=branch, wipe=wipe)
+
+
+if __name__ == '__main__':
+    app()

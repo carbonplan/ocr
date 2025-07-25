@@ -1,6 +1,8 @@
+import pathlib
+
 import typer
 
-from ocr.types import Branch, Platform
+from ocr.types import Branch, Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
@@ -15,6 +17,9 @@ def main(
         '--all-region-ids',
         help='Process all valid region IDs',
         show_default=True,
+    ),
+    risk_type: RiskType = typer.Option(
+        RiskType.WIND, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
     branch: Branch = typer.Option(
         'QA', '-b', '--branch', help='Data branch path', show_default=True
@@ -47,6 +52,9 @@ def main(
     """
     Run the OCR deployment pipeline on Coiled.
     """
+    here = pathlib.Path(__file__).parent.resolve()
+    pipeline_path = here.parent / 'ocr' / 'pipeline'
+
     if all_region_ids and region_id:
         raise typer.BadParameter(
             'Cannot use --all-region-ids and -r/--region-id together. Please specify either one.'
@@ -109,13 +117,14 @@ def main(
         # region_id is tuple
         for rid in unprocessed_valid_region_ids:
             batch_manager_01.submit_job(
-                command=f'python ../../ocr/pipeline/01_Write_Region.py -r {rid} -b {branch}',
-                name=f'process-region-{rid}-{branch}',
+                command=f'{pipeline_path}/process_region.py {rid} --branch {branch.value} --risk-type {risk_type.value}',
+                name=f'process-region-{rid}-{branch.value}',
                 kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
         batch_manager_01.wait_for_completion()
+        exit()
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
