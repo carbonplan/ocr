@@ -1,18 +1,8 @@
-from enum import Enum
-
 import typer
 
+from ocr.types import Branch, Platform
+
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
-
-
-class Branch(str, Enum):
-    QA = 'QA'
-    PROD = 'prod'
-
-
-class Platform(str, Enum):
-    COILED = 'coiled'
-    LOCAL = 'local'
 
 
 @app.command()

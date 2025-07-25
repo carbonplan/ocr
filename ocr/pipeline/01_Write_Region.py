@@ -86,9 +86,9 @@ def run_wind_region(region_id: str, branch: str):
     """
 
     from ocr.template import insert_region_uncoop
-    from ocr.wind import run_wind_adjustment
+    from ocr.wind import calculate_wind_adjusted_risk
 
-    risk_4326_combined = run_wind_adjustment(region_id=region_id)
+    risk_4326_combined = calculate_wind_adjusted_risk(region_id=region_id)
     # Using the Icechunk uncooperative writes method: https://icechunk.io/en/latest/icechunk-python/parallel/#uncooperative-distributed-writes
     # In this, we are trading performance / more difficult conflict resolution for stateless processing.
     insert_region_uncoop(subset_ds=risk_4326_combined, region_id=region_id, branch=branch)

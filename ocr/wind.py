@@ -3,6 +3,8 @@ import typing
 import numpy as np
 import xarray as xr
 
+from ocr.console import console
+
 
 # Depreciate? - potentially unused
 def generate_angles() -> dict[str, float]:
@@ -227,10 +229,7 @@ def classify_wind(
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
-    from ocr.wind import (
-        apply_wind_directional_convolution,
-        create_composite_bp_map,
-    )
+    from ocr.wind import apply_wind_directional_convolution, create_composite_bp_map
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
@@ -259,14 +258,14 @@ def classify_wind(
     return wind_informed_bp_float_corrected
 
 
-def run_wind_adjustment(region_id: str) -> xr.Dataset:
+def calculate_wind_adjusted_risk(region_id: str) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
     from ocr import catalog
     from ocr.chunking_config import ChunkingConfig
-    from ocr.utils import (
-        lon_to_180,
-    )
+    from ocr.utils import lon_to_180
+
+    console.log(f'Calculating wind risk for region: {region_id}')
 
     config = ChunkingConfig()
 
