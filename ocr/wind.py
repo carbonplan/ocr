@@ -215,3 +215,55 @@ def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
     # select the entry that corresponds to the wind direction index
     # TODO: let's test this to confirm it's working as expected
     return bp_da.isel(direction=wind_directions)
+
+
+def nws_fire_weather(hurs, hurs_threshold, sfcWind, wind_threshold, tas=None, tas_threshold=None):
+    """
+    calculation of whether or not a day counts as fire weather
+    based upon relative humidity, windspeed, temperature and thresholds associated
+    with each
+    """
+    # relative_humidity < 25%
+    mask_hurs = hurs < hurs_threshold
+    # windspeed > 15 mph
+    mps_to_mph_conversion = (
+        1000 * 3600 / (25.4 * 12 * 5280)
+    )  # convert m/s to mph and then double to account for sustained winds
+    mask_sfcWind = (sfcWind * mps_to_mph_conversion) > wind_threshold
+    # temperature > 75 deg F
+    if tas is not None:
+        mask_tas = ((tas - 273.15) * 9 / 5 + 32) > tas_threshold  # convert K to deg F
+    fire_weather_mask = mask_hurs & mask_sfcWind
+    if tas is not None:
+        fire_weather_mask = fire_weather_mask & mask_tas
+    return fire_weather_mask
+
+
+def calculate_rh(q2, t2, psfc):
+    """
+    Calculate relative humidity (RH).
+
+    Inputs:
+    - q2: water vapor mixing ratio at 2 meters above ground level (kg/kg)
+    - t2: 2-meter temperature (K)
+    - psfc: surface pressure (Pa)
+
+    Returns:
+    RH (%)
+    """
+    # Saturation vapor pressure using Tetens formula (in Pa)
+    es = 611.2 * np.exp((17.67 * (t2 - 273.15)) / (t2 - 29.65))
+
+    # Actual vapor pressure (in Pa)
+    e = (q2 * psfc) / (0.622 + q2)
+
+    # Relative humidity (%)
+    rh = (e / es) * 100
+
+    return rh
+
+
+def direction_histogram(arr):
+    arr = arr[arr >= 0]
+    counts = np.bincount(arr, minlength=8)
+    return counts / counts.sum() if counts.sum() > 0 else np.zeros(8)

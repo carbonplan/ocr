@@ -1,7 +1,9 @@
 from collections.abc import Iterable
 
 import geopandas as gpd
+import icechunk
 import xarray as xr
+from zarr.codecs import BloscCodec
 
 
 def apply_s3_creds(region: str = 'us-west-2'):
@@ -114,3 +116,36 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     )
 
     return nearest_pixels.values
+
+
+def prep_encoding(ds):
+    var_list = list(ds.keys())
+    encoding = {}
+    for var in var_list:
+        encoding[var] = {
+            'compressor': BloscCodec(
+                cname='zstd',
+                clevel=6,
+            )
+        }
+    for coord in ds.coords:
+        encoding[coord] = {'compressor': None}
+    return encoding
+
+
+def load_conus404(variable):
+    config = {
+        'bucket': 'carbonplan-ocr',
+        'prefix': f'input/conus404-hourly-icechunk/{variable}',
+        'region': 'us-west-2',
+    }
+
+    storage = icechunk.s3_storage(
+        bucket=config['bucket'],
+        prefix=config['prefix'],
+        region=config['region'],
+    )
+
+    repo = icechunk.Repository.open(storage)
+    session = repo.readonly_session('main')
+    return xr.open_zarr(session.store, consolidated=False)
