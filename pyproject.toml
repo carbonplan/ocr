@@ -119,6 +119,7 @@
     geodatasets   = ">=2024.8.0,<2025"
     geopandas     = ">=1.0.1,<2"
     icechunk      = ">=0.2.8,<0.3"
+    intake        = ">=2.0.8"
     netcdf4       = ">=1.7.2,<2"
     numba         = ">=0.54"
     numbagg       = ">=0.9.0,<0.10"
@@ -131,12 +132,17 @@
     s3fs          = ">=2025.3.0,<2026"
     windrose      = ">=1.9.2 ,<2"
     xarray        = ">=2025.3.0,<2026"
+    xesmf         = ">=0.8.1"
     zarr          = ">=3.0.5,<4"
 jupyterlab = ">=4.4.0,<5"
 geemap = ">=0.35.3,<0.36"
 earthengine-api = ">=1.5.11,<2"
 planetary-computer = ">=1.0.0,<2"
 adlfs = ">=2024.12.0,<2025"
+gcsfs = ">=2025.3.2,<2026"
+cartopy = ">=0.24.0,<0.25"
+xclim = ">=0.56.0,<0.57"
+dask-labextension = ">=7.0.0,<8"
 
 [tool.pixi.environments]
     data-mgmt = ["data-mgmt"]
@@ -172,3 +178,4 @@ adlfs = ">=2024.12.0,<2025"
     export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
     start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi" }
+    start-coiled-notebook-32core = { cmd = "coiled notebook start --sync --vm-type m5.8xlarge --sync-ignore .pixi" }
