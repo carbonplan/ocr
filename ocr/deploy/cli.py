@@ -1,7 +1,7 @@
 import pathlib
 
 import typer
-
+from ocr.deploy.managers import CoiledBatchManager
 from ocr.types import Branch, Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
@@ -53,7 +53,7 @@ def main(
     Run the OCR deployment pipeline on Coiled.
     """
     here = pathlib.Path(__file__).parent.resolve()
-    pipeline_path = here.parent / 'ocr' / 'pipeline'
+    pipeline_path = here.parent  / 'pipeline'
 
     if all_region_ids and region_id:
         raise typer.BadParameter(
@@ -101,7 +101,7 @@ def main(
         raise ValueError(error_message)
 
     if platform == Platform.COILED:
-        from managers import CoiledBatchManager
+        
 
         shared_coiled_kwargs = {
             'ntasks': 1,
