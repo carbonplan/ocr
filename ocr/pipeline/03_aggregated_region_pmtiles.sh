@@ -1,12 +1,4 @@
-
 #!/bin/bash
-
-# COILED container quay.io/carbonplan/ocr:latest
-# COILED n-tasks 1
-# COILED region us-west-2
-# COILED --forward-aws-credentials
-# COILED --tag project=OCR
-# COILED --vm-type c7a.xlarge
 
 
 duckdb -c "
@@ -16,7 +8,7 @@ COPY (
     SELECT
         'Feature' AS type,
         json_object(
-            'tract_geoid', tract_geoid,
+            'tract_geoid', NAME,
             'building_count', building_count,
             'avg_risk_2011_horizon_1', avg_risk_2011_horizon_1,
             'avg_risk_2011_horizon_15', avg_risk_2011_horizon_15,
@@ -55,7 +47,7 @@ COPY (
     SELECT
         'Feature' AS type,
         json_object(
-            'county_name', county_name,
+            'county_name', NAME,
             'building_count', building_count,
             'avg_risk_2011_horizon_1', avg_risk_2011_horizon_1,
             'avg_risk_2011_horizon_15', avg_risk_2011_horizon_15,
