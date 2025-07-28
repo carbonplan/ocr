@@ -1,13 +1,9 @@
-import pathlib
-
 import typer
+
 from ocr.deploy.managers import CoiledBatchManager
 from ocr.types import Branch, Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
-
-
-
 
 
 @app.command()
@@ -55,8 +51,6 @@ def run(
     """
     Run the OCR deployment pipeline on Coiled.
     """
-    here = pathlib.Path(__file__).parent.resolve()
-    pipeline_path = here.parent  / 'pipeline'
 
     if all_region_ids and region_id:
         raise typer.BadParameter(
@@ -104,8 +98,6 @@ def run(
         raise ValueError(error_message)
 
     if platform == Platform.COILED:
-        
-
         shared_coiled_kwargs = {
             'ntasks': 1,
             'region': 'us-west-2',
@@ -127,7 +119,6 @@ def run(
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
         batch_manager_01.wait_for_completion()
-      
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
@@ -200,6 +191,7 @@ def process_region(
     Calculate and write risk for a given region to Icechunk CONUS template.
     """
     from ocr.pipeline.process_region import calculate_risk
+
     calculate_risk(region_id=region_id, risk_type=risk_type, branch=branch, wipe=wipe)
 
 
@@ -213,7 +205,9 @@ def aggregate(
     Aggregate geoparquet regions, reproject and write.
     """
     from ocr.pipeline.aggregate import aggregated_gpq
+
     aggregated_gpq(branch=branch)
+
 
 if __name__ == '__main__':
     typer.run(run)
