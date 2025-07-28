@@ -235,10 +235,11 @@ def region_id_exists_in_repo(region_id: str, branch: str):
 def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool = False):
     import icechunk
 
-    console.log(
-        f'Inserting region: {region_id} into Icechunk store on branch: {branch} with wipe={wipe}'
-    )
+   
     icechunk_config = IcechunkConfig(branch=branch.value, wipe=wipe)
+    console.log(
+        f'Inserting region: {region_id} into Icechunk store: {icechunk_config.uri} on branch: {branch} with wipe={wipe}'
+    )
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
     while True:

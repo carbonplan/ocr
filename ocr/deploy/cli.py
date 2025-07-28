@@ -7,8 +7,11 @@ from ocr.types import Branch, Platform, RiskType
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
 
+
+
+
 @app.command()
-def main(
+def run(
     region_id: list[str] | None = typer.Option(
         None, '-r', '--region-id', help='Region IDs to process, e.g., y10_x2'
     ),
@@ -117,20 +120,20 @@ def main(
         # region_id is tuple
         for rid in unprocessed_valid_region_ids:
             batch_manager_01.submit_job(
-                command=f'{pipeline_path}/process_region.py {rid} --branch {branch.value} --risk-type {risk_type.value}',
+                command=f'ocr process-region {rid} --branch {branch.value} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{branch.value}',
                 kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
         batch_manager_01.wait_for_completion()
-        exit()
+      
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
         batch_manager_aggregate_02.submit_job(
-            command=f'python ../../ocr/pipeline/02_Aggregate.py -b {branch}',
-            name=f'aggregate-geoparuqet-{branch}',
+            command=f'ocr aggregate --branch {branch.value}',
+            name=f'aggregate-geoparquet-{branch.value}',
             kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large'},
         )
         batch_manager_aggregate_02.wait_for_completion()
@@ -176,5 +179,41 @@ def main(
         )
 
 
+@app.command()
+def process_region(
+    region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
+    risk_type: RiskType = typer.Option(
+        RiskType.WIND, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
+    ),
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+    wipe: bool = typer.Option(
+        False,
+        '-w',
+        '--wipe',
+        help='If True, wipes icechunk repo and vector data before initializing.',
+        show_default=True,
+    ),
+):
+    """
+    Calculate and write risk for a given region to Icechunk CONUS template.
+    """
+    from ocr.pipeline.process_region import calculate_risk
+    calculate_risk(region_id=region_id, risk_type=risk_type, branch=branch, wipe=wipe)
+
+
+@app.command()
+def aggregate(
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+):
+    """
+    Aggregate geoparquet regions, reproject and write.
+    """
+    from ocr.pipeline.aggregate import aggregated_gpq
+    aggregated_gpq(branch=branch)
+
 if __name__ == '__main__':
-    typer.run(main)
+    typer.run(run)

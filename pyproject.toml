@@ -67,6 +67,11 @@
 
     dev = ["ocr[test,lint,docs]"]
 
+[project.scripts]
+    ocr = "ocr.deploy.cli:app"
+    ocr-deploy = "ocr.deploy.cli:app"
+
+
 [tool.setuptools.packages.find]
     include = ["ocr*"]
 
@@ -74,6 +79,8 @@
     fallback_version = "999"
     local_scheme     = "node-and-date"
     version_scheme   = "post-release"
+
+
 
 [tool.coverage.run]
     branch = true

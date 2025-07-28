@@ -17,6 +17,9 @@ from ocr.wind import calculate_wind_adjusted_risk
 app = typer.Typer(help='Calculate and write risk for a given region to Icechunk CONUS template.')
 
 
+
+
+
 def write_region_to_icechunk(ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool):
     insert_region_uncoop(
         subset_ds=ds,
@@ -95,7 +98,7 @@ def calculate_risk(region_id: str, risk_type: RiskType, branch: Branch, wipe: bo
     sample_risk_to_buildings(region_id=region_id, branch=branch)
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def cli(
     region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
     risk_type: RiskType = typer.Option(
