@@ -141,8 +141,8 @@ def run(
             # create summary stats PMTiles layer
             batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
             batch_manager_county_tiles_02.submit_job(
-                command=f'../../ocr/pipeline/03_aggregated_region_pmtiles.sh {branch}',
-                name=f'create-county-pmtiles-{branch}',
+                command=f'ocr create-regional-pmtiles --branch {branch.value}',
+                name=f'create-county-pmtiles-{branch.value}',
                 kwargs={
                     **shared_coiled_kwargs,
                     'vm_type': 'c7a.4xlarge',
@@ -221,6 +221,20 @@ def aggregate_regional_risk(
     from ocr.pipeline.fire_wind_risk_regional_aggregator import compute_regional_fire_wind_risk_statistics
 
     compute_regional_fire_wind_risk_statistics(branch=branch)
+
+
+@app.command()
+def create_regional_pmtiles(
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+):
+    """
+    Create PMTiles for regional risk statistics (counties and tracts).
+    """
+    from ocr.pipeline.create_regional_pmtiles import create_regional_pmtiles
+
+    create_regional_pmtiles(branch=branch)
 
 
 if __name__ == '__main__':
