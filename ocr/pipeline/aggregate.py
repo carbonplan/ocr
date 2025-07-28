@@ -1,14 +1,16 @@
 # aggregate geoparquet regions, reproject and write
 
-import duckdb
-from ocr.types import Branch, RiskType
-from ocr.template import VectorConfig
-from ocr.utils import apply_s3_creds, install_load_extensions
-from ocr.console import console
 
+from ocr.types import Branch
 
 
 def aggregated_gpq(branch: Branch):
+    import duckdb
+
+    from ocr.console import console
+    from ocr.template import VectorConfig
+    from ocr.utils import apply_s3_creds, install_load_extensions
+
     install_load_extensions()
     apply_s3_creds()
     vector_config = VectorConfig(branch=branch.value)
@@ -25,5 +27,8 @@ def aggregated_gpq(branch: Branch):
         FORMAT 'parquet',
         COMPRESSION 'zstd',
         OVERWRITE_OR_IGNORE true);""")
-    
-    console.log('Aggregation complete. Consolidated geoparquet written to:', vector_config.consolidated_geoparquet_uri)
+
+    console.log(
+        'Aggregation complete. Consolidated geoparquet written to:',
+        vector_config.consolidated_geoparquet_uri,
+    )
