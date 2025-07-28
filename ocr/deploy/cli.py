@@ -153,8 +153,8 @@ def run(
         # ------------- 03  Tiles ---------------
         batch_manager_03 = CoiledBatchManager(debug=debug)
         batch_manager_03.submit_job(
-            command=f'../../ocr/pipeline/03_Tiles.sh {branch}',
-            name=f'create-pmtiles-{branch}',
+            command=f'ocr create-pmtiles --branch {branch.value}',
+            name=f'create-pmtiles-{branch.value}',
             kwargs={
                 **shared_coiled_kwargs,
                 'vm_type': 'c7a.xlarge',
@@ -236,6 +236,18 @@ def create_regional_pmtiles(
 
     create_regional_pmtiles(branch=branch)
 
+@app.command()
+def create_pmtiles(
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+):
+    """
+    Create PMTiles from the consolidated geoparquet file.
+    """
+    from ocr.pipeline.create_pmtiles import create_pmtiles
+
+    create_pmtiles(branch=branch)
 
 if __name__ == '__main__':
     typer.run(run)
