@@ -132,8 +132,8 @@ def run(
         if summary_stats:
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
             batch_manager_county_aggregation_01.submit_job(
-                command=f'python ../../ocr/pipeline/02_aggregated_region_summary_stats.py -b {branch}',
-                name=f'create-county-summary-stats-{branch}',
+                command=f'ocr aggregate-regional-risk --branch {branch.value}',
+                name=f'create-county-summary-stats-{branch.value}',
                 kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.6xlarge'},
             )
             batch_manager_county_aggregation_01.wait_for_completion()
@@ -207,6 +207,20 @@ def aggregate(
     from ocr.pipeline.aggregate import aggregated_gpq
 
     aggregated_gpq(branch=branch)
+
+
+@app.command()
+def aggregate_regional_risk(
+    branch: Branch = typer.Option(
+        'QA', '-b', '--branch', help='Data branch path', show_default=True
+    ),
+):
+    """
+    Aggregate regional fire and wind risk statistics.
+    """
+    from ocr.pipeline.fire_wind_risk_regional_aggregator import compute_regional_fire_wind_risk_statistics
+
+    compute_regional_fire_wind_risk_statistics(branch=branch)
 
 
 if __name__ == '__main__':
