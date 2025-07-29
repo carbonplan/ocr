@@ -1,7 +1,11 @@
+import pathlib
+
 import typer
 
 from ocr.deploy.managers import CoiledBatchManager
 from ocr.types import Branch, Platform, RiskType
+
+here = pathlib.Path(__file__).parent.resolve()
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
@@ -109,7 +113,6 @@ def run(
 
         batch_manager_01 = CoiledBatchManager(debug=debug)
 
-        # region_id is tuple
         for rid in unprocessed_valid_region_ids:
             batch_manager_01.submit_job(
                 command=f'ocr process-region {rid} --branch {branch.value} --risk-type {risk_type.value}',
@@ -158,7 +161,6 @@ def run(
             kwargs={
                 **shared_coiled_kwargs,
                 'vm_type': 'c7a.xlarge',
-                'container': 'quay.io/carbonplan/ocr:latest',
             },
         )
 

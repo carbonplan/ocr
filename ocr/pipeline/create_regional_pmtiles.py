@@ -90,7 +90,7 @@ def create_regional_pmtiles(branch: Branch):
             '-zg',
         ]
 
-        tippecanoe_proc = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
+        _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
         console.log('Tract PMTiles created successfully')
 
@@ -155,7 +155,7 @@ def create_regional_pmtiles(branch: Branch):
             '-zg',
         ]
 
-        tippecanoe_proc = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
+        _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
         console.log('County PMTiles created successfully')
 

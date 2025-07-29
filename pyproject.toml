@@ -201,12 +201,16 @@
     tippecanoe = ">=2.78.0,<3"
 
 [tool.pixi.tasks]
-    export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
+    export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
+
     start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
 
 [tool.pixi.dependencies]
-    netcdf4  = ">=1.7.2,<2"
-    numba    = ">=0.61.2,<0.62"
-    pyproj   = ">=3.7.1,<4"
-    rasterio = ">=1.4.3,<2"
+    gdal                  = ">=3.10.3,<4"
+    libgdal-arrow-parquet = ">=3.10.3,<4"
+    netcdf4               = ">=1.7.2,<2"
+    numba                 = ">=0.61.2,<0.62"
+    pyproj                = ">=3.7.1,<4"
+    rasterio              = ">=1.4.3,<2"
+    s5cmd                 = ">=2.3.0,<3"
