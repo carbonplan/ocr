@@ -218,7 +218,9 @@ def aggregate_regional_risk(
     """
     Aggregate regional fire and wind risk statistics.
     """
-    from ocr.pipeline.fire_wind_risk_regional_aggregator import compute_regional_fire_wind_risk_statistics
+    from ocr.pipeline.fire_wind_risk_regional_aggregator import (
+        compute_regional_fire_wind_risk_statistics,
+    )
 
     compute_regional_fire_wind_risk_statistics(branch=branch)
 
@@ -236,6 +238,7 @@ def create_regional_pmtiles(
 
     create_regional_pmtiles(branch=branch)
 
+
 @app.command()
 def create_pmtiles(
     branch: Branch = typer.Option(
@@ -248,6 +251,7 @@ def create_pmtiles(
     from ocr.pipeline.create_pmtiles import create_pmtiles
 
     create_pmtiles(branch=branch)
+
 
 if __name__ == '__main__':
     typer.run(run)
