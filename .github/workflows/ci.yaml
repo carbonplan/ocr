@@ -39,8 +39,8 @@ jobs:
       - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list -e test
+          pixi list -e dev
 
       - name: Run tests
         run: |
-          pixi run tests
+          pixi run run-tests
