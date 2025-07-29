@@ -3,6 +3,15 @@ import typing
 
 import coiled
 import pydantic
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.table import Table
 
 from ocr.console import console
 
@@ -46,45 +55,77 @@ class CoiledBatchManager(AbstractBatchManager):
     def wait_for_completion(self, exit_on_failure: bool = False):
         """Wait for all tracked jobs to complete."""
 
-        console.print(f'Waiting for {len(self.job_ids)} jobs to complete...')
-
         # sets instead of lists so we don't add duplicates on each check
         completed: set = set()
         failed: set = set()
-        while len(completed) + len(failed) < len(self.job_ids):
-            # TODO/ Q: are there other status's for coiled batch jobs. If so, this might stall.
-            all_jobs = coiled.batch.list_jobs(limit=self.job_limit)
-            for job in all_jobs:
-                job_id = job.get('id')
-                if job_id in self.job_ids and job_id not in completed and job_id not in failed:
-                    # if job_id is one of submitted job_ids, incase someone else submits... and not in failed or completed.
-                    state = job.get('state')
-                    console.print(f'job id: {job_id} and state: {state}')
-                    if state == 'done':
-                        console.print(f'{job_id} success')
-                        completed.add(job_id)
-                    elif state in ('failed', 'error', 'done (errors)'):
-                        console.print(f'{job_id} failed')
-                        failed.add(job_id)
-                        if exit_on_failure:
-                            raise Exception(f'{job_id} failed, and exit_on_failure == True. ')
 
-                    elif state == 'queued':
-                        console.print(f'{job_id} is queued')
-                    elif state == 'running':
-                        console.print(f'{job_id} is running')
-                    else:
-                        raise NotImplementedError(
-                            f'state: {state} for job_id: {job_id} is not done, failed, queued or running. We need to add more checks!'
-                        )
-            print(
-                f'\n ---------status checked every {self.status_check_int} seconds ----------- \n'
+        with Progress(
+            SpinnerColumn(),
+            TextColumn('[progress.description]{task.description}'),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            main_task = progress.add_task(
+                f'Processing {len(self.job_ids)} jobs', total=len(self.job_ids)
             )
 
-            if len(completed) + len(failed) < len(self.job_ids):
-                print(f'{len(completed)} jobs have completed out of {len(self.job_ids)}')
-                time.sleep(self.status_check_int)
+            while len(completed) + len(failed) < len(self.job_ids):
+                # TODO/ Q: are there other status's for coiled batch jobs. If so, this might stall.
+                all_jobs = coiled.batch.list_jobs(limit=self.job_limit)
+                current_states = {'queued': 0, 'running': 0, 'done': 0, 'failed': 0}
+                for job in all_jobs:
+                    job_id = job.get('id')
+                    if job_id in self.job_ids and job_id not in completed and job_id not in failed:
+                        # if job_id is one of submitted job_ids, incase someone else submits... and not in failed or completed.
+                        state = job.get('state')
 
-        console.print(
-            f'\n ---------------- \n all jobs finished running \n completed: {len(completed)}, {completed} \n  failed: {len(failed)}, {failed} \n ------------'
+                        if state == 'done':
+                            completed.add(job_id)
+                            current_states['done'] += 1
+                        elif state in ('failed', 'error', 'done (errors)'):
+                            failed.add(job_id)
+                            current_states['failed'] += 1
+                            if exit_on_failure:
+                                raise Exception(f'{job_id} failed, and exit_on_failure == True. ')
+
+                        elif state == 'queued':
+                            current_states['queued'] += 1
+                        elif state == 'running':
+                            current_states['running'] += 1
+                        else:
+                            progress.stop()
+                            raise NotImplementedError(
+                                f'state: {state} for job_id: {job_id} is not done, failed, queued or running. We need to add more checks!'
+                            )
+
+                total_processed = len(completed) + len(failed)
+                progress.update(
+                    main_task,
+                    completed=total_processed,
+                    description=f'Jobs - ✅ {len(completed)} done, ❌ {len(failed)} failed, 🏃 {current_states["running"]} running, ⏳ {current_states["queued"]} queued',
+                )
+                if len(completed) + len(failed) < len(self.job_ids):
+                    time.sleep(self.status_check_int)
+
+        table = Table(title='Job Completion Summary')
+        table.add_column('Status', style='cyan')
+        table.add_column('Count', justify='right', style='magenta')
+        table.add_column('Job IDs', style='green')
+        table.add_row(
+            '✅ Completed',
+            str(len(completed)),
+            ', '.join(list(completed)[:5]) + ('...' if len(completed) > 5 else ''),
         )
+
+        table.add_row(
+            '❌ Failed',
+            str(len(failed)),
+            ', '.join(list(failed)[:5]) + ('...' if len(failed) > 5 else ''),
+        )
+
+        console.print('\n')
+        console.print(table)
+        console.print(f'\n[bold green]All {len(self.job_ids)} jobs finished![/bold green]')

@@ -1,11 +1,7 @@
-import pathlib
-
 import typer
 
 from ocr.deploy.managers import CoiledBatchManager
 from ocr.types import Branch, Platform, RiskType
-
-here = pathlib.Path(__file__).parent.resolve()
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
