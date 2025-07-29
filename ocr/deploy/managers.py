@@ -117,13 +117,15 @@ class CoiledBatchManager(AbstractBatchManager):
         table.add_row(
             '✅ Completed',
             str(len(completed)),
-            ', '.join(list(completed)[:5]) + ('...' if len(completed) > 5 else ''),
+            ', '.join([str(job_id) for job_id in list(completed)[:5]])
+            + ('...' if len(completed) > 5 else ''),
         )
 
         table.add_row(
             '❌ Failed',
             str(len(failed)),
-            ', '.join(list(failed)[:5]) + ('...' if len(failed) > 5 else ''),
+            ', '.join([str(job_id) for job_id in list(failed)[:5]])
+            + ('...' if len(failed) > 5 else ''),
         )
 
         console.print('\n')
