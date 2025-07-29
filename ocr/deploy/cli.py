@@ -133,8 +133,8 @@ def run(
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
             batch_manager_county_aggregation_01.submit_job(
                 command=f'ocr aggregate-regional-risk --branch {branch.value}',
-                name=f'create-county-summary-stats-{branch.value}',
-                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.6xlarge'},
+                name=f'create-aggregated-region-summary-stats-{branch.value}',
+                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.2xlarge'},
             )
             batch_manager_county_aggregation_01.wait_for_completion()
 
@@ -142,10 +142,10 @@ def run(
             batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
             batch_manager_county_tiles_02.submit_job(
                 command=f'ocr create-regional-pmtiles --branch {branch.value}',
-                name=f'create-county-pmtiles-{branch.value}',
+                name=f'create-aggregated-region-pmtiles-{branch.value}',
                 kwargs={
                     **shared_coiled_kwargs,
-                    'vm_type': 'c7a.4xlarge',
+                    'vm_type': 'c7a.2xlarge',
                     'container': 'quay.io/carbonplan/ocr:latest',
                 },
             )
