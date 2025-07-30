@@ -1,4 +1,4 @@
-name: end-to-end tests
+name: end-to-end
 
 on:
   push:
@@ -43,4 +43,4 @@ jobs:
           pixi list -e dev
       - name: Run end-to-end tests
         run: |
-          pixi run ocr run --region-id y2_x4 --debug --platform local
+          pixi run ocr run --region-id y2_x4 --debug --platform local --wipe
