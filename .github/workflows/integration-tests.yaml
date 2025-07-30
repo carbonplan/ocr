@@ -1,12 +1,12 @@
-name: CI
+name: end-to-end
+
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Daily “At 00:00”
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,7 +40,6 @@ jobs:
       - name: List installed libraries/packages
         run: |
           pixi list -e dev
-
-      - name: Run tests
+      - name: Run end-to-end tests
         run: |
-          pixi run run-tests
+          pixi run ocr run --region-id y2_x4 --debug --platform local --wipe --summary-stats

@@ -15,10 +15,8 @@
         "fsspec>=2025.5.1",
         "geopandas>=1.0.1",
         "icechunk>1.0.1",
-        "ipdb>=0.13.13",
         "jupyter-server-proxy>=4.4.0",
         "jupyterlab>=4.4.0",
-        "ndpyramid>=0.4.0,<0.5",
         "numpy>=2.2.6",
         "obstore>=0.6.0",
         "odc-geo>=0.4.10",
@@ -31,9 +29,8 @@
         "s3fs>=2025.5.1",
         "typer>=0.16.0,<0.17",
         "xarray>=2025.4.0",
-        "xesmf>=0.8.10",
         "zarr>=3.0.8",
-]
+    ]
 
     dynamic         = ["version"]
     name            = "ocr"
@@ -51,8 +48,14 @@
         "patool>=4.0.0",
         "planetary-computer>=1.0.0",
     ]
-    lint = ["pre-commit>=4.2.0", "ruff>=0.11.0", "ty>=0.0.1a7"]
-    test = ["ipdb>=0.13.13", "pytest-cov>=6.0.0", "pytest>=8.3.5"]
+    dev = [
+        "ipdb>=0.13.13",
+        "pre-commit>=4.2.0",
+        "pytest-cov>=6.0.0",
+        "pytest>=8.3.5",
+        "ruff>=0.11.0",
+        "ty>=0.0.1a7",
+    ]
 
     # Docs includes lint tools for code formatting in docs
     docs = [
@@ -62,10 +65,12 @@
         "mkdocs>=1.6.1",
         "mkdocstrings-python>=1.16.12",
         "mkdocstrings>=0.29.1",
-        "ocr[lint]",
+
     ]
 
-    dev = ["ocr[test,lint,docs]"]
+[project.scripts]
+    ocr        = "ocr.deploy.cli:app"
+    ocr-deploy = "ocr.deploy.cli:app"
 
 [tool.setuptools.packages.find]
     include = ["ocr*"]
@@ -174,20 +179,16 @@
     ocr = { path = ".", editable = true }
 
 [tool.pixi.environments]
-    data-mgmt = { features = ["data-mgmt"], solve-group = "default" }
-    default   = { solve-group = "default" }
-    dev       = { features = ["dev"], solve-group = "default" }
-    docs      = { features = ["docs"], solve-group = "default" }
-    lint      = { features = ["lint"], solve-group = "default" }
-    test      = { features = ["test"], solve-group = "default" }
+    all-deps = ["data-mgmt", "dev", "docs"]
+    default  = ["data-mgmt", "dev"]
+    dev      = ["data-mgmt", "dev"]
+    docs     = ["docs"]
 
-[tool.pixi.feature.test.tasks]
-    tests = { cmd = "pytest" }
-
-[tool.pixi.feature.lint.tasks]
-    format    = { cmd = "ruff format" }
-    lint      = { cmd = "ruff check" }
-    precommit = { cmd = "pre-commit run --all-files" }
+[tool.pixi.feature.dev.tasks]
+    run-precommit   = { cmd = "pre-commit run --all-files" }
+    run-ruff-check  = { cmd = "ruff check" }
+    run-ruff-format = { cmd = "ruff format" }
+    run-tests       = { cmd = "pytest" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
@@ -196,14 +197,20 @@
 [tool.pixi.feature.data-mgmt.tasks]
     jupyter = { cmd = "jupyter lab" }
 
+[tool.pixi.feature.data-mgmt.dependencies]
+    tippecanoe = ">=2.78.0,<3"
+
 [tool.pixi.tasks]
-    export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
+    export-conda-file = { cmd = "pixi project export conda-environment > environment.yml" }
+
     start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
 
 [tool.pixi.dependencies]
-    esmf     = ">=8.8.1,<9"
-    netcdf4  = ">=1.7.2,<2"
-    numba    = ">=0.61.2,<0.62"
-    pyproj   = ">=3.7.1,<4"
-    rasterio = ">=1.4.3,<2"
+    gdal                  = ">=3.10.3,<4"
+    libgdal-arrow-parquet = ">=3.10.3,<4"
+    netcdf4               = ">=1.7.2,<2"
+    numba                 = ">=0.61.2,<0.62"
+    pyproj                = ">=3.7.1,<4"
+    rasterio              = ">=1.4.3,<2"
+    s5cmd                 = ">=2.3.0,<3"

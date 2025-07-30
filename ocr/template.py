@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING
 
 import icechunk
 
+from ocr.console import console
+from ocr.types import Branch
+
 if TYPE_CHECKING:
     import xarray as xr
 
@@ -141,10 +144,12 @@ class IcechunkConfig:
 
     def create_template(self):
         import dask
+        import dask.array
         import numpy as np
         import xarray as xr
 
         from ocr.chunking_config import ChunkingConfig
+
         # NOTE: This is hardcoded as using the USFS 30m chunking scheme!
 
         config = ChunkingConfig()
@@ -203,7 +208,7 @@ class IcechunkConfig:
         self.uri = 's3://' + self.bucket + '/' + self.prefix
 
 
-def get_commit_messages_ancestry(repo: icechunk.repository, icechunk_branch: str = 'main') -> list:
+def get_commit_messages_ancestry(repo: icechunk.Repository, icechunk_branch: str = 'main') -> list:
     commit_messages = [commit.message for commit in list(repo.ancestry(branch=icechunk_branch))]
     # separate commits by ',' and handle case of single length ancestry commit history
     split_commits = [
@@ -224,15 +229,16 @@ def region_id_exists_in_repo(region_id: str, branch: str):
     if region_id in region_ids_in_ancestry:
         return True
     else:
-        # switch to logging
-        print(f'{region_id} already exists in Icechunk ancestry')
         return False
 
 
-def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str, wipe: bool = False):
+def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool = False):
     import icechunk
 
-    icechunk_config = IcechunkConfig(branch=branch, wipe=wipe)
+    icechunk_config = IcechunkConfig(branch=branch.value, wipe=wipe)
+    console.log(
+        f'Inserting region: {region_id} into Icechunk store: {icechunk_config.uri} on branch: {branch} with wipe={wipe}'
+    )
     icechunk_repo_and_session = icechunk_config.repo_and_session()
 
     while True:
@@ -247,10 +253,9 @@ def insert_region_uncoop(subset_ds: xr.Dataset, region_id: str, branch: str, wip
             icechunk_repo_and_session['session'].commit(
                 f'{region_id}', rebase_with=icechunk.ConflictDetector()
             )
-            print(f'Wrote region: {region_id}')
+            console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
             break
 
         except icechunk.ConflictError:
-            # add logging
-            print(f'conflict for region_commit_history {region_id}, retrying')
+            console.log(f'conflict for region_commit_history {region_id}, retrying')
             pass

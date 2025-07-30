@@ -1,7 +1,20 @@
-import click
+import duckdb
+
+from ocr.console import console
+from ocr.types import Branch
 
 
-def create_summary_stat_tmp_tables(con, branch: str):
+def create_summary_stat_tmp_tables(con: duckdb.DuckDBPyConnection, branch: Branch):
+    s3_base = 's3://carbonplan-ocr'
+    input_base = f'{s3_base}/input/fire-risk/vector'
+    intermediate_base = f'{s3_base}/intermediate/fire-risk/vector/{branch.value}'
+
+    consolidated_buildings_path = f'{intermediate_base}/consolidated_geoparquet.parquet'
+    counties_path = f'{input_base}/aggregated_regions/counties.parquet'
+    tracts_path = f'{input_base}/aggregated_regions/tracts/tracts.parquet'
+
+    console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
+
     # tmp table for buildings
     con.execute(f"""
         CREATE TEMP TABLE buildings AS
@@ -25,21 +38,21 @@ def create_summary_stat_tmp_tables(con, branch: str):
         round((1.0 - POWER((1 - wind_risk_2047), 30)) * 100.0, 2) as wind_risk_2047_horizon_30,
 
 
-        FROM read_parquet('s3://carbonplan-ocr/intermediate/fire-risk/vector/{branch}/consolidated_geoparquet.parquet')
+        FROM read_parquet('{consolidated_buildings_path}')
         """)
 
     # tmp table for geoms
-    con.execute("""
+    con.execute(f"""
         CREATE TEMP TABLE county AS
         SELECT NAME, geometry
-        FROM read_parquet('s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties.parquet')
+        FROM read_parquet('{counties_path}')
         """)
 
     # tmp table for tracts
-    con.execute("""
+    con.execute(f"""
         CREATE TEMP TABLE tract AS
         SELECT GEOID as NAME, geometry
-        FROM read_parquet('s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet')
+        FROM read_parquet('{tracts_path}')
         """)
 
     # create spatial index on geom cols
@@ -50,14 +63,17 @@ def create_summary_stat_tmp_tables(con, branch: str):
 
 
 def custom_histogram_query(
-    con,
+    con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
-    branch: str,
-    hist_bins: list[int] = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    branch: Branch,
+    hist_bins: list[int] | None = None,
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
     then add them on to a histogram that excludes values of 0.
     """
+
+    hist_bins = hist_bins or [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    console.log(f'Creating custom histogram query for {geo_table_name} with bins: {hist_bins}')
 
     # First temp table: zero counts by county
     zero_counts_query = f"""
@@ -124,8 +140,11 @@ def custom_histogram_query(
     GROUP BY NAME, b.geometry
 
     """
+    console.log(f'Executing nonzero histogram query for {geo_table_name}')
 
     con.execute(nonzero_hist_query)
+
+    output_path = f's3://carbonplan-ocr/intermediate/fire-risk/vector/{branch.value}/region_aggregation/{geo_table_name}/{geo_table_name}_summary_stats.parquet'
 
     # Now we merge the two temp tables together, the 0 counts table and the histograms that exclude 0.
     # duckdb has a func called `list_concat` for this.
@@ -161,20 +180,17 @@ def custom_histogram_query(
         h.geometry
     FROM temp_nonzero_histograms_{geo_table_name} h
     JOIN temp_zero_counts_{geo_table_name} z ON h.NAME = z.NAME)
-        TO 's3://carbonplan-ocr/intermediate/fire-risk/vector/{branch}/region_aggregation/{geo_table_name}/{geo_table_name}_summary_stats.parquet'
+        TO '{output_path}'
         (
                 FORMAT 'parquet',
                 COMPRESSION 'zstd',
                 OVERWRITE_OR_IGNORE true);
     """
     con.execute(merge_and_write)
+    console.log(f'Wrote summary statistics for {geo_table_name} to {output_path}')
 
 
-@click.command()
-@click.option('-b', '--branch', help='data branch: [QA, prod]. Default QA')
-def main(branch: str):
-    import duckdb
-
+def compute_regional_fire_wind_risk_statistics(branch: Branch):
     con = duckdb.connect(database=':memory:')
     con.execute("""INSTALL SPATIAL; LOAD SPATIAL; INSTALL HTTPS; LOAD HTTPFS""")
 
@@ -184,7 +200,3 @@ def main(branch: str):
     create_summary_stat_tmp_tables(con=con, branch=branch)
     custom_histogram_query(con=con, geo_table_name='county', branch=branch, hist_bins=hist_bins)
     custom_histogram_query(con=con, geo_table_name='tract', branch=branch, hist_bins=hist_bins)
-
-
-if __name__ == '__main__':
-    main()

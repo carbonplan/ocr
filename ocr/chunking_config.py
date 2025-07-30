@@ -1,12 +1,9 @@
 import functools
 
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
-import odc.geo.xr  # noqa
 import pydantic
 from matplotlib.patches import Rectangle
 from shapely.geometry import box
@@ -41,6 +38,8 @@ class ChunkingConfig(pydantic.BaseModel):
 
     @functools.cached_property
     def ds(self):
+        import odc.geo.xr  # noqa
+
         dataset = (
             catalog.get_dataset('USFS-wildfire-risk-communities-4326')
             .to_xarray()
@@ -51,6 +50,8 @@ class ChunkingConfig(pydantic.BaseModel):
 
     @functools.cached_property
     def transform(self):
+        import odc.geo.xr  # noqa
+
         return self.ds.odc.geobox.transform
 
     @functools.cached_property
@@ -66,14 +67,6 @@ class ChunkingConfig(pydantic.BaseModel):
             'y_starts': y_starts,
             'x_starts': x_starts,
         }
-
-    @property
-    def generate_click_all_region_deploy_command(self):
-        region_ids = self.valid_region_ids
-        deploy_str = 'uv run python deploy.py '
-        for rid in region_ids:
-            deploy_str += f'-r {rid} '
-        return deploy_str
 
     @property
     def valid_region_ids(self) -> list:
@@ -630,6 +623,9 @@ class ChunkingConfig(pydantic.BaseModel):
         color_by_size : bool, default False
             If True, color chunks based on their size (useful to identify irregularities)
         """
+        import cartopy.crs as ccrs
+        import cartopy.feature as cfeature
+
         # Create figure
         fig, ax = plt.subplots(figsize=(24, 16), subplot_kw={'projection': ccrs.PlateCarree()})
 
