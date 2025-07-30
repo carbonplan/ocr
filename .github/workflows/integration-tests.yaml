@@ -1,0 +1,46 @@
+name: end-to-end tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          pixi-version: v0.43.3
+          cache: false # no pixi.lock
+          locked: false
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list -e dev
+      - name: Run end-to-end tests
+        run: |
+          pixi run ocr run --region-id y2_x4 --debug --platform local

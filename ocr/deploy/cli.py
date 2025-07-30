@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import typer
 
 from ocr.deploy.managers import CoiledBatchManager, LocalBatchManager
@@ -164,15 +167,16 @@ def run(
 
     elif platform == Platform.LOCAL:
         manager = LocalBatchManager(debug=debug)
-        import os
+        env = os.environ.copy()
+        tmp_dir = tempfile.gettempdir()
 
         for rid in unprocessed_valid_region_ids:
             manager.submit_job(
                 command=f'ocr process-region {rid} --branch {branch.value} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{branch.value}',
                 kwargs={
-                    'env': os.environ.copy(),
-                    'cwd': '/tmp',
+                    'env': env,
+                    'cwd': tmp_dir,
                 },
             )
         manager.wait_for_completion()
@@ -183,40 +187,43 @@ def run(
             command=f'ocr aggregate --branch {branch.value}',
             name=f'aggregate-geoparquet-{branch.value}',
             kwargs={
-                'env': os.environ.copy(),
-                'cwd': '/tmp',
+                'env': env,
+                'cwd': tmp_dir,
             },
         )
         manager.wait_for_completion()
         if summary_stats:
+            manager = LocalBatchManager(debug=debug)
             # Aggregate regional fire and wind risk statistics
             manager.submit_job(
                 command=f'ocr aggregate-regional-risk --branch {branch.value}',
                 name=f'create-aggregated-region-summary-stats-{branch.value}',
                 kwargs={
-                    'env': os.environ.copy(),
-                    'cwd': '/tmp',
+                    'env': env,
+                    'cwd': tmp_dir,
                 },
             )
             manager.wait_for_completion()
 
             # Create summary stats PMTiles layer
+            manager = LocalBatchManager(debug=debug)
             manager.submit_job(
                 command=f'ocr create-regional-pmtiles --branch {branch.value}',
                 name=f'create-aggregated-region-pmtiles-{branch.value}',
                 kwargs={
-                    'env': os.environ.copy(),
-                    'cwd': '/tmp',
+                    'env': env,
+                    'cwd': tmp_dir,
                 },
             )
             manager.wait_for_completion()
         # Create PMTiles from the consolidated geoparquet file
+        manager = LocalBatchManager(debug=debug)
         manager.submit_job(
-            command=f'ocr create_pmtiles --branch {branch.value}',
+            command=f'ocr create-pmtiles --branch {branch.value}',
             name=f'create-pmtiles-{branch.value}',
             kwargs={
-                'env': os.environ.copy(),
-                'cwd': '/tmp',
+                'env': env,
+                'cwd': tmp_dir,
             },
         )
         manager.wait_for_completion()
