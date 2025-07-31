@@ -3,6 +3,7 @@ import tempfile
 
 import typer
 
+from ocr.config import OCRConfig
 from ocr.deploy.managers import CoiledBatchManager, LocalBatchManager
 from ocr.types import Branch, Platform, RiskType
 
@@ -249,7 +250,7 @@ def process_region(
     """
     Calculate and write risk for a given region to Icechunk CONUS template.
     """
-    from ocr.config import OCRConfig
+
     from ocr.pipeline.process_region import calculate_risk
 
     config = OCRConfig(storage_root='/tmp', branch=branch, wipe=wipe)
@@ -268,7 +269,11 @@ def aggregate(
     """
     from ocr.pipeline.aggregate import aggregated_gpq
 
-    aggregated_gpq(branch=branch)
+    config = OCRConfig(storage_root='/tmp', branch=branch)
+    aggregated_gpq(
+        input_path=config.vector.region_geoparquet_uri,
+        output_path=config.vector.consolidated_geoparquet_uri,
+    )
 
 
 @app.command()
@@ -284,7 +289,14 @@ def aggregate_regional_risk(
         compute_regional_fire_wind_risk_statistics,
     )
 
-    compute_regional_fire_wind_risk_statistics(branch=branch)
+    config = OCRConfig(storage_root='/tmp', branch=branch)
+
+    compute_regional_fire_wind_risk_statistics(
+        counties_path=config.vector.counties_geoparquet_uri,
+        tracts_path=config.vector.tracts_geoparquet_uri,
+        consolidated_buildings_path=config.vector.consolidated_geoparquet_uri,
+        aggregated_regions_prefix=config.vector.aggregated_regions_prefix,
+    )
 
 
 @app.command()

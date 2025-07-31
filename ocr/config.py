@@ -35,6 +35,16 @@ class VectorConfig(pydantic_settings.BaseSettings):
     pmtiles_prefix: str | None = pydantic.Field(None, description='Prefix for PMTiles files')
     pmtiles_prefix_uri: UPath | None = pydantic.Field(None, description='URI for PMTiles files')
 
+    counties_geoparquet_uri: UPath | None = pydantic.Field(
+        None, description='URI for counties aggregated geoparquet'
+    )
+    tracts_geoparquet_uri: UPath | None = pydantic.Field(
+        None, description='URI for tracts aggregated geoparquet'
+    )
+    aggregated_regions_prefix: str | None = pydantic.Field(
+        None, description='Prefix for aggregated regions geoparquet files'
+    )
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
         if self.prefix is None:
@@ -58,6 +68,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
         self.region_geoparquet_prefix = self.prefix + 'geoparquet-regions/'
         self.consolidated_geoparquet_prefix = self.prefix + 'consolidated-geoparquet.parquet'
         self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
+        self.aggregated_regions_prefix = self.prefix + 'aggregated-regions'
 
     def _gen_uris(self):
         """Generate URIs for geoparquet and PMTiles files."""
@@ -70,6 +81,10 @@ class VectorConfig(pydantic_settings.BaseSettings):
         self.consolidated_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
         self.pmtiles_prefix_uri = UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
         self.pmtiles_prefix_uri.parent.mkdir(parents=True, exist_ok=True)
+        self.counties_geoparquet_uri = UPath(f'{self.prefix}/aggregated-regions/counties.parquet')
+        self.counties_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
+        self.tracts_geoparquet_uri = UPath(f'{self.prefix}/aggregated-regions/tracts.parquet')
+        self.tracts_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
