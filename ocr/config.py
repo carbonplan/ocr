@@ -63,10 +63,13 @@ class VectorConfig(pydantic_settings.BaseSettings):
         """Generate URIs for geoparquet and PMTiles files."""
 
         self.region_geoparquet_uri = UPath(f'{self.storage_root}/{self.region_geoparquet_prefix}')
+        self.region_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
         self.consolidated_geoparquet_uri = UPath(
             f'{self.storage_root}/{self.consolidated_geoparquet_prefix}'
         )
+        self.consolidated_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
         self.pmtiles_prefix_uri = UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
+        self.pmtiles_prefix_uri.parent.mkdir(parents=True, exist_ok=True)
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
