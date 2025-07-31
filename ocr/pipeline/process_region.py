@@ -3,6 +3,7 @@ import icechunk
 import xarray as xr
 
 from ocr.config import OCRConfig
+from ocr.console import console
 from ocr.datasets import catalog
 from ocr.icechunk_utils import insert_region_uncoop, region_id_exists_in_repo
 from ocr.risks.fire import calculate_wind_adjusted_risk
@@ -18,12 +19,7 @@ def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, regio
     )
 
 
-def sample_risk_to_buildings(config: OCRConfig, *, region_id: str):
-    icechunk_repo_and_session = config.icechunk.repo_and_session(readonly=True)
-    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
-    ds = xr.open_dataset(
-        icechunk_repo_and_session['session'].store, engine='zarr', consolidated=False, chunks={}
-    ).sel(latitude=y_slice, longitude=x_slice)
+def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Create bounding box from region
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     # Query buildings within the region
@@ -50,15 +46,7 @@ def sample_risk_to_buildings(config: OCRConfig, *, region_id: str):
     geom_cols = ['geometry']
     buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
 
-    # Write to geoparquet
-    outpath = f'{config.vector.region_geoparquet_uri}{region_id}.parquet'
-    buildings_gdf.to_parquet(
-        outpath,
-        compression='zstd',
-        geometry_encoding='WKB',
-        write_covering_bbox=True,
-        schema_version='1.1.0',
-    )
+    return buildings_gdf
 
 
 def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
@@ -83,4 +71,19 @@ def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
         ds=ds,
         region_id=region_id,
     )
-    sample_risk_to_buildings(config=config, region_id=region_id)
+
+    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
+    dset = ds.sel(latitude=y_slice, longitude=x_slice)
+
+    buildings_gdf = sample_risk_to_buildings(ds=dset)
+
+    # Write to geoparquet
+    outpath = f'{config.vector.region_geoparquet_uri}{region_id}.parquet'
+    buildings_gdf.to_parquet(
+        outpath,
+        compression='zstd',
+        geometry_encoding='WKB',
+        write_covering_bbox=True,
+        schema_version='1.1.0',
+    )
+    console.log(f'Wrote sampled risk data for region {region_id} to {outpath}')
