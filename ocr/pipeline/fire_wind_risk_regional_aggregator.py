@@ -64,7 +64,7 @@ def custom_histogram_query(
     *,
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
-    aggregated_regions_prefix: str,
+    aggregated_regions_prefix: UPath,
     hist_bins: list[int] | None = None,
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
@@ -143,7 +143,9 @@ def custom_histogram_query(
 
     con.execute(nonzero_hist_query)
 
-    output_path = f'{aggregated_regions_prefix}/{geo_table_name}_summary_stats.parquet'
+    output_path = aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    console.log(f'Writing summary statistics for {geo_table_name} to {output_path}')
 
     # Now we merge the two temp tables together, the 0 counts table and the histograms that exclude 0.
     # duckdb has a func called `list_concat` for this.
@@ -193,7 +195,7 @@ def compute_regional_fire_wind_risk_statistics(
     counties_path: UPath,
     tracts_path: UPath,
     consolidated_buildings_path: UPath,
-    aggregated_regions_prefix: str,
+    aggregated_regions_prefix: UPath,
 ):
     con = duckdb.connect(database=':memory:')
     con.execute("""INSTALL SPATIAL; LOAD SPATIAL; INSTALL HTTPS; LOAD HTTPFS""")

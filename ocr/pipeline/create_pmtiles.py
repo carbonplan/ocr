@@ -1,12 +1,12 @@
 import subprocess
 import tempfile
-from pathlib import Path
+
+from upath import UPath
 
 from ocr.console import console
-from ocr.types import Branch
 
 
-def create_pmtiles(branch: Branch):
+def create_pmtiles(*, input_path: UPath, output_path: UPath):
     """
     Convert consolidated geoparquet to PMTiles format.
 
@@ -16,16 +16,9 @@ def create_pmtiles(branch: Branch):
     3. Creates PMTiles using tippecanoe
     4. Uploads the result back to S3
     """
-    branch_value = branch.value
-    s3_base = 's3://carbonplan-ocr'
-
-    input_path = (
-        f'{s3_base}/intermediate/fire-risk/vector/{branch_value}/consolidated_geoparquet.parquet'
-    )
-    output_path = f'{s3_base}/intermediate/fire-risk/vector/{branch_value}/aggregated.pmtiles'
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir)
+        tmp_path = UPath(tmpdir)
         local_parquet = tmp_path / 'region.parquet'
         local_fgb = tmp_path / 'region.fgb'
         local_pmtiles = tmp_path / 'aggregated.pmtiles'
@@ -74,6 +67,15 @@ def create_pmtiles(branch: Branch):
         console.log('Tippecanoe tiles generation complete')
 
         console.log(f'Uploading PMTiles to {output_path}')
-        subprocess.run(['s5cmd', 'cp', '--sp', str(local_pmtiles), output_path], check=True)
+
+        def copy_or_upload(src: UPath, dest: UPath):
+            import shutil
+
+            if dest.protocol == 's3':
+                subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
+            else:
+                shutil.copy(str(src), str(dest))
+
+        copy_or_upload(local_pmtiles, output_path)
 
         console.log('PMTiles upload completed successfully')

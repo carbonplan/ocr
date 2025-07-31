@@ -310,7 +310,14 @@ def create_regional_pmtiles(
     """
     from ocr.pipeline.create_regional_pmtiles import create_regional_pmtiles
 
-    create_regional_pmtiles(branch=branch)
+    config = OCRConfig(storage_root='/tmp', branch=branch)
+
+    create_regional_pmtiles(
+        tract_stats_path=config.vector.tracts_geoparquet_uri,
+        county_stats_path=config.vector.counties_geoparquet_uri,
+        tract_pmtiles_output=config.vector.region_geoparquet_uri / 'tract.pmtiles',
+        county_pmtiles_output=config.vector.region_geoparquet_uri / 'counties.pmtiles',
+    )
 
 
 @app.command()
@@ -324,7 +331,12 @@ def create_pmtiles(
     """
     from ocr.pipeline.create_pmtiles import create_pmtiles
 
-    create_pmtiles(branch=branch)
+    config = OCRConfig(storage_root='/tmp', branch=branch)
+
+    create_pmtiles(
+        input_path=config.vector.consolidated_geoparquet_uri,
+        output_path=config.vector.pmtiles_prefix_uri,
+    )
 
 
 if __name__ == '__main__':

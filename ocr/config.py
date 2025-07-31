@@ -41,7 +41,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
     tracts_geoparquet_uri: UPath | None = pydantic.Field(
         None, description='URI for tracts aggregated geoparquet'
     )
-    aggregated_regions_prefix: str | None = pydantic.Field(
+    aggregated_regions_prefix: UPath | None = pydantic.Field(
         None, description='Prefix for aggregated regions geoparquet files'
     )
 
@@ -68,7 +68,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
         self.region_geoparquet_prefix = self.prefix + 'geoparquet-regions/'
         self.consolidated_geoparquet_prefix = self.prefix + 'consolidated-geoparquet.parquet'
         self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
-        self.aggregated_regions_prefix = self.prefix + 'aggregated-regions'
+        self.aggregated_regions_prefix = UPath(
+            f'{self.storage_root}/{self.prefix + "aggregated-regions"}/'
+        )
 
     def _gen_uris(self):
         """Generate URIs for geoparquet and PMTiles files."""

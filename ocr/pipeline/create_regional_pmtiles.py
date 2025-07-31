@@ -1,32 +1,27 @@
 import subprocess
 import tempfile
-from pathlib import Path
+
+from upath import UPath
 
 from ocr.console import console
-from ocr.types import Branch
 
 
-def create_regional_pmtiles(branch: Branch):
+def create_regional_pmtiles(
+    *,
+    tract_stats_path: UPath,
+    county_stats_path: UPath,
+    tract_pmtiles_output: UPath,
+    county_pmtiles_output: UPath,
+):
     """
     Create PMTiles for tract and county regional risk statistics.
 
     This function runs DuckDB queries on regional statistics, creates PMTiles using tippecanoe,
     and uploads the results to S3.
     """
-    branch_value = branch.value
-    s3_base = 's3://carbonplan-ocr'
-    intermediate_base = f'{s3_base}/intermediate/fire-risk/vector/{branch_value}'
-
-    tract_stats_path = f'{intermediate_base}/region_aggregation/tract/tract_summary_stats.parquet'
-    county_stats_path = (
-        f'{intermediate_base}/region_aggregation/county/county_summary_stats.parquet'
-    )
-
-    tract_pmtiles_output = f'{intermediate_base}/region_aggregation/tract/tract.pmtiles'
-    county_pmtiles_output = f'{intermediate_base}/region_aggregation/county/counties.pmtiles'
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir)
+        tmp_path = UPath(tmpdir)
         tract_pmtiles = tmp_path / 'tract.pmtiles'
         county_pmtiles = tmp_path / 'counties.pmtiles'
 
@@ -159,14 +154,18 @@ def create_regional_pmtiles(branch: Branch):
 
         console.log('County PMTiles created successfully')
 
+        def copy_or_upload(src: UPath, dest: UPath):
+            import shutil
+
+            if dest.protocol == 's3':
+                subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
+            else:
+                shutil.copy(str(src), str(dest))
+
         console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
-        subprocess.run(
-            ['s5cmd', 'cp', '--sp', str(tract_pmtiles), tract_pmtiles_output], check=True
-        )
+        copy_or_upload(tract_pmtiles, tract_pmtiles_output)
 
         console.log(f'Uploading county PMTiles to {county_pmtiles_output}')
-        subprocess.run(
-            ['s5cmd', 'cp', '--sp', str(county_pmtiles), county_pmtiles_output], check=True
-        )
+        copy_or_upload(county_pmtiles, county_pmtiles_output)
 
         console.log('PMTiles uploads completed successfully')
