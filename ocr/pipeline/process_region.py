@@ -1,35 +1,26 @@
 import geopandas as gpd
+import icechunk
 import xarray as xr
 
-from ocr.chunking_config import ChunkingConfig
+from ocr.config import OCRConfig
 from ocr.datasets import catalog
-from ocr.template import (
-    IcechunkConfig,
-    VectorConfig,
-    insert_region_uncoop,
-    region_id_exists_in_repo,
-)
-from ocr.types import Branch, RiskType
+from ocr.icechunk_utils import insert_region_uncoop, region_id_exists_in_repo
+from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 from ocr.wind import calculate_wind_adjusted_risk
 
 
-def write_region_to_icechunk(ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool):
+def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, region_id: str):
     insert_region_uncoop(
+        session=session,
         subset_ds=ds,
         region_id=region_id,
-        branch=branch,
-        wipe=wipe,  # Wipe is handled at the IcechunkConfig level
     )
 
 
-def sample_risk_to_buildings(region_id: str, branch: Branch):
-    config = ChunkingConfig()
-    icechunk_config = IcechunkConfig(branch=branch.value)
-    vector_config = VectorConfig(branch=branch.value)
-
-    icechunk_repo_and_session = icechunk_config.repo_and_session(readonly=True)
-    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
+def sample_risk_to_buildings(config: OCRConfig, *, region_id: str):
+    icechunk_repo_and_session = config.icechunk.repo_and_session(readonly=True)
+    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
     ds = xr.open_dataset(
         icechunk_repo_and_session['session'].store, engine='zarr', consolidated=False, chunks={}
     ).sel(latitude=y_slice, longitude=x_slice)
@@ -60,7 +51,7 @@ def sample_risk_to_buildings(region_id: str, branch: Branch):
     buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
 
     # Write to geoparquet
-    outpath = f'{vector_config.region_geoparquet_uri}{region_id}.parquet'
+    outpath = f'{config.vector.region_geoparquet_uri}{region_id}.parquet'
     buildings_gdf.to_parquet(
         outpath,
         compression='zstd',
@@ -70,23 +61,26 @@ def sample_risk_to_buildings(region_id: str, branch: Branch):
     )
 
 
-def calculate_risk(region_id: str, risk_type: RiskType, branch: Branch, wipe: bool):
-    config = ChunkingConfig()
-    if region_id not in config.valid_region_ids:
+def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
+    if region_id not in config.chunking.valid_region_ids:
         raise ValueError(
-            f'{region_id} is an invalid region_id. Valid IDs include: {config.valid_region_ids}'
+            f'{region_id} is an invalid region_id. Valid IDs include: {config.chunking.valid_region_ids}'
         )
 
     # Check if region already exists
-    if region_id_exists_in_repo(region_id=region_id, branch=branch.value):
+    if region_id_exists_in_repo(config.icechunk.repo_and_session()['repo'], region_id=region_id):
         raise ValueError(
             f'Region {region_id} already exists in Icechunk store.'
-            f' {branch.value} branch. Please provide a new region_id or use the wipe flag to overwrite existing data.'
+            'Please provide a new region_id or use the wipe flag to overwrite existing data.'
         )
     if risk_type == RiskType.WIND:
         ds = calculate_wind_adjusted_risk(region_id=region_id)
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
-    write_region_to_icechunk(ds=ds, region_id=region_id, branch=branch, wipe=wipe)
-    sample_risk_to_buildings(region_id=region_id, branch=branch)
+    write_region_to_icechunk(
+        session=config.icechunk.repo_and_session()['session'],
+        ds=ds,
+        region_id=region_id,
+    )
+    sample_risk_to_buildings(config=config, region_id=region_id)

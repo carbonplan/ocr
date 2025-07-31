@@ -8,7 +8,7 @@ def aggregated_gpq(branch: Branch):
     import duckdb
 
     from ocr.console import console
-    from ocr.template import VectorConfig
+    from ocr.icechunk_utils import VectorConfig
     from ocr.utils import apply_s3_creds, install_load_extensions
 
     install_load_extensions()

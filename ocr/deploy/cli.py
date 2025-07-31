@@ -63,7 +63,7 @@ def run(
         raise typer.BadParameter('You must specify either --region-id or --all-region-ids.')
 
     from ocr.chunking_config import ChunkingConfig
-    from ocr.template import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
+    from ocr.icechunk_utils import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
 
     # ------------- CONFIG ---------------
     branch_ = branch.value
@@ -249,9 +249,12 @@ def process_region(
     """
     Calculate and write risk for a given region to Icechunk CONUS template.
     """
+    from ocr.config import OCRConfig
     from ocr.pipeline.process_region import calculate_risk
 
-    calculate_risk(region_id=region_id, risk_type=risk_type, branch=branch, wipe=wipe)
+    config = OCRConfig(storage_root='/tmp', branch=branch, wipe=wipe)
+
+    calculate_risk(config=config, region_id=region_id, risk_type=risk_type)
 
 
 @app.command()

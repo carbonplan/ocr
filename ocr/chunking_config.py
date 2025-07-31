@@ -12,7 +12,7 @@ from ocr import catalog
 
 
 class ChunkingConfig(pydantic.BaseModel):
-    chunks: dict | None = None
+    chunks: dict | None = pydantic.Field(None, description='Chunk sizes for longitude and latitude')
 
     def model_post_init(self, __context):
         self.chunks = self.chunks or dict(
