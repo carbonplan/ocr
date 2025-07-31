@@ -229,7 +229,7 @@ def classify_wind(
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
-    from ocr.wind import apply_wind_directional_convolution, create_composite_bp_map
+    from ocr.risks.fire import apply_wind_directional_convolution, create_composite_bp_map
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)

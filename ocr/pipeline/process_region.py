@@ -5,9 +5,9 @@ import xarray as xr
 from ocr.config import OCRConfig
 from ocr.datasets import catalog
 from ocr.icechunk_utils import insert_region_uncoop, region_id_exists_in_repo
+from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
-from ocr.wind import calculate_wind_adjusted_risk
 
 
 def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, region_id: str):
@@ -73,7 +73,7 @@ def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
             f'Region {region_id} already exists in Icechunk store.'
             'Please provide a new region_id or use the wipe flag to overwrite existing data.'
         )
-    if risk_type == RiskType.WIND:
+    if risk_type == RiskType.FIRE:
         ds = calculate_wind_adjusted_risk(region_id=region_id)
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')

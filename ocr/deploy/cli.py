@@ -21,7 +21,7 @@ def run(
         show_default=True,
     ),
     risk_type: RiskType = typer.Option(
-        RiskType.WIND, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
+        RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
     branch: Branch = typer.Option(
         'QA', '-b', '--branch', help='Data branch path', show_default=True
@@ -233,7 +233,7 @@ def run(
 def process_region(
     region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
     risk_type: RiskType = typer.Option(
-        RiskType.WIND, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
+        RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
     branch: Branch = typer.Option(
         'QA', '-b', '--branch', help='Data branch path', show_default=True
