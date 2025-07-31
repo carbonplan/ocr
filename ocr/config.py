@@ -81,10 +81,14 @@ class VectorConfig(pydantic_settings.BaseSettings):
         self.consolidated_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
         self.pmtiles_prefix_uri = UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
         self.pmtiles_prefix_uri.parent.mkdir(parents=True, exist_ok=True)
-        self.counties_geoparquet_uri = UPath(f'{self.prefix}/aggregated-regions/counties.parquet')
-        self.counties_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
-        self.tracts_geoparquet_uri = UPath(f'{self.prefix}/aggregated-regions/tracts.parquet')
-        self.tracts_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
+        # TODO: Move these hardcoded URIs to the config
+        self.counties_geoparquet_uri = UPath(
+            's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties.parquet'
+        )
+
+        self.tracts_geoparquet_uri = UPath(
+            's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet'
+        )
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
