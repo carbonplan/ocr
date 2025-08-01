@@ -40,6 +40,6 @@ jobs:
       - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list -e dev
+          pixi list -e docs
       - name: Deploy docs
-        run: pixi run mkdocs gh-deploy --force
+        run: pixi run -e docs mkdocs gh-deploy --force
