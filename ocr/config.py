@@ -20,30 +20,6 @@ class VectorConfig(pydantic_settings.BaseSettings):
     wipe: bool = pydantic.Field(
         default=False, description='Whether to wipe existing data before processing'
     )
-    region_geoparquet_prefix: str | None = pydantic.Field(
-        None, description='Prefix for region geoparquet files'
-    )
-    region_geoparquet_uri: UPath | None = pydantic.Field(
-        None, description='URI for region geoparquet files'
-    )
-    consolidated_geoparquet_prefix: str | None = pydantic.Field(
-        None, description='Prefix for consolidated geoparquet files'
-    )
-    consolidated_geoparquet_uri: UPath | None = pydantic.Field(
-        None, description='URI for consolidated geoparquet files'
-    )
-    pmtiles_prefix: str | None = pydantic.Field(None, description='Prefix for PMTiles files')
-    pmtiles_prefix_uri: UPath | None = pydantic.Field(None, description='URI for PMTiles files')
-
-    counties_geoparquet_uri: UPath | None = pydantic.Field(
-        None, description='URI for counties aggregated geoparquet'
-    )
-    tracts_geoparquet_uri: UPath | None = pydantic.Field(
-        None, description='URI for tracts aggregated geoparquet'
-    )
-    aggregated_regions_prefix: UPath | None = pydantic.Field(
-        None, description='Prefix for aggregated regions geoparquet files'
-    )
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
@@ -54,43 +30,35 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 self.prefix = 'intermediate/fire-risk/vector/QA/'
 
         if self.wipe:
-            self._gen_prefixes()
-            self._gen_uris()
             self.delete_region_gpqs()
 
-        self._gen_prefixes()
-        self._gen_uris()
+    @property
+    def region_geoparquet_prefix(self) -> str:
+        return f'{self.prefix}geoparquet-regions/'
 
-    def _gen_prefixes(self):
-        """Generate prefixes for geoparquet and PMTiles files."""
-        if self.prefix is None:
-            raise ValueError('Prefix must be set before generating prefixes.')
-        self.region_geoparquet_prefix = self.prefix + 'geoparquet-regions/'
-        self.consolidated_geoparquet_prefix = self.prefix + 'consolidated-geoparquet.parquet'
-        self.pmtiles_prefix = self.prefix + 'consolidated.pmtiles'
-        self.aggregated_regions_prefix = UPath(
-            f'{self.storage_root}/{self.prefix + "aggregated-regions"}/'
-        )
+    @property
+    def region_geoparquet_uri(self) -> UPath:
+        return UPath(f'{self.storage_root}/{self.region_geoparquet_prefix}')
 
-    def _gen_uris(self):
-        """Generate URIs for geoparquet and PMTiles files."""
+    @property
+    def consolidated_geoparquet_prefix(self) -> str:
+        return f'{self.prefix}consolidated-geoparquet.parquet'
 
-        self.region_geoparquet_uri = UPath(f'{self.storage_root}/{self.region_geoparquet_prefix}')
-        self.region_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
-        self.consolidated_geoparquet_uri = UPath(
-            f'{self.storage_root}/{self.consolidated_geoparquet_prefix}'
-        )
-        self.consolidated_geoparquet_uri.parent.mkdir(parents=True, exist_ok=True)
-        self.pmtiles_prefix_uri = UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
-        self.pmtiles_prefix_uri.parent.mkdir(parents=True, exist_ok=True)
-        # TODO: Move these hardcoded URIs to the config
-        self.counties_geoparquet_uri = UPath(
-            's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties.parquet'
-        )
+    @property
+    def consolidated_geoparquet_uri(self) -> UPath:
+        return UPath(f'{self.storage_root}/{self.consolidated_geoparquet_prefix}')
 
-        self.tracts_geoparquet_uri = UPath(
-            's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet'
-        )
+    @property
+    def pmtiles_prefix(self) -> str:
+        return f'{self.prefix}consolidated.pmtiles'
+
+    @property
+    def pmtiles_prefix_uri(self) -> UPath:
+        return UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
+
+    @property
+    def aggregated_regions_prefix(self) -> UPath:
+        return UPath(f'{self.storage_root}/{self.prefix}aggregated-regions/')
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""

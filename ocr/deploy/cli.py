@@ -63,34 +63,29 @@ def run(
     if not all_region_ids and not region_id:
         raise typer.BadParameter('You must specify either --region-id or --all-region-ids.')
 
-    from ocr.chunking_config import ChunkingConfig
-    from ocr.icechunk_utils import IcechunkConfig, VectorConfig, get_commit_messages_ancestry
+    from ocr.icechunk_utils import get_commit_messages_ancestry
 
     # ------------- CONFIG ---------------
-    branch_ = branch.value
-    config = ChunkingConfig()
-    VectorConfig(branch=branch_, wipe=wipe)
-    icechunk_config = IcechunkConfig(branch=branch_, wipe=wipe)
 
-    icechunk_repo_and_session = icechunk_config.repo_and_session()
+    config = OCRConfig(storage_root='/tmp', branch=branch, wipe=wipe)
+
+    icechunk_repo_and_session = config.icechunk.repo_and_session()
     if all_region_ids:
-        provided_region_ids = set(config.valid_region_ids)
+        provided_region_ids = set(config.chunking.valid_region_ids)
     else:
         provided_region_ids = set(region_id or [])
-    valid_region_ids = provided_region_ids.intersection(config.valid_region_ids)
+    valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
     processed_region_ids = set(get_commit_messages_ancestry(icechunk_repo_and_session['repo']))
     unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
 
     if len(unprocessed_valid_region_ids) == 0:
-        invalid_region_ids = provided_region_ids.difference(config.valid_region_ids)
+        invalid_region_ids = provided_region_ids.difference(config.chunking.valid_region_ids)
         previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
         error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
 
         if invalid_region_ids:
             error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_region_ids))}\n'
-            error_message += (
-                f'  Valid region IDs: {", ".join(sorted(list(config.valid_region_ids)))}...\n'
-            )
+            error_message += f'  Valid region IDs: {", ".join(sorted(list(config.chunking.valid_region_ids)))}...\n'
 
         if previously_processed_ids:
             error_message += (
