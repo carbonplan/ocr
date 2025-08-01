@@ -2,6 +2,7 @@ import os
 import tempfile
 from pathlib import Path
 
+import dotenv
 import typer
 
 from ocr.config import OCRConfig
@@ -15,12 +16,11 @@ def load_config(file_path: Path | None) -> OCRConfig:
     """
     Load OCR configuration from a YAML file.
     """
-    from dotenv import load_dotenv
 
     if file_path is None:
         return OCRConfig()
     else:
-        load_dotenv(file_path)  # loads environment variables from the specified file
+        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
         return OCRConfig()  # loads from environment variables
 
 
@@ -118,6 +118,10 @@ def run(
             'tag': {'Project': 'OCR'},
         }
 
+        env_vars = {}
+        if env_file is not None:
+            env_vars = dotenv.dotenv_values(str(env_file))
+
         # ------------- 01 AU ---------------
 
         batch_manager_01 = CoiledBatchManager(debug=debug)
@@ -126,7 +130,7 @@ def run(
             batch_manager_01.submit_job(
                 command=f'ocr process-region {rid} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{config.branch.value}',
-                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env_file': str(env_file)},
+                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env': env_vars},
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
@@ -137,7 +141,7 @@ def run(
         batch_manager_aggregate_02.submit_job(
             command='ocr aggregate',
             name=f'aggregate-geoparquet-{config.branch.value}',
-            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env_file': str(env_file)},
+            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env': env_vars},
         )
         batch_manager_aggregate_02.wait_for_completion()
 
@@ -149,7 +153,7 @@ def run(
                 kwargs={
                     **shared_coiled_kwargs,
                     'vm_type': 'm8g.2xlarge',
-                    'env_file': str(env_file),
+                    'env': env_vars,
                 },
             )
             batch_manager_county_aggregation_01.wait_for_completion()
@@ -162,7 +166,7 @@ def run(
                 kwargs={
                     **shared_coiled_kwargs,
                     'vm_type': 'c7a.2xlarge',
-                    'env_file': str(env_file),
+                    'env': env_vars,
                 },
             )
 
@@ -174,7 +178,7 @@ def run(
             kwargs={
                 **shared_coiled_kwargs,
                 'vm_type': 'c7a.xlarge',
-                'env_file': str(env_file),
+                'env': env_vars,
             },
         )
 
