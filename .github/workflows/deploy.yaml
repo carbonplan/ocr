@@ -1,5 +1,3 @@
-# manual dispatch via github actions of deploy.py pipeline orchestration
-
 name: deploy
 on:
   workflow_dispatch:
@@ -34,19 +32,19 @@ jobs:
 
       # seems like using the python setup version is cached by GH, so might be faster
       - uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.14
         with:
-          python-version: "3.12"
-      - uses: astral-sh/setup-uv@v6
-        with:
-          version: "latest"
+          pixi-version: v0.43.3
+          cache: false # no pixi.lock
+          locked: false
+          activate-environment: true
 
-      - name: installs libs with uv sync, then lists
+      - run: pixi info
+      - name: List installed libraries/packages
         run: |
-          uv sync
-          uv pip list
+          pixi list -e dev
 
       - name: Try using inputs
-      - run: echo ${{ github.event.inputs.branch }}
-      - run: echo ${{ github.event.inputs.region_ids }}
+        run: |
+          echo ${{ github.event.inputs.branch }}
+          echo ${{ github.event.inputs.region_ids }}
