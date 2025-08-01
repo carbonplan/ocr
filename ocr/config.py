@@ -92,9 +92,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     wipe: bool = pydantic.Field(
         default=False, description='Whether to wipe existing data before processing'
     )
-    uri: UPath | None = pydantic.Field(
-        None, description='URI for icechunk files, e.g., s3://bucket/path/to/icechunk'
-    )
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
@@ -103,9 +100,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                 self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
             elif self.branch == Branch.QA:
                 self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
-
-        if self.uri is None:
-            self.uri = UPath(f'{self.storage_root}/{self.prefix}')
 
         if self.wipe:
             self.delete()
@@ -116,6 +110,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         if 'initialize store with template' not in commits:
             console.log('No template found in icechunk store. Creating a new template dataset.')
             self.create_template()
+
+    @property
+    def uri(self) -> UPath:
+        """Return the URI for the icechunk repository."""
+        if self.prefix is None:
+            raise ValueError('Prefix must be set before initializing the icechunk repo.')
+        return UPath(f'{self.storage_root}/{self.prefix}')
 
     @property
     def storage(self) -> icechunk.Storage:

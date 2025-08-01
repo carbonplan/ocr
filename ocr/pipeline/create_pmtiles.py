@@ -6,6 +6,15 @@ from upath import UPath
 from ocr.console import console
 
 
+def copy_or_upload(src: UPath, dest: UPath):
+    import shutil
+
+    if dest.protocol == 's3' or src.protocol == 's3':
+        subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
+    else:
+        shutil.copy(str(src), str(dest))
+
+
 def create_pmtiles(*, input_path: UPath, output_path: UPath):
     """
     Convert consolidated geoparquet to PMTiles format.
@@ -24,7 +33,7 @@ def create_pmtiles(*, input_path: UPath, output_path: UPath):
         local_pmtiles = tmp_path / 'aggregated.pmtiles'
 
         console.log(f'Downloading consolidated geoparquet from {input_path}')
-        subprocess.run(['s5cmd', 'cp', '--sp', input_path, str(local_parquet)], check=True)
+        copy_or_upload(input_path, local_parquet)
 
         console.log('Converting to FlatGeobuf format')
         subprocess.run(
@@ -67,14 +76,6 @@ def create_pmtiles(*, input_path: UPath, output_path: UPath):
         console.log('Tippecanoe tiles generation complete')
 
         console.log(f'Uploading PMTiles to {output_path}')
-
-        def copy_or_upload(src: UPath, dest: UPath):
-            import shutil
-
-            if dest.protocol == 's3':
-                subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
-            else:
-                shutil.copy(str(src), str(dest))
 
         copy_or_upload(local_pmtiles, output_path)
 
