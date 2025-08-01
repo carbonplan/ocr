@@ -258,16 +258,13 @@ def classify_wind(
     return wind_informed_bp_float_corrected
 
 
-def calculate_wind_adjusted_risk(region_id: str) -> xr.Dataset:
+def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
     from ocr import catalog
-    from ocr.chunking_config import ChunkingConfig
     from ocr.utils import lon_to_180
 
-    console.log(f'Calculating wind risk for region: {region_id}')
-
-    config = ChunkingConfig()
+    console.log(f'Calculating wind risk for region with x_slice: {x_slice} and y_slice: {y_slice}')
 
     # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
@@ -280,7 +277,6 @@ def calculate_wind_adjusted_risk(region_id: str) -> xr.Dataset:
     # TODO: Input datasets should already be pre-processed, so this transform should be done upstream.
     important_days = lon_to_180(important_days)
 
-    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice).chunk(
         {'latitude': 6000, 'longitude': 4500}

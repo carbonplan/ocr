@@ -61,8 +61,9 @@ def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
             f'Region {region_id} already exists in Icechunk store.'
             'Please provide a new region_id or use the wipe flag to overwrite existing data.'
         )
+    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
     if risk_type == RiskType.FIRE:
-        ds = calculate_wind_adjusted_risk(region_id=region_id)
+        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
@@ -72,7 +73,6 @@ def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
         region_id=region_id,
     )
 
-    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
     dset = ds.sel(latitude=y_slice, longitude=x_slice)
 
     buildings_gdf = sample_risk_to_buildings(ds=dset)
