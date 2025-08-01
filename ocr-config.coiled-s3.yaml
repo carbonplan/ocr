@@ -1,0 +1,17 @@
+branch: QA
+storage_root: "s3://carbonplan-ocr"
+wipe: true
+vector:
+  branch: QA
+  storage_root: "s3://carbonplan-ocr"
+  prefix: intermediate/fire-risk/vector/QA/
+  wipe: true
+icechunk:
+  branch: QA
+  storage_root: "s3://carbonplan-ocr"
+  prefix: intermediate/fire-risk/tensor/QA/template.icechunk
+  wipe: true
+chunking:
+  chunks:
+    longitude: 6000
+    latitude: 4500
