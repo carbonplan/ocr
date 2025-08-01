@@ -3,32 +3,34 @@ import tempfile
 from pathlib import Path
 
 import typer
-import yaml
 
 from ocr.config import OCRConfig
-from ocr.console import console
 from ocr.deploy.managers import CoiledBatchManager, LocalBatchManager
 from ocr.types import Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
 
-def load_config_from_yaml(file_path: Path) -> OCRConfig:
+def load_config(file_path: Path | None) -> OCRConfig:
     """
     Load OCR configuration from a YAML file.
     """
-    text = file_path.read_text()
-    config_data = yaml.safe_load(text)
-    return OCRConfig.model_validate(config_data)
+    from dotenv import load_dotenv
+
+    if file_path is None:
+        return OCRConfig()
+    else:
+        load_dotenv(file_path)  # loads environment variables from the specified file
+        return OCRConfig()  # loads from environment variables
 
 
 @app.command()
 def run(
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
@@ -79,27 +81,25 @@ def run(
 
     # ------------- CONFIG ---------------
 
-    config_ = load_config_from_yaml(config)
-    if debug:
-        console.log(f'Using OCR config: {config_}')
+    config = load_config(env_file)
 
-    icechunk_repo_and_session = config_.icechunk.repo_and_session()
+    icechunk_repo_and_session = config.icechunk.repo_and_session()
     if all_region_ids:
-        provided_region_ids = set(config_.chunking.valid_region_ids)
+        provided_region_ids = set(config.chunking.valid_region_ids)
     else:
         provided_region_ids = set(region_id or [])
-    valid_region_ids = provided_region_ids.intersection(config_.chunking.valid_region_ids)
+    valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
     processed_region_ids = set(get_commit_messages_ancestry(icechunk_repo_and_session['repo']))
     unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
 
     if len(unprocessed_valid_region_ids) == 0:
-        invalid_region_ids = provided_region_ids.difference(config_.chunking.valid_region_ids)
+        invalid_region_ids = provided_region_ids.difference(config.chunking.valid_region_ids)
         previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
         error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
 
         if invalid_region_ids:
             error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_region_ids))}\n'
-            error_message += f'  Valid region IDs: {", ".join(sorted(list(config_.chunking.valid_region_ids)))}...\n'
+            error_message += f'  Valid region IDs: {", ".join(sorted(list(config.chunking.valid_region_ids)))}...\n'
 
         if previously_processed_ids:
             error_message += (
@@ -124,9 +124,9 @@ def run(
 
         for rid in unprocessed_valid_region_ids:
             batch_manager_01.submit_job(
-                command=f'ocr process-region {rid} --config {config.name} --risk-type {risk_type.value}',
-                name=f'process-region-{rid}-{config_.branch.value}',
-                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'file': str(config)},
+                command=f'ocr process-region {rid} --risk-type {risk_type.value}',
+                name=f'process-region-{rid}-{config.branch.value}',
+                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env_file': str(env_file)},
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
@@ -135,42 +135,46 @@ def run(
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
         batch_manager_aggregate_02.submit_job(
-            command=f'ocr aggregate --config {config.name}',
-            name=f'aggregate-geoparquet-{config_.branch.value}',
-            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'file': str(config)},
+            command='ocr aggregate',
+            name=f'aggregate-geoparquet-{config.branch.value}',
+            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env_file': str(env_file)},
         )
         batch_manager_aggregate_02.wait_for_completion()
 
         if summary_stats:
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
             batch_manager_county_aggregation_01.submit_job(
-                command=f'ocr aggregate-regional-risk --config {config.name}',
-                name=f'create-aggregated-region-summary-stats-{config_.branch.value}',
-                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.2xlarge', 'file': str(config)},
+                command='ocr aggregate-regional-risk',
+                name=f'create-aggregated-region-summary-stats-{config.branch.value}',
+                kwargs={
+                    **shared_coiled_kwargs,
+                    'vm_type': 'm8g.2xlarge',
+                    'env_file': str(env_file),
+                },
             )
             batch_manager_county_aggregation_01.wait_for_completion()
 
             # create summary stats PMTiles layer
             batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
             batch_manager_county_tiles_02.submit_job(
-                command=f'ocr create-regional-pmtiles --config {config.name}',
-                name=f'create-aggregated-region-pmtiles-{config_.branch.value}',
+                command='ocr create-regional-pmtiles',
+                name=f'create-aggregated-region-pmtiles-{config.branch.value}',
                 kwargs={
                     **shared_coiled_kwargs,
                     'vm_type': 'c7a.2xlarge',
-                    'file': str(config),
+                    'env_file': str(env_file),
                 },
             )
 
         # ------------- 03  Tiles ---------------
         batch_manager_03 = CoiledBatchManager(debug=debug)
         batch_manager_03.submit_job(
-            command=f'ocr create-pmtiles --config {config.name}',
-            name=f'create-pmtiles-{config_.branch.value}',
+            command='ocr create-pmtiles',
+            name=f'create-pmtiles-{config.branch.value}',
             kwargs={
                 **shared_coiled_kwargs,
                 'vm_type': 'c7a.xlarge',
-                'file': str(config),
+                'env_file': str(env_file),
             },
         )
 
@@ -183,8 +187,8 @@ def run(
 
         for rid in unprocessed_valid_region_ids:
             manager.submit_job(
-                command=f'ocr process-region {rid} --config {config} --risk-type {risk_type.value}',
-                name=f'process-region-{rid}-{config_.branch.value}',
+                command=f'ocr process-region {rid} --risk-type {risk_type.value}',
+                name=f'process-region-{rid}-{config.branch.value}',
                 kwargs={
                     'env': env,
                     'cwd': tmp_dir,
@@ -195,8 +199,8 @@ def run(
         # Aggregate geoparquet regions
         manager = LocalBatchManager(debug=debug)
         manager.submit_job(
-            command=f'ocr aggregate --config {config}',
-            name=f'aggregate-geoparquet-{config_.branch.value}',
+            command='ocr aggregate',
+            name=f'aggregate-geoparquet-{config.branch.value}',
             kwargs={
                 'env': env,
                 'cwd': tmp_dir,
@@ -207,8 +211,8 @@ def run(
             manager = LocalBatchManager(debug=debug)
             # Aggregate regional fire and wind risk statistics
             manager.submit_job(
-                command=f'ocr aggregate-regional-risk --config {config}',
-                name=f'create-aggregated-region-summary-stats-{config_.branch.value}',
+                command='ocr aggregate-regional-risk',
+                name=f'create-aggregated-region-summary-stats-{config.branch.value}',
                 kwargs={
                     'env': env,
                     'cwd': tmp_dir,
@@ -219,8 +223,8 @@ def run(
             # Create summary stats PMTiles layer
             manager = LocalBatchManager(debug=debug)
             manager.submit_job(
-                command=f'ocr create-regional-pmtiles --config {config}',
-                name=f'create-aggregated-region-pmtiles-{config_.branch.value}',
+                command='ocr create-regional-pmtiles',
+                name=f'create-aggregated-region-pmtiles-{config.branch.value}',
                 kwargs={
                     'env': env,
                     'cwd': tmp_dir,
@@ -230,8 +234,8 @@ def run(
         # Create PMTiles from the consolidated geoparquet file
         manager = LocalBatchManager(debug=debug)
         manager.submit_job(
-            command=f'ocr create-pmtiles --config {config}',
-            name=f'create-pmtiles-{config_.branch.value}',
+            command='ocr create-pmtiles',
+            name=f'create-pmtiles-{config.branch.value}',
             kwargs={
                 'env': env,
                 'cwd': tmp_dir,
@@ -242,16 +246,17 @@ def run(
 
 @app.command()
 def process_region(
-    region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
+        resolve_path=True,
     ),
+    region_id: str = typer.Argument(..., help='Region ID to process, e.g., y10_x2'),
     risk_type: RiskType = typer.Option(
         RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
@@ -262,21 +267,22 @@ def process_region(
 
     from ocr.pipeline.process_region import calculate_risk
 
-    config_ = load_config_from_yaml(config)
+    config = load_config(env_file)
 
-    calculate_risk(config=config_, region_id=region_id, risk_type=risk_type)
+    calculate_risk(config=config, region_id=region_id, risk_type=risk_type)
 
 
 @app.command()
 def aggregate(
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
+        resolve_path=True,
     ),
 ):
     """
@@ -284,23 +290,24 @@ def aggregate(
     """
     from ocr.pipeline.aggregate import aggregated_gpq
 
-    config_ = load_config_from_yaml(config)
+    config = load_config(env_file)
     aggregated_gpq(
-        input_path=config_.vector.region_geoparquet_uri,
-        output_path=config_.vector.consolidated_geoparquet_uri,
+        input_path=config.vector.region_geoparquet_uri,
+        output_path=config.vector.consolidated_geoparquet_uri,
     )
 
 
 @app.command()
 def aggregate_regional_risk(
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
+        resolve_path=True,
     ),
 ):
     """
@@ -310,26 +317,27 @@ def aggregate_regional_risk(
         compute_regional_fire_wind_risk_statistics,
     )
 
-    config_ = load_config_from_yaml(config)
+    config = load_config(env_file)
 
     compute_regional_fire_wind_risk_statistics(
-        counties_path=config_.vector.counties_geoparquet_uri,
-        tracts_path=config_.vector.tracts_geoparquet_uri,
-        consolidated_buildings_path=config_.vector.consolidated_geoparquet_uri,
-        aggregated_regions_prefix=config_.vector.aggregated_regions_prefix,
+        counties_path=config.vector.counties_geoparquet_uri,
+        tracts_path=config.vector.tracts_geoparquet_uri,
+        consolidated_buildings_path=config.vector.consolidated_geoparquet_uri,
+        aggregated_regions_prefix=config.vector.aggregated_regions_prefix,
     )
 
 
 @app.command()
 def create_regional_pmtiles(
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
+        resolve_path=True,
     ),
 ):
     """
@@ -337,26 +345,27 @@ def create_regional_pmtiles(
     """
     from ocr.pipeline.create_regional_pmtiles import create_regional_pmtiles
 
-    config_ = load_config_from_yaml(config)
+    config = load_config(env_file)
 
     create_regional_pmtiles(
-        tract_stats_path=config_.vector.tracts_geoparquet_uri,
-        county_stats_path=config_.vector.counties_geoparquet_uri,
-        tract_pmtiles_output=config_.vector.region_geoparquet_uri / 'tract.pmtiles',
-        county_pmtiles_output=config_.vector.region_geoparquet_uri / 'counties.pmtiles',
+        tract_stats_path=config.vector.tracts_geoparquet_uri,
+        county_stats_path=config.vector.counties_geoparquet_uri,
+        tract_pmtiles_output=config.vector.region_geoparquet_uri / 'tract.pmtiles',
+        county_pmtiles_output=config.vector.region_geoparquet_uri / 'counties.pmtiles',
     )
 
 
 @app.command()
 def create_pmtiles(
-    config: Path = typer.Option(
-        'ocr-config.local.yaml',
-        '-c',
-        '--config',
-        help='Path to the OCR configuration file in YAML format',
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
         show_default=True,
         exists=True,
         file_okay=True,
+        resolve_path=True,
     ),
 ):
     """
@@ -364,11 +373,11 @@ def create_pmtiles(
     """
     from ocr.pipeline.create_pmtiles import create_pmtiles
 
-    config_ = load_config_from_yaml(config)
+    config = load_config(env_file)
 
     create_pmtiles(
-        input_path=config_.vector.consolidated_geoparquet_uri,
-        output_path=config_.vector.pmtiles_prefix_uri,
+        input_path=config.vector.consolidated_geoparquet_uri,
+        output_path=config.vector.pmtiles_prefix_uri,
     )
 
 

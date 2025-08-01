@@ -12,8 +12,14 @@ from ocr.icechunk_utils import get_commit_messages_ancestry
 from ocr.types import Branch
 
 
-class ChunkingConfig(pydantic.BaseModel):
+class ChunkingConfig(pydantic_settings.BaseSettings):
     chunks: dict | None = pydantic.Field(None, description='Chunk sizes for longitude and latitude')
+
+    class Config:
+        """Configuration for Pydantic settings."""
+
+        env_prefix = 'ocr_chunking_'
+        case_sensitive = False
 
     def model_post_init(self, __context):
         self.chunks = self.chunks or dict(
@@ -741,6 +747,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
     wipe: bool = pydantic.Field(
         default=False, description='Whether to wipe existing data before processing'
     )
+
+    class Config:
+        """Configuration for Pydantic settings."""
+
+        env_prefix = 'ocr_vector_'
+        case_sensitive = False
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
