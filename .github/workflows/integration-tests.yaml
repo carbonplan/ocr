@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00”
@@ -42,4 +45,4 @@ jobs:
           pixi list -e dev
       - name: Run end-to-end tests
         run: |
-          pixi run ocr run --region-id y2_x4 --debug --platform local --summary-stats
+          pixi run ocr run --region-id y2_x4 --debug --platform local --summary-stats --env-file ocr-local.env
