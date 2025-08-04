@@ -95,11 +95,12 @@ ocr run --env-file .env --region-id y10_x2
 
 ## CLI Commands
 
+<!-- prettier-ignore -->
 ::: mkdocs-click
-:module: ocr.deploy.cli
-:command: ocr
-:prog_name: ocr
-:list_subcommands: true
+  :module: ocr.deploy.cli
+  :command: ocr
+  :prog_name: ocr
+  :list_subcommands: true
 
 ### Pipeline Orchestration
 
