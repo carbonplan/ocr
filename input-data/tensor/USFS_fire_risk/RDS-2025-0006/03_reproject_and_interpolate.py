@@ -51,6 +51,17 @@ def interpolate_and_reproject(climate_run_year: str):
     # assign crs and reproject to lat/lon EPSG:4326
     interp_30 = assign_crs(interp_30, crs='EPSG:5070')
     climate_run_4326 = xr_reproject(interp_30, how='EPSG:4326')
+
+    # assign processing attributes
+    climate_run_4326.attrs = {
+        'title': 'RDS-2025-0006',
+        'version': '2025',
+        'data_source': 'https://www.fs.usda.gov/rds/archive/catalog/RDS-2025-0006',
+        'description': 'Modified version of: Spatial datasets of probabilistic wildfire risk components for the conterminous United States for circa 2011 climate and projected future climate circa 2047. This dataset was created by combining from multiple source tif files, interpolating from 270m to 30m and projecting from EPSG:5070 to EPSG:4326. It is stored in the Icechunk storage format.',
+        'EPSG': '4326',
+        'resolution': '30m',
+    }
+
     # Write to icechunk
     write_to_icechunk(climate_run_4326, climate_run_year)
 
