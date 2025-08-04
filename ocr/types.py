@@ -14,4 +14,4 @@ class Platform(str, Enum):
 class RiskType(str, Enum):
     """Available risk types for calculation."""
 
-    WIND = 'wind'
+    FIRE = 'fire'
