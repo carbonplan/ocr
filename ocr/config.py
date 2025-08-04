@@ -763,7 +763,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def region_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}geoparquet-regions/'
+        return f'{self.prefix}/geoparquet-regions/'
 
     @functools.cached_property
     def region_geoparquet_uri(self) -> UPath:
@@ -771,7 +771,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def consolidated_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}consolidated-geoparquet.parquet'
+        return f'{self.prefix}/consolidated-geoparquet.parquet'
 
     @functools.cached_property
     def consolidated_geoparquet_uri(self) -> UPath:
@@ -779,7 +779,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def pmtiles_prefix(self) -> str:
-        return f'{self.prefix}consolidated.pmtiles'
+        return f'{self.prefix}/consolidated.pmtiles'
 
     @functools.cached_property
     def pmtiles_prefix_uri(self) -> UPath:
@@ -787,7 +787,19 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def aggregated_regions_prefix(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.prefix}aggregated-regions/')
+        return UPath(f'{self.storage_root}/{self.prefix}/aggregated-regions/')
+
+    @functools.cached_property
+    def tracts_summary_stats_uri(self) -> UPath:
+        """URI for the tracts summary statistics file."""
+        geo_table_name = 'tracts'
+        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+
+    @functools.cached_property
+    def counties_summary_stats_uri(self) -> UPath:
+        """URI for the counties summary statistics file."""
+        geo_table_name = 'counties'
+        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""

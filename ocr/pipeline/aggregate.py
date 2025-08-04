@@ -12,14 +12,15 @@ def aggregated_gpq(input_path: UPath, output_path: UPath):
 
     install_load_extensions()
     apply_s3_creds()
+    path = input_path / '*.parquet'
 
-    console.log(f'Aggregating geoparquet regions from: {input_path}*.parquet')
+    console.log(f'Aggregating geoparquet regions from: {path}')
 
     duckdb.sql(f"""
         SET preserve_insertion_order=false;
         COPY (
         SELECT *
-        FROM '{input_path}*.parquet')
+        FROM '{path}')
         TO  '{output_path}' (
         FORMAT 'parquet',
         COMPRESSION 'zstd',

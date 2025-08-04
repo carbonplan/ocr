@@ -1,6 +1,7 @@
 import duckdb
 from upath import UPath
 
+from ocr import catalog
 from ocr.console import console
 
 
@@ -64,7 +65,7 @@ def custom_histogram_query(
     *,
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
-    aggregated_regions_prefix: UPath,
+    summary_stats_path: UPath,
     hist_bins: list[int] | None = None,
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
@@ -143,7 +144,7 @@ def custom_histogram_query(
 
     con.execute(nonzero_hist_query)
 
-    output_path = aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+    output_path = summary_stats_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
     console.log(f'Writing summary statistics for {geo_table_name} to {output_path}')
 
@@ -192,11 +193,19 @@ def custom_histogram_query(
 
 
 def compute_regional_fire_wind_risk_statistics(
-    counties_path: UPath,
-    tracts_path: UPath,
+    *,
     consolidated_buildings_path: UPath,
-    aggregated_regions_prefix: UPath,
+    tracts_summary_stats_path: UPath,
+    counties_summary_stats_path: UPath,
+    counties_path: UPath | None = None,
+    tracts_path: UPath | None = None,
 ):
+    if counties_path is None:
+        dataset = catalog.get_dataset('us-census-counties')
+        counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+    if tracts_path is None:
+        dataset = catalog.get_dataset('us-census-tracts')
+        tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
     con = duckdb.connect(database=':memory:')
     con.execute("""INSTALL SPATIAL; LOAD SPATIAL; INSTALL HTTPS; LOAD HTTPFS""")
 
@@ -212,12 +221,12 @@ def compute_regional_fire_wind_risk_statistics(
     custom_histogram_query(
         con=con,
         geo_table_name='county',
-        aggregated_regions_prefix=aggregated_regions_prefix,
+        summary_stats_path=counties_summary_stats_path,
         hist_bins=hist_bins,
     )
     custom_histogram_query(
         con=con,
         geo_table_name='tract',
-        aggregated_regions_prefix=aggregated_regions_prefix,
+        summary_stats_path=tracts_summary_stats_path,
         hist_bins=hist_bins,
     )

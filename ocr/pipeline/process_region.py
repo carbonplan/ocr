@@ -1,11 +1,11 @@
 import geopandas as gpd
 import icechunk
 import xarray as xr
+from upath import UPath
 
-from ocr.config import OCRConfig
 from ocr.console import console
 from ocr.datasets import catalog
-from ocr.icechunk_utils import insert_region_uncoop, region_id_exists_in_repo
+from ocr.icechunk_utils import insert_region_uncoop
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
@@ -49,26 +49,22 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     return buildings_gdf
 
 
-def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
-    if region_id not in config.chunking.valid_region_ids:
-        raise ValueError(
-            f'{region_id} is an invalid region_id. Valid IDs include: {config.chunking.valid_region_ids}'
-        )
-
-    # Check if region already exists
-    if region_id_exists_in_repo(config.icechunk.repo_and_session()['repo'], region_id=region_id):
-        raise ValueError(
-            f'Region {region_id} already exists in Icechunk store.'
-            'Please provide a new region_id or use the wipe flag to overwrite existing data.'
-        )
-    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
+def calculate_risk(
+    *,
+    region_geoparquet_uri: UPath,
+    region_id: str,
+    x_slice: slice,
+    y_slice: slice,
+    risk_type: RiskType,
+    session: icechunk.Session,
+):
     if risk_type == RiskType.FIRE:
         ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
     write_region_to_icechunk(
-        session=config.icechunk.repo_and_session()['session'],
+        session=session,
         ds=ds,
         region_id=region_id,
     )
@@ -78,9 +74,11 @@ def calculate_risk(config: OCRConfig, *, region_id: str, risk_type: RiskType):
     buildings_gdf = sample_risk_to_buildings(ds=dset)
 
     # Write to geoparquet
-    outpath = f'{config.vector.region_geoparquet_uri}{region_id}.parquet'
+    outpath = UPath(f'{region_geoparquet_uri}/{region_id}.parquet')
+    if not outpath.parent.exists():
+        outpath.parent.mkdir(parents=True, exist_ok=True)
     buildings_gdf.to_parquet(
-        outpath,
+        str(outpath),
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,

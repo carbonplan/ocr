@@ -259,7 +259,7 @@ class LocalBatchManager(AbstractBatchManager):
 
                                 if exit_on_failure:
                                     raise Exception(
-                                        f'Job {job_id} failed with return code {result["return_code"]}'
+                                        f'Job {job_id} failed with return code {result["return_code"]}: {result["stderr"]}'
                                     )
 
                         except Exception as e:

@@ -144,7 +144,7 @@ def run(
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
-        batch_manager_01.wait_for_completion()
+        batch_manager_01.wait_for_completion(exit_on_failure=True)
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
@@ -153,7 +153,7 @@ def run(
             name=f'aggregate-geoparquet-{config.branch.value}',
             kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env': env_vars},
         )
-        batch_manager_aggregate_02.wait_for_completion()
+        batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
 
         if summary_stats:
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
@@ -166,7 +166,7 @@ def run(
                     'env': env_vars,
                 },
             )
-            batch_manager_county_aggregation_01.wait_for_completion()
+            batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
 
             # create summary stats PMTiles layer
             batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
@@ -192,7 +192,7 @@ def run(
             },
         )
 
-        batch_manager_03.wait_for_completion()
+        batch_manager_03.wait_for_completion(exit_on_failure=True)
 
     elif platform == Platform.LOCAL:
         manager = LocalBatchManager(debug=debug)
@@ -208,7 +208,7 @@ def run(
                     'cwd': tmp_dir,
                 },
             )
-        manager.wait_for_completion()
+        manager.wait_for_completion(exit_on_failure=True)
 
         # Aggregate geoparquet regions
         manager = LocalBatchManager(debug=debug)
@@ -220,7 +220,8 @@ def run(
                 'cwd': tmp_dir,
             },
         )
-        manager.wait_for_completion()
+        manager.wait_for_completion(exit_on_failure=True)
+
         if summary_stats:
             manager = LocalBatchManager(debug=debug)
             # Aggregate regional fire and wind risk statistics
@@ -232,7 +233,7 @@ def run(
                     'cwd': tmp_dir,
                 },
             )
-            manager.wait_for_completion()
+            manager.wait_for_completion(exit_on_failure=True)
 
             # Create summary stats PMTiles layer
             manager = LocalBatchManager(debug=debug)
@@ -244,7 +245,8 @@ def run(
                     'cwd': tmp_dir,
                 },
             )
-            manager.wait_for_completion()
+            manager.wait_for_completion(exit_on_failure=True)
+
         # Create PMTiles from the consolidated geoparquet file
         manager = LocalBatchManager(debug=debug)
         manager.submit_job(
@@ -255,7 +257,7 @@ def run(
                 'cwd': tmp_dir,
             },
         )
-        manager.wait_for_completion()
+        manager.wait_for_completion(exit_on_failure=True)
 
 
 @app.command()
@@ -283,7 +285,16 @@ def process_region(
 
     config = load_config(env_file)
 
-    calculate_risk(config=config, region_id=region_id, risk_type=risk_type)
+    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
+
+    calculate_risk(
+        region_geoparquet_uri=config.vector.region_geoparquet_uri,
+        region_id=region_id,
+        y_slice=y_slice,
+        x_slice=x_slice,
+        risk_type=risk_type,
+        session=config.icechunk.repo_and_session()['session'],
+    )
 
 
 @app.command()
@@ -334,10 +345,9 @@ def aggregate_regional_risk(
     config = load_config(env_file)
 
     compute_regional_fire_wind_risk_statistics(
-        counties_path=config.vector.counties_geoparquet_uri,
-        tracts_path=config.vector.tracts_geoparquet_uri,
+        tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
+        counties_summary_stats_path=config.vector.counties_summary_stats_uri,
         consolidated_buildings_path=config.vector.consolidated_geoparquet_uri,
-        aggregated_regions_prefix=config.vector.aggregated_regions_prefix,
     )
 
 
@@ -362,8 +372,8 @@ def create_regional_pmtiles(
     config = load_config(env_file)
 
     create_regional_pmtiles(
-        tract_stats_path=config.vector.tracts_geoparquet_uri,
-        county_stats_path=config.vector.counties_geoparquet_uri,
+        tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
+        counties_summary_stats_path=config.vector.counties_summary_stats_uri,
         tract_pmtiles_output=config.vector.region_geoparquet_uri / 'tract.pmtiles',
         county_pmtiles_output=config.vector.region_geoparquet_uri / 'counties.pmtiles',
     )

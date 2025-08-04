@@ -8,8 +8,8 @@ from ocr.console import console
 
 def create_regional_pmtiles(
     *,
-    tract_stats_path: UPath,
-    county_stats_path: UPath,
+    tracts_summary_stats_path: UPath,
+    counties_summary_stats_path: UPath,
     tract_pmtiles_output: UPath,
     county_pmtiles_output: UPath,
 ):
@@ -25,7 +25,7 @@ def create_regional_pmtiles(
         tract_pmtiles = tmp_path / 'tract.pmtiles'
         county_pmtiles = tmp_path / 'counties.pmtiles'
 
-        console.log(f'Creating tract PMTiles from {tract_stats_path}')
+        console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
         duckdb_tract_query = f"""
         load spatial;
 
@@ -62,7 +62,7 @@ def create_regional_pmtiles(
                      ) AS properties,
                 json(ST_AsGeoJson(geometry)) AS geometry
 
-            FROM read_parquet('{tract_stats_path}')
+            FROM read_parquet('{tracts_summary_stats_path}')
         ) TO STDOUT (FORMAT json);
         """
 
@@ -89,7 +89,7 @@ def create_regional_pmtiles(
 
         console.log('Tract PMTiles created successfully')
 
-        console.log(f'Creating county PMTiles from {county_stats_path}')
+        console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
         duckdb_county_query = f"""
         load spatial;
 
@@ -126,7 +126,7 @@ def create_regional_pmtiles(
                      ) AS properties,
                 json(ST_AsGeoJson(geometry)) AS geometry
 
-            FROM read_parquet('{county_stats_path}')
+            FROM read_parquet('{counties_summary_stats_path}')
         ) TO STDOUT (FORMAT json);
         """
 
