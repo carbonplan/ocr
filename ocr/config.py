@@ -744,9 +744,6 @@ class VectorConfig(pydantic_settings.BaseSettings):
         ..., description='Root storage path for vector data, can be a bucket name or local path'
     )
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
-    wipe: bool = pydantic.Field(
-        default=False, description='Whether to wipe existing data before processing'
-    )
 
     class Config:
         """Configuration for Pydantic settings."""
@@ -757,13 +754,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
         if self.prefix is None:
-            if self.branch == Branch.PROD:
-                self.prefix = 'intermediate/fire-risk/vector/prod/'
-            elif self.branch == Branch.QA:
-                self.prefix = 'intermediate/fire-risk/vector/QA/'
+            self.prefix = f'intermediate/fire-risk/vector/{self.branch.value}'
 
-        if self.wipe:
-            self.delete_region_gpqs()
+    def wipe(self):
+        """Wipe the vector data storage."""
+        console.log(f'Wiping vector data storage at {self.storage_root}/{self.prefix}')
+        self.delete_region_gpqs()
 
     @functools.cached_property
     def region_geoparquet_prefix(self) -> str:
@@ -822,27 +818,18 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         ..., description='Root storage path for icechunk data, can be a bucket name or local path'
     )
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
-    wipe: bool = pydantic.Field(
-        default=False, description='Whether to wipe existing data before processing'
-    )
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
         if self.prefix is None:
-            if self.branch == Branch.PROD:
-                self.prefix = 'intermediate/fire-risk/tensor/prod/template.icechunk'
-            elif self.branch == Branch.QA:
-                self.prefix = 'intermediate/fire-risk/tensor/QA/template.icechunk'
+            self.prefix = f'intermediate/fire-risk/tensor/{self.branch.value}/template.icechunk'
+        self.init_repo()
 
-        if self.wipe:
-            self.delete()
-            self.init_repo()
-            self.create_template()
-
-        commits = get_commit_messages_ancestry(self.repo_and_session()['repo'])
-        if 'initialize store with template' not in commits:
-            console.log('No template found in icechunk store. Creating a new template dataset.')
-            self.create_template()
+    def wipe(self):
+        """Wipe the icechunk repository."""
+        console.log(f'Wiping icechunk repository at {self.uri}')
+        self.delete()
+        self.init_repo()
 
     @functools.cached_property
     def uri(self) -> UPath:
@@ -876,6 +863,10 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         icechunk.Repository.open_or_create(self.storage)
         console.log('Initialized/Opened icechunk repository')
+        commits = get_commit_messages_ancestry(self.repo_and_session()['repo'])
+        if 'initialize store with template' not in commits:
+            console.log('No template found in icechunk store. Creating a new template dataset.')
+            self.create_template()
 
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         """Open an icechunk repository and return the session."""
@@ -967,9 +958,6 @@ class OCRConfig(pydantic_settings.BaseSettings):
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for OCR data, can be a bucket name or local path'
     )
-    wipe: bool = pydantic.Field(
-        default=False, description='Whether to wipe existing data before processing'
-    )
     vector: VectorConfig | None = pydantic.Field(None, description='Vector configuration')
     icechunk: IcechunkConfig | None = pydantic.Field(None, description='Icechunk configuration')
     chunking: ChunkingConfig | None = pydantic.Field(
@@ -988,7 +976,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
             object.__setattr__(
                 self,
                 'vector',
-                VectorConfig(storage_root=self.storage_root, branch=self.branch, wipe=self.wipe),
+                VectorConfig(storage_root=self.storage_root, branch=self.branch),
             )
         if self.icechunk is None:
             object.__setattr__(
@@ -997,7 +985,6 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 IcechunkConfig(
                     storage_root=self.storage_root,
                     branch=self.branch,
-                    wipe=self.wipe,
                 ),
             )
         if self.chunking is None:

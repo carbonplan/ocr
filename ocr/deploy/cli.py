@@ -65,6 +65,12 @@ def run(
         help='Platform to run the pipeline on',
         show_default=True,
     ),
+    wipe: bool = typer.Option(
+        False,
+        '--wipe',
+        help='Wipe the icechunk and vector data storages before running the pipeline',
+        show_default=True,
+    ),
 ):
     """
     Run the OCR deployment pipeline. This will process regions, aggregate geoparquet files,
@@ -83,6 +89,9 @@ def run(
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
+    if wipe:
+        config.icechunk.wipe()
+        config.vector.wipe()
 
     icechunk_repo_and_session = config.icechunk.repo_and_session()
     if all_region_ids:
