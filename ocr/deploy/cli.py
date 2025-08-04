@@ -67,7 +67,8 @@ def run(
     ),
 ):
     """
-    Run the OCR deployment pipeline on Coiled.
+    Run the OCR deployment pipeline. This will process regions, aggregate geoparquet files,
+    and create PMTiles layers for the specified risk type.
     """
 
     if all_region_ids and region_id:
@@ -315,7 +316,7 @@ def aggregate_regional_risk(
     ),
 ):
     """
-    Aggregate regional fire and wind risk statistics.
+    Generate statistical summaries at county and tract levels.
     """
     from ocr.pipeline.fire_wind_risk_regional_aggregator import (
         compute_regional_fire_wind_risk_statistics,
@@ -383,6 +384,11 @@ def create_pmtiles(
         input_path=config.vector.consolidated_geoparquet_uri,
         output_path=config.vector.pmtiles_prefix_uri,
     )
+
+
+ocr = typer.main.get_command(
+    app
+)  # this is needed to make the app available in the docs via mkdocs-click
 
 
 if __name__ == '__main__':
