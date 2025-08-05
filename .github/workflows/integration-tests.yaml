@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00”
@@ -19,6 +22,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        (
+          contains(github.event.pull_request.labels.*.name, 'e2e')
+        ) ||
+        (
+          contains(github.event.pull_request.title, '[e2e]') ||
+          contains(github.event.pull_request.body, '[e2e]')
+        )
+      )
     steps:
       - uses: actions/checkout@v4
 
@@ -42,4 +56,4 @@ jobs:
           pixi list -e dev
       - name: Run end-to-end tests
         run: |
-          pixi run ocr run --region-id y2_x4 --debug --platform local --wipe --summary-stats
+          pixi run ocr run --region-id y2_x4 --debug --platform local --summary-stats --env-file ocr-local.env
