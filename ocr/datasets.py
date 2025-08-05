@@ -287,7 +287,7 @@ class Catalog(pydantic.BaseModel):
         *,
         case_sensitive: bool = True,
         latest: bool = False,
-    ) -> Dataset | None:
+    ) -> Dataset:
         """
         Get a dataset by name and optionally version.
 
@@ -451,6 +451,20 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='2011-climate-run-30m-4326',
+        description='USFS 2011 Climate Run',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/2011_climate_run_30m_4326_chunked_icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='2047-climate-run-30m-4326',
+        description='USFS 2047 Climate Run',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/2047_climate_run_30m_4326_chunked_icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
         bucket='carbonplan-ocr',
@@ -462,7 +476,15 @@ datasets = [
         name='conus-overture-buildings',
         description='CONUS Overture Buildings',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/CONUS_overture_buildings_2025-03-19.1.parquet',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings_2025-06-25.0.parquet',
+        data_format='geoparquet',
+        version='v2025-03-19.1',
+    ),
+    Dataset(
+        name='conus-overture-buildings-5070',
+        description='CONUS Overture Buildings in EPSG 5070. Columns are: bbox, bbox_5070, geometry, geometry_5070',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/CONUS_overture_buildings_5070_2025-03-19.1.parquet',
         data_format='geoparquet',
         version='v2025-03-19.1',
     ),
@@ -498,10 +520,73 @@ datasets = [
     ),
     Dataset(
         name='USFS-wildfire-risk-communities',
-        description='Wildfire Risk to Communites - RDS-2020-0016-2',
+        description='Wildfire Risk to Communities - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_all_vars_merge_icechunk/',
         data_format='zarr',
+    ),
+    Dataset(
+        name='USFS-wildfire-risk-communities-4326',
+        description='Wildfire Risk to Communities - RDS-2020-0016-2',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-Q2',
+        description='Q2 variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/Q2',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-TD2',
+        description='TD2 variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/TD2',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-PSFC',
+        description='PSFC variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/PSFC',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-T2',
+        description='T2 variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/T2',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-V10',
+        description='V10 variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/V10',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-hourly-U10',
+        description='U10 variable from CONUS404 hourly data in Icechunk format',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-hourly-icechunk/U10',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='us-census-tracts',
+        description='US Census Tracts',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
+        name='us-census-counties',
+        description='US Census Counties',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/aggregated_regions/counties.parquet',
+        data_format='geoparquet',
     ),
 ]
 

@@ -1,12 +1,12 @@
 import typing
 
-import cv2 as cv
 import numpy as np
 import xarray as xr
-from rasterio.warp import Resampling
-from scipy.ndimage import rotate
+
+from ocr.console import console
 
 
+# Depreciate? - potentially unused
 def generate_angles() -> dict[str, float]:
     """Generate a dictionary mapping cardinal/ordinal directions to their starting angles in degrees.
 
@@ -59,6 +59,8 @@ def generate_weights(
 def generate_wind_directional_kernels(
     kernel_size: float = 81.0, circle_diameter: float = 35.0
 ) -> dict[str, np.ndarray]:
+    from scipy.ndimage import rotate
+
     """Generate a dictionary of 2D arrays of weights for circular kernels oriented in different directions.
     Parameters
     ----------
@@ -77,7 +79,9 @@ def generate_wind_directional_kernels(
     for angle, direction in zip(rotating_angles, wind_direction_labels):
         weights_dict[direction] = rotate(
             generate_weights(
-                method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
+                method='skewed',
+                kernel_size=kernel_size,
+                circle_diameter=circle_diameter,
             ),
             angle=angle,
         )
@@ -86,7 +90,9 @@ def generate_wind_directional_kernels(
                 17:98, 17:98
             ]  # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
     weights_dict['circular'] = generate_weights(
-        method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
+        method='circular_focal_mean',
+        kernel_size=kernel_size,
+        circle_diameter=circle_diameter,
     )
 
     # re-normalize all weights to ensure sum equals 1.0
@@ -96,7 +102,10 @@ def generate_wind_directional_kernels(
 
 
 def apply_wind_directional_convolution(
-    da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
+    da: xr.DataArray,
+    iterations: int = 3,
+    kernel_size: float = 81.0,
+    circle_diameter: float = 35.0,
 ) -> xr.DataArray:
     """Apply a directional convolution to a DataArray.
 
@@ -116,6 +125,8 @@ def apply_wind_directional_convolution(
     xr.DataArray
         The DataArray with the directional convolution applied
     """
+    import cv2 as cv
+
     # TODO: must scale the size of the kernel according to the latitude. Can either
     # be done before entering this function to calculate the kernel_size
     # argument or inside this function and pass latitude into the convolution
@@ -187,9 +198,12 @@ def apply_mode_calc(direction_indices_ds: xr.Dataset) -> xr.Dataset:
     )
 
 
+# Depreciate? - potentially unused
 def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) -> xr.Dataset:
+    from rasterio.warp import Resampling
+
     wind_direction = wind_direction.rio.write_crs('EPSG:4326')
-    bp = bp.rio.write_crs('EPSG:5070')
+    # bp = bp.rio.write_crs('EPSG:5070')
     # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries.
     # TODO: consider ways of creating a smooth transition between gridcells, options include:
     # - instead of using the mode direction, do a weighted average of the different winds and then
@@ -215,6 +229,125 @@ def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
     # select the entry that corresponds to the wind direction index
     # TODO: let's test this to confirm it's working as expected
     return bp_da.isel(direction=wind_directions)
+
+
+def classify_wind(
+    climate_run_subset: xr.Dataset,
+    direction_modes_sfc: xr.Dataset,
+    rps_30_subset: xr.Dataset,
+) -> xr.Dataset:
+    from odc.geo.xr import assign_crs
+
+    from ocr.risks.fire import (
+        apply_wind_directional_convolution,
+        create_composite_bp_map,
+    )
+
+    # Build and apply wind adjustment
+    blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
+
+    blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
+    # Switched to xarray interp_like to since both datasets have matching EPSG codes.
+    # wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
+    #     blurred_bp, resampling=Resampling.nearest
+    # ).rename({'y': 'latitude', 'x': 'longitude'})
+    # wind_direction_reprojected = assign_crs(wind_direction_reprojected, crs='EPSG:4326')
+    # import xarray.testing as xrt
+    # xrt.assert_equal(wind_direction_reprojected, wind_direction_reprojected_xr)
+
+    # Adding int coercion because rasterio outputs ints, while scipy/xarray outputs floats.
+    wind_direction_reprojected = direction_modes_sfc.interp_like(
+        blurred_bp, method='nearest'
+    ).astype(int)
+
+    wind_informed_bp = create_composite_bp_map(blurred_bp, wind_direction_reprojected).drop_vars(
+        'direction'
+    )
+    # Fix tiny FP misalignment in .sel of lat/lon between two datasets.
+    wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
+        latitude=rps_30_subset.latitude, longitude=rps_30_subset.longitude
+    )
+    return wind_informed_bp_float_corrected
+
+
+def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Dataset:
+    from odc.geo.xr import assign_crs
+
+    from ocr import catalog
+    from ocr.utils import lon_to_180
+
+    console.log(f'Calculating wind risk for region with x_slice: {x_slice} and y_slice: {y_slice}')
+
+    # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
+    climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
+    climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
+
+    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
+        ['BP', 'CRPS', 'RPS']
+    ]
+    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[['sfcWindfromdir']]
+    # TODO: Input datasets should already be pre-processed, so this transform should be done upstream.
+    important_days = lon_to_180(important_days)
+
+    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
+    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice).chunk(
+        {'latitude': 6000, 'longitude': 4500}
+    )
+    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice).chunk(
+        {'latitude': 6000, 'longitude': 4500}
+    )
+
+    # Since important_days / wind is a lower resolution (.25 degrees?), we add in spatial buffer to match the resolution.
+    wind_res = 0.25
+    buffer = wind_res * 2  # add in a 2x buffer of the resolution
+    buffered_y_slice = slice(y_slice.start + buffer, y_slice.stop - buffer, y_slice.step)
+    buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
+
+    wind_directions = important_days.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
+    direction_indices = classify_wind_directions(wind_directions).chunk(dict(time=-1))
+    direction_modes = apply_mode_calc(direction_indices).compute()
+
+    direction_modes_sfc = assign_crs(direction_modes['sfcWindfromdir'], crs='EPSG:4326')
+
+    wind_informed_bp_float_corrected_2011 = classify_wind(
+        climate_run_subset=climate_run_2011_subset,
+        direction_modes_sfc=direction_modes_sfc,
+        rps_30_subset=rps_30_subset,
+    )
+    wind_informed_bp_float_corrected_2047 = classify_wind(
+        climate_run_subset=climate_run_2047_subset,
+        direction_modes_sfc=direction_modes_sfc,
+        rps_30_subset=rps_30_subset,
+    )
+
+    # Add in non-wind-adjusted 2011 and 2047 BP*CRPS score for QA comparison
+
+    climate_run_2011_subset_float_corrected = climate_run_2011_subset.assign_coords(
+        latitude=wind_informed_bp_float_corrected_2011.latitude,
+        longitude=wind_informed_bp_float_corrected_2011.longitude,
+    )
+    climate_run_2047_subset_float_corrected = climate_run_2047_subset.assign_coords(
+        latitude=wind_informed_bp_float_corrected_2047.latitude,
+        longitude=wind_informed_bp_float_corrected_2047.longitude,
+    )
+
+    risk_4326_combined = (
+        climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
+    ).to_dataset(name='risk_2011')
+
+    risk_4326_combined['risk_2047'] = (
+        climate_run_2047_subset_float_corrected['BP'] * rps_30_subset['CRPS']
+    )
+
+    # Adjust USFS 30m CRPS with wind informed burn probability
+    risk_4326_combined['wind_risk_2011'] = (
+        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    )
+    risk_4326_combined['wind_risk_2047'] = (
+        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
+    )
+
+    return risk_4326_combined.drop_vars(['spatial_ref'])
 
 
 def nws_fire_weather(hurs, hurs_threshold, sfcWind, wind_threshold, tas=None, tas_threshold=None):

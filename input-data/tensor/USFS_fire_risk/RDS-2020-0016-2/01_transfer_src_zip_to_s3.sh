@@ -4,12 +4,12 @@
 # COILED --region us-west-2
 # COILED --vm-type m7a.4xlarge
 # COILED --forward-aws-credentials
-# COILED --tag project=OCR
+# COILED --tag Project=OCR
 # COILED --disk-size 500
 
 
 # Download the zip(s)
-# Should we have a async bash loop - probably..
+# Should we have a async bash loop?
 
 # bp
 curl -L https://usfs-public.box.com/shared/static/7itw7p56vje2m0u3kqh91lt6kqq1i9l1.zip -o RDS-2020-0016-02-BP-CONUS.zip
@@ -41,6 +41,11 @@ s5cmd mv --sp 'RDS-2020-0016-02-FLEP4-CONUS/FLEP4_CONUS/FLEP4_CONUS.tif' 's3://c
 curl -L https://usfs-public.box.com/shared/static/gwasv734wwcx77zc4wj4ntfhaxyt8mel.zip -o RDS-2020-0016-02-FLEP8-CONUS.zip
 unzip RDS-2020-0016-02-FLEP8-CONUS.zip -d RDS-2020-0016-02-FLEP8-CONUS/ && rm *.zip
 s5cmd mv --sp 'RDS-2020-0016-02-FLEP8-CONUS/FLEP8_CONUS/FLEP8_CONUS.tif' 's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/FLEP8_CONUS.tif'
+
+# RPS
+curl -L https://usfs-public.box.com/shared/static/88tv8byot0t22o9p1eqlrfqco3z5ouvf.zip -o RDS-2020-0016-02-RPS-CONUS.zip
+unzip RDS-2020-0016-02-RPS-CONUS.zip -d RDS-2020-0016-02-RPS-CONUS/ && rm *.zip
+s5cmd mv --sp 'RDS-2020-0016-02-RPS-CONUS/RPS_CONUS/RPS_CONUS.tif' 's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/RPS_CONUS.tif'
 
 # WHP
 curl -L https://usfs-public.box.com/shared/static/jz74xh0eqdezblhexwu2s2at7fqgom8n.zip -o RDS-2020-0016-02-WHP-CONUS.zip

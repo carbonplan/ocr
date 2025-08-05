@@ -1,4 +1,5 @@
-name: CI
+name: end-to-end
+
 on:
   push:
     branches:
@@ -7,6 +8,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Daily “At 00:00”
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +22,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        (
+          contains(github.event.pull_request.labels.*.name, 'e2e')
+        ) ||
+        (
+          contains(github.event.pull_request.title, '[e2e]') ||
+          contains(github.event.pull_request.body, '[e2e]')
+        )
+      )
     steps:
       - uses: actions/checkout@v4
 
@@ -40,7 +54,6 @@ jobs:
       - name: List installed libraries/packages
         run: |
           pixi list -e dev
-
-      - name: Run tests
+      - name: Run end-to-end tests
         run: |
-          pixi run run-tests
+          pixi run ocr run --region-id y2_x4 --debug --platform local --summary-stats --env-file ocr-local.env

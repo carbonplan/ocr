@@ -10,7 +10,7 @@ cluster = coiled.Cluster(
     name='ocr_RDS_2020-0016-02',
     region='us-west-2',
     n_workers=10,
-    tags={'project': 'OCR'},
+    tags={'Project': 'OCR'},
     worker_vm_types='m8g.large',
     scheduler_vm_types='m8g.2xlarge',
 )
@@ -20,7 +20,8 @@ client = cluster.get_client()
 cluster.adapt(minimum=1, maximum=200)
 
 
-var_list = ['BP', 'CRPS', 'CFL', 'Exposure', 'FLEP4', 'FLEP8', 'WHP']
+var_list = ['BP', 'CRPS', 'CFL', 'Exposure', 'FLEP4', 'FLEP8', 'RPS', 'WHP']
+
 fpath_dict = {
     var_name: f's3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/{var_name}_CONUS.tif'
     for var_name in var_list

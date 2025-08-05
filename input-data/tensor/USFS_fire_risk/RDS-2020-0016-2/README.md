@@ -1,7 +1,7 @@
 ## Scripts to generate Icechunk store(s) for the USFS RDS-2020-0016 dataset.
 
 Wildfire Risk to Communities: Spatial datasets of landscape-wide wildfire risk components for the United States (2nd Edition)
-https://www.fs.usda.gov/rds/archive/catalog/RDS-2020-0016
+https://www.fs.usda.gov/rds/archive/catalog/RDS-2020-0016-2
 
 ### Order of operations
 

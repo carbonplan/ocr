@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from ocr.wind import (
+from ocr.risks.fire import (
     apply_wind_directional_convolution,
     generate_angles,
     generate_weights,

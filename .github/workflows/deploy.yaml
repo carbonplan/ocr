@@ -1,12 +1,13 @@
-name: CI
+name: deploy
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      branch:
+        description: "branch: QA or prod"
+        default: "QA"
+      region_ids:
+        description: "region_ids(s)"
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +18,7 @@ permissions:
   contents: read # This is required for actions/checkout
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +30,8 @@ jobs:
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
 
+      # seems like using the python setup version is cached by GH, so might be faster
+      - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.8.14
         with:
           pixi-version: v0.43.3
@@ -41,6 +44,7 @@ jobs:
         run: |
           pixi list -e dev
 
-      - name: Run tests
+      - name: Try using inputs
         run: |
-          pixi run run-tests
+          echo ${{ github.event.inputs.branch }}
+          echo ${{ github.event.inputs.region_ids }}

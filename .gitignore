@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 wheels/
+temp/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -180,3 +181,4 @@ ocr/_version.py
 pixi.lock
 .vscode/
 pixi.lock
+uv.lock
