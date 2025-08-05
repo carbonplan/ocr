@@ -9,7 +9,7 @@ on:
         description: "region ID"
         required: true
       wipe:
-        description: "wipe the database"
+        description: "wipe existing data (icechunk and parquet files) before running"
         default: "false"
         required: false
 
@@ -47,7 +47,6 @@ jobs:
       - name: List installed libraries/packages
         run: |
           pixi list -e dev
-          pixi run duckdb --help
 
       - name: Deploy
         env:
