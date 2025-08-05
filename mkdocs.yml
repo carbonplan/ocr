@@ -10,12 +10,12 @@ docs_dir: docs
 nav:
   - "index.md"
   - Getting Started:
-      - getting_started/installation.md
+      - getting-started/installation.md
   - Methods:
       - methods/input_datasets.md
       - methods/fire_risk.md
   - Usage:
-      - usage/data_pipeline.md
+      - usage/data-pipeline.md
   - Project Structure:
       - layout/project_structure.md
   - API Reference:

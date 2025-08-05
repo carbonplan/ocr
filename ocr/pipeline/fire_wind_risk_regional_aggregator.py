@@ -1,18 +1,17 @@
 import duckdb
+from upath import UPath
 
+from ocr import catalog
 from ocr.console import console
-from ocr.types import Branch
 
 
-def create_summary_stat_tmp_tables(con: duckdb.DuckDBPyConnection, branch: Branch):
-    s3_base = 's3://carbonplan-ocr'
-    input_base = f'{s3_base}/input/fire-risk/vector'
-    intermediate_base = f'{s3_base}/intermediate/fire-risk/vector/{branch.value}'
-
-    consolidated_buildings_path = f'{intermediate_base}/consolidated_geoparquet.parquet'
-    counties_path = f'{input_base}/aggregated_regions/counties.parquet'
-    tracts_path = f'{input_base}/aggregated_regions/tracts/tracts.parquet'
-
+def create_summary_stat_tmp_tables(
+    *,
+    con: duckdb.DuckDBPyConnection,
+    counties_path: UPath,
+    tracts_path: UPath,
+    consolidated_buildings_path: UPath,
+):
     console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
 
     # tmp table for buildings
@@ -63,9 +62,10 @@ def create_summary_stat_tmp_tables(con: duckdb.DuckDBPyConnection, branch: Branc
 
 
 def custom_histogram_query(
+    *,
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
-    branch: Branch,
+    summary_stats_path: UPath,
     hist_bins: list[int] | None = None,
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
@@ -144,7 +144,9 @@ def custom_histogram_query(
 
     con.execute(nonzero_hist_query)
 
-    output_path = f's3://carbonplan-ocr/intermediate/fire-risk/vector/{branch.value}/region_aggregation/{geo_table_name}/{geo_table_name}_summary_stats.parquet'
+    output_path = summary_stats_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    console.log(f'Writing summary statistics for {geo_table_name} to {output_path}')
 
     # Now we merge the two temp tables together, the 0 counts table and the histograms that exclude 0.
     # duckdb has a func called `list_concat` for this.
@@ -190,13 +192,41 @@ def custom_histogram_query(
     console.log(f'Wrote summary statistics for {geo_table_name} to {output_path}')
 
 
-def compute_regional_fire_wind_risk_statistics(branch: Branch):
+def compute_regional_fire_wind_risk_statistics(
+    *,
+    consolidated_buildings_path: UPath,
+    tracts_summary_stats_path: UPath,
+    counties_summary_stats_path: UPath,
+    counties_path: UPath | None = None,
+    tracts_path: UPath | None = None,
+):
+    if counties_path is None:
+        dataset = catalog.get_dataset('us-census-counties')
+        counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+    if tracts_path is None:
+        dataset = catalog.get_dataset('us-census-tracts')
+        tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
     con = duckdb.connect(database=':memory:')
     con.execute("""INSTALL SPATIAL; LOAD SPATIAL; INSTALL HTTPS; LOAD HTTPFS""")
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
     hist_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
-    create_summary_stat_tmp_tables(con=con, branch=branch)
-    custom_histogram_query(con=con, geo_table_name='county', branch=branch, hist_bins=hist_bins)
-    custom_histogram_query(con=con, geo_table_name='tract', branch=branch, hist_bins=hist_bins)
+    create_summary_stat_tmp_tables(
+        con=con,
+        counties_path=counties_path,
+        tracts_path=tracts_path,
+        consolidated_buildings_path=consolidated_buildings_path,
+    )
+    custom_histogram_query(
+        con=con,
+        geo_table_name='county',
+        summary_stats_path=counties_summary_stats_path,
+        hist_bins=hist_bins,
+    )
+    custom_histogram_query(
+        con=con,
+        geo_table_name='tract',
+        summary_stats_path=tracts_summary_stats_path,
+        hist_bins=hist_bins,
+    )

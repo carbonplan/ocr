@@ -1,38 +1,25 @@
 import geopandas as gpd
+import icechunk
 import xarray as xr
+from upath import UPath
 
-from ocr.chunking_config import ChunkingConfig
+from ocr.console import console
 from ocr.datasets import catalog
-from ocr.template import (
-    IcechunkConfig,
-    VectorConfig,
-    insert_region_uncoop,
-    region_id_exists_in_repo,
-)
-from ocr.types import Branch, RiskType
+from ocr.icechunk_utils import insert_region_uncoop
+from ocr.risks.fire import calculate_wind_adjusted_risk
+from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
-from ocr.wind import calculate_wind_adjusted_risk
 
 
-def write_region_to_icechunk(ds: xr.Dataset, region_id: str, branch: Branch, wipe: bool):
+def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, region_id: str):
     insert_region_uncoop(
+        session=session,
         subset_ds=ds,
         region_id=region_id,
-        branch=branch,
-        wipe=wipe,  # Wipe is handled at the IcechunkConfig level
     )
 
 
-def sample_risk_to_buildings(region_id: str, branch: Branch):
-    config = ChunkingConfig()
-    icechunk_config = IcechunkConfig(branch=branch.value)
-    vector_config = VectorConfig(branch=branch.value)
-
-    icechunk_repo_and_session = icechunk_config.repo_and_session(readonly=True)
-    y_slice, x_slice = config.region_id_to_latlon_slices(region_id=region_id)
-    ds = xr.open_dataset(
-        icechunk_repo_and_session['session'].store, engine='zarr', consolidated=False, chunks={}
-    ).sel(latitude=y_slice, longitude=x_slice)
+def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Create bounding box from region
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     # Query buildings within the region
@@ -59,34 +46,42 @@ def sample_risk_to_buildings(region_id: str, branch: Branch):
     geom_cols = ['geometry']
     buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
 
+    return buildings_gdf
+
+
+def calculate_risk(
+    *,
+    region_geoparquet_uri: UPath,
+    region_id: str,
+    x_slice: slice,
+    y_slice: slice,
+    risk_type: RiskType,
+    session: icechunk.Session,
+):
+    if risk_type == RiskType.FIRE:
+        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
+    else:
+        raise ValueError(f'Unsupported risk type: {risk_type}')
+
+    write_region_to_icechunk(
+        session=session,
+        ds=ds,
+        region_id=region_id,
+    )
+
+    dset = ds.sel(latitude=y_slice, longitude=x_slice)
+
+    buildings_gdf = sample_risk_to_buildings(ds=dset)
+
     # Write to geoparquet
-    outpath = f'{vector_config.region_geoparquet_uri}{region_id}.parquet'
+    outpath = UPath(f'{region_geoparquet_uri}/{region_id}.parquet')
+    if not outpath.parent.exists():
+        outpath.parent.mkdir(parents=True, exist_ok=True)
     buildings_gdf.to_parquet(
-        outpath,
+        str(outpath),
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,
         schema_version='1.1.0',
     )
-
-
-def calculate_risk(region_id: str, risk_type: RiskType, branch: Branch, wipe: bool):
-    config = ChunkingConfig()
-    if region_id not in config.valid_region_ids:
-        raise ValueError(
-            f'{region_id} is an invalid region_id. Valid IDs include: {config.valid_region_ids}'
-        )
-
-    # Check if region already exists
-    if region_id_exists_in_repo(region_id=region_id, branch=branch.value):
-        raise ValueError(
-            f'Region {region_id} already exists in Icechunk store.'
-            f' {branch.value} branch. Please provide a new region_id or use the wipe flag to overwrite existing data.'
-        )
-    if risk_type == RiskType.WIND:
-        ds = calculate_wind_adjusted_risk(region_id=region_id)
-    else:
-        raise ValueError(f'Unsupported risk type: {risk_type}')
-
-    write_region_to_icechunk(ds=ds, region_id=region_id, branch=branch, wipe=wipe)
-    sample_risk_to_buildings(region_id=region_id, branch=branch)
+    console.log(f'Wrote sampled risk data for region {region_id} to {outpath}')

@@ -574,6 +574,20 @@ datasets = [
         prefix='input/conus404-hourly-icechunk/U10',
         data_format='zarr',
     ),
+    Dataset(
+        name='us-census-tracts',
+        description='US Census Tracts',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
+        name='us-census-counties',
+        description='US Census Counties',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/aggregated_regions/counties.parquet',
+        data_format='geoparquet',
+    ),
 ]
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
