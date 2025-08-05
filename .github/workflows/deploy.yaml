@@ -50,6 +50,8 @@ jobs:
           pixi run duckdb --help
 
       - name: Deploy
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
           pixi run ocr run
             --region-id ${{ github.event.inputs.region_id }} \
@@ -58,3 +60,4 @@ jobs:
             --debug \
             --summary-stats \
             --env-file ocr-coiled-s3.env
+            --platform coiled
