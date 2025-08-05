@@ -5,9 +5,13 @@ on:
       branch:
         description: "branch: QA or prod"
         default: "QA"
-      region_ids:
-        description: "region_ids(s)"
+      region_id:
+        description: "region ID"
         required: true
+      wipe:
+        description: "wipe the database"
+        default: "false"
+        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,8 +47,14 @@ jobs:
       - name: List installed libraries/packages
         run: |
           pixi list -e dev
+          pixi run duckdb --help
 
-      - name: Try using inputs
+      - name: Deploy
         run: |
-          echo ${{ github.event.inputs.branch }}
-          echo ${{ github.event.inputs.region_ids }}
+          pixi run ocr run
+            --region-id ${{ github.event.inputs.region_id }} \
+            --branch ${{ github.event.inputs.branch }} \
+            ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }} \
+            --debug \
+            --summary-stats \
+            --env-file ocr-coiled-s3.env
