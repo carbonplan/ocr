@@ -776,7 +776,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def consolidated_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}/consolidated-geoparquet.parquet'
+        return f'{self.output_prefix}/consolidated-geoparquet.parquet'
 
     @functools.cached_property
     def consolidated_geoparquet_uri(self) -> UPath:
