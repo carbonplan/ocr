@@ -155,7 +155,7 @@ We welcome contributions! Please see our [contributing guide](./contributing.md)
 
 ## Support
 
-- **Documentation** - [Full documentation](https://ocr.readthedocs.io) (coming soon)
+- **Documentation** - [Full documentation](https://carbonplan-ocr.readthedocs.io) (coming soon)
 - **Issues** - Report bugs or request features via [GitHub Issues](https://github.com/carbonplan/ocr/issues)
 - **Discussions** - Join the conversation in [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
 
