@@ -238,10 +238,7 @@ def classify_wind(
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
-    from ocr.risks.fire import (
-        apply_wind_directional_convolution,
-        create_composite_bp_map,
-    )
+    from ocr.risks.fire import apply_wind_directional_convolution, create_composite_bp_map
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
@@ -356,6 +353,7 @@ def nws_fire_weather(hurs, hurs_threshold, sfcWind, wind_threshold, tas=None, ta
     based upon relative humidity, windspeed, temperature and thresholds associated
     with each
     """
+    # TODO: use pint-xarray?
     # relative_humidity < 25%
     mask_hurs = hurs < hurs_threshold
     # windspeed > 15 mph
@@ -399,4 +397,5 @@ def calculate_rh(q2, t2, psfc):
 def direction_histogram(arr):
     arr = arr[arr >= 0]
     counts = np.bincount(arr, minlength=8)
+    # TODO: use dask's `da.bincount` for larger arrays
     return counts / counts.sum() if counts.sum() > 0 else np.zeros(8)
