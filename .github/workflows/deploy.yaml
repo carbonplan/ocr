@@ -52,7 +52,7 @@ jobs:
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
-          pixi run ocr run
+          pixi run ocr run \
             --region-id ${{ github.event.inputs.region_id }} \
             --branch ${{ github.event.inputs.branch }} \
             ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }} \
