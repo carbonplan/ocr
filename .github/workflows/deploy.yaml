@@ -2,9 +2,6 @@ name: deploy
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "branch: QA or prod"
-        default: "QA"
       region_id:
         description: "region ID"
         required: true
@@ -54,7 +51,6 @@ jobs:
         run: |
           pixi run ocr run \
             --region-id ${{ github.event.inputs.region_id }} \
-            --branch ${{ github.event.inputs.branch }} \
             ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }} \
             --debug \
             --summary-stats \

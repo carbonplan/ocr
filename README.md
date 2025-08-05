@@ -1,8 +1,8 @@
 # ocr
 
-| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![End-to-End Tests Status][github-e2e-badge]][github-e2e-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
-| :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| **License** |                                                                                                         [![License][license-badge]][repo-link]                                                                                                         |
+| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![E2E Tests][github-e2e-badge]][github-e2e-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
+| :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| **License** |                                                                                                                                [![License][license-badge]][repo-link]                                                                                                                                |
 
 Open Climate Risk Platform
 
@@ -15,6 +15,8 @@ Please see the [contributing guide](./contributing.md) for detailed instructions
 
 [github-ci-badge]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml/badge.svg
 [github-ci-link]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml
+[github-deploy-badge]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml/badge.svg
+[github-deploy-link]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml
 [github-e2e-badge]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml/badge.svg
 [github-e2e-link]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml
 [codecov-badge]: https://img.shields.io/codecov/c/github/carbonplan/ocr.svg?logo=codecov
