@@ -22,6 +22,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        (
+          contains(github.event.pull_request.labels.*.name, 'e2e')
+        ) ||
+        (
+          contains(github.event.pull_request.title, '[e2e]') ||
+          contains(github.event.pull_request.body, '[e2e]')
+        )
+      )
     steps:
       - uses: actions/checkout@v4
 
