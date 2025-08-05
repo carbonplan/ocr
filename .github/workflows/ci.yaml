@@ -43,4 +43,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run run-tests
+          pixi run tests
