@@ -1,5 +1,6 @@
 import typing
 
+import dask.array as da
 import numpy as np
 import xarray as xr
 
@@ -492,8 +493,69 @@ def calculate_rh(q2, t2, psfc):
     return rh
 
 
-def direction_histogram(arr):
-    arr = arr[arr >= 0]
-    counts = np.bincount(arr, minlength=8)
-    # TODO: use dask's `da.bincount` for larger arrays
-    return counts / counts.sum() if counts.sum() > 0 else np.zeros(8)
+def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
+    """
+    Compute direction histogram on xarray DataArray with dask chunks.
+    Parameters:
+    -----------
+    data_array : xarray.DataArray
+        Input data array containing direction indices (expected to be integers 0-7)
+    Returns:
+    --------
+    xarray.DataArray
+        Normalized histogram counts as a probability distribution
+    """
+
+    # Create a mask for non-negative values
+    mask = data_array >= 0
+
+    # Apply the mask (this preserves chunking)
+    filtered_data = data_array.where(mask, drop=False)
+
+    def _compute_histogram(block):
+        # Convert block to numpy array to avoid issues with unknown chunks
+        block_np = np.asarray(block)
+
+        # Handle NaN values from the where operation
+        valid_mask = ~np.isnan(block_np)
+        if not np.any(valid_mask):
+            return np.zeros(8, dtype=np.float32)
+
+        # Extract valid values
+        valid_data = block_np[valid_mask].astype(np.int32)
+
+        # Only process if we have valid data
+        if valid_data.size > 0:
+            counts = np.bincount(valid_data, minlength=8)
+            return counts
+        else:
+            return np.zeros(8, dtype=np.float32)
+
+    # Define chunk sizes for the output
+    chunks = ((8,),)  # Explicitly define that we want 8 elements in the new dimension
+
+    # Compute histogram over the entire array
+    result = filtered_data.data.map_blocks(
+        _compute_histogram,
+        dtype=np.float32,
+        drop_axis=(0, 1, 2),  # Drop all input dimensions
+        new_axis=(0,),  # Create a new axis for the histogram bins
+        chunks=chunks,  # Specify the output chunks explicitly
+    )
+
+    # Normalize to get a probability distribution
+    total = result.sum()
+    normalized = da.where(total > 0, result / total, result)
+
+    # Convert back to xarray with appropriate coordinates
+    attrs = {
+        'long_name': 'Wind Direction Histogram',
+        'units': 'probability',
+    }
+    return xr.DataArray(
+        normalized,
+        dims=['direction'],
+        coords={'direction': np.arange(8).astype(np.float32)},
+        name='wind_direction_histogram',
+        attrs=attrs,
+    )
