@@ -146,7 +146,7 @@ def apply_wind_directional_convolution(
     return spread_results
 
 
-def classify_wind_directions(wind_direction_ds: xr.Dataset) -> xr.Dataset:
+def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     # todo - make tests that ensure that our orientation is always initialized
     # to the north (0 index = north like direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     #  and that it's centered (i.e. North is -22.5 to 22.5)
@@ -163,7 +163,7 @@ def classify_wind_directions(wind_direction_ds: xr.Dataset) -> xr.Dataset:
         wind_direction_ds,
         vectorize=True,
         dask='parallelized',
-        output_dtypes=[int],
+        output_dtypes=[np.int32],
     )
     # Todo: make a test to ensure that this always produces integers between 0 and 8 inclusive
     return classified

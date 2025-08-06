@@ -4,10 +4,75 @@ import xarray as xr
 
 from ocr.risks.fire import (
     apply_wind_directional_convolution,
+    classify_wind_directions,
     generate_angles,
     generate_weights,
     generate_wind_directional_kernels,
 )
+
+############################################
+# Tests for wind direction classification ##
+############################################
+
+NORTH = 0
+NORTHEAST = 1
+EAST = 2
+SOUTHEAST = 3
+SOUTH = 4
+SOUTHWEST = 5
+WEST = 6
+NORTHWEST = 7
+
+
+class TestWindDirectionClassification:
+    @pytest.fixture
+    def create_test_data(self):
+        """Create test wind direction data as xarray DataArray"""
+
+        def _create(values):
+            if isinstance(values, int | float):
+                values = np.array([values])
+            return xr.DataArray(values).astype('float32')
+
+        return _create
+
+    @pytest.mark.parametrize(
+        'angle,expected_class',
+        [
+            # Test center of each bin
+            (0, NORTH),  # North center
+            (45, NORTHEAST),  # Northeast center
+            (90, EAST),  # East center
+            (135, SOUTHEAST),  # Southeast center
+            (180, SOUTH),  # South center
+            (225, SOUTHWEST),  # Southwest center
+            (270, WEST),  # West center
+            (315, NORTHWEST),  # Northwest center
+            # Test exact boundary cases
+            (22.5, NORTHEAST),  # N-NE boundary
+            (67.5, EAST),  # NE-E boundary
+            (112.5, SOUTHEAST),  # E-SE boundary
+            (157.5, SOUTH),  # SE-S boundary
+            (202.5, SOUTHWEST),  # S-SW boundary
+            (247.5, WEST),  # SW-W boundary
+            (292.5, NORTHWEST),  # W-NW boundary
+            (337.5, NORTH),  # NW-N boundary
+            # Test near-boundary cases
+            (22.4, NORTH),
+            (22.6, NORTHEAST),
+            (337.4, NORTHWEST),
+            (337.6, NORTH),
+            # Test critical North edge case (near 360)
+            (359.9, NORTH),
+            (0.1, NORTH),
+            (360, NORTH),
+        ],
+    )
+    def test_direction_classification(self, angle, expected_class, create_test_data):
+        """Test classification for various wind directions."""
+        wind_dir = create_test_data(angle)
+        result = classify_wind_directions(wind_dir).values[0]
+        assert result == expected_class, f'Expected {expected_class} for {angle}°, got {result}'
 
 
 def test_generate_angles_returns_dict():
