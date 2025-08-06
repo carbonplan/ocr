@@ -744,6 +744,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
         ..., description='Root storage path for vector data, can be a bucket name or local path'
     )
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
+    output_prefix: str | None = pydantic.Field(
+        None, description='Sub-path within the storage root for pipeline output products'
+    )
 
     class Config:
         """Configuration for Pydantic settings."""
@@ -755,6 +758,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
         """Post-initialization to set up prefixes and URIs based on branch."""
         if self.prefix is None:
             self.prefix = f'intermediate/fire-risk/vector/{self.branch.value}'
+        if self.output_prefix is None:
+            self.prefix = f'output/fire-risk/vector/{self.branch.value}'
 
     def wipe(self):
         """Wipe the vector data storage."""
@@ -771,7 +776,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def consolidated_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}/consolidated-geoparquet.parquet'
+        return f'{self.output_prefix}/consolidated-geoparquet.parquet'
 
     @functools.cached_property
     def consolidated_geoparquet_uri(self) -> UPath:
@@ -779,15 +784,15 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def pmtiles_prefix(self) -> str:
-        return f'{self.prefix}/consolidated.pmtiles'
+        return f'{self.output_prefix}/consolidated.pmtiles'
 
     @functools.cached_property
     def pmtiles_prefix_uri(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.pmtiles_prefix}')
+        return UPath(f'{self.storage_root}/{self.output_prefix}')
 
     @functools.cached_property
     def aggregated_regions_prefix(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.prefix}/aggregated-regions/')
+        return UPath(f'{self.storage_root}/{self.output_prefix}/aggregated-regions/')
 
     @functools.cached_property
     def tracts_summary_stats_uri(self) -> UPath:
