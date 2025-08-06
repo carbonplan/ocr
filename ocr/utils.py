@@ -1,5 +1,4 @@
 import geopandas as gpd
-import icechunk
 import xarray as xr
 from zarr.codecs import BloscCodec
 
@@ -277,19 +276,15 @@ def prep_encoding(ds):
     return encoding
 
 
-def load_conus404(variable):
-    config = {
-        'bucket': 'carbonplan-ocr',
-        'prefix': f'input/conus404-hourly-icechunk/{variable}',
-        'region': 'us-west-2',
-    }
+def load_conus404():
+    from ocr import catalog
 
-    storage = icechunk.s3_storage(
-        bucket=config['bucket'],
-        prefix=config['prefix'],
-        region=config['region'],
-    )
-
-    repo = icechunk.Repository.open(storage)
-    session = repo.readonly_session('main')
-    return xr.open_zarr(session.store, consolidated=False)
+    variables = ['PSFC', 'Q2', 'T2', 'TD2', 'U10', 'V10']
+    dsets = []
+    for variable in variables:
+        dset = (
+            catalog.get_dataset(f'conus404-hourly-{variable}').to_xarray().drop_vars(['lat', 'lon'])
+        )
+        dsets.append(dset)
+    ds = xr.merge(dsets)
+    return ds
