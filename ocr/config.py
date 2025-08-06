@@ -759,7 +759,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
         if self.prefix is None:
             self.prefix = f'intermediate/fire-risk/vector/{self.branch.value}'
         if self.output_prefix is None:
-            self.prefix = f'output/fire-risk/vector/{self.branch.value}'
+            self.output_prefix = f'output/fire-risk/vector/{self.branch.value}'
 
     def wipe(self):
         """Wipe the vector data storage."""
