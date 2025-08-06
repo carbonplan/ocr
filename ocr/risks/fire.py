@@ -147,26 +147,61 @@ def apply_wind_directional_convolution(
 
 
 def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
+    """
+    Classify wind directions into 8 cardinal directions (0-7).
+    The classification is:
+    0: North (337.5-22.5)
+    1: Northeast (22.5-67.5)
+    2: East (67.5-112.5)
+    3: Southeast (112.5-157.5)
+    4: South (157.5-202.5)
+    5: Southwest (202.5-247.5)
+    6: West (247.5-292.5)
+    7: Northwest (292.5-337.5)
+    Parameters:
+    -----------
+    wind_direction_ds : xarray.DataArray
+        Dataset containing wind direction in degrees (0-360)
+    Returns:
+    --------
+    xarray.DataArray
+        Dataset with wind directions classified as integers 0-7
+    """
     # todo - make tests that ensure that our orientation is always initialized
     # to the north (0 index = north like direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     #  and that it's centered (i.e. North is -22.5 to 22.5)
-    rotating_angles = np.arange(22.5, 360, 45)
-    wind_direction_ds %= 337.5  # this handles the North winds that are just under 360 degrees
-    classified = xr.apply_ufunc(
-        lambda wind_direction_ds: np.where(
-            np.isnan(wind_direction_ds),
-            -1,  # Assign a placeholder value (e.g., -1) for NaNs
-            # TODO let's remove this placeholder because we want to know
-            # if there are NaNs and don't want to unwittingly mask them
-            np.digitize(wind_direction_ds, bins=rotating_angles),
-        ),
-        wind_direction_ds,
-        vectorize=True,
-        dask='parallelized',
-        output_dtypes=[np.int32],
-    )
-    # Todo: make a test to ensure that this always produces integers between 0 and 8 inclusive
-    return classified
+    # bins for classification (degrees)
+    bins = np.arange(22.5, 360, 45)
+
+    def classify_block(block):
+        # Handle the North wind edge case (337.5-360 and 0-22.5)
+        # We use modulo 360 to ensure all values are in 0-360 range
+        normalized_directions = block % 360
+
+        # For values between 337.5 and 360, we want to classify them as North (0)
+        north_mask = normalized_directions >= 337.5
+
+        classification = np.digitize(normalized_directions, bins=bins)
+
+        # explicitly set the North classification for values >= 337.5
+        classification[north_mask] = 0
+
+        # preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), np.nan, classification)
+
+        return classification.astype(np.float32)
+
+    # Apply the function using map_blocks
+    result = wind_direction_ds.copy()
+
+    # It's a DataArray
+    if hasattr(wind_direction_ds.data, 'map_blocks'):
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
+    else:
+        # Fall back for non-dask arrays
+        result.data = classify_block(wind_direction_ds.data)
+
+    return result
 
 
 def compute_mode(arr):
