@@ -201,6 +201,13 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
 
+    result.attrs = {}
+    # rename variable to wind_direction_classification
+    result = result.rename('wind_direction_classification')
+    result.attrs['long_name'] = 'wind direction classified into 8 cardinal directions (0-7)'
+    result.attrs['short_name'] = 'wind_direction_classification'
+    result.attrs['direction_labels'] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
     return result
 
 
