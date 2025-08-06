@@ -158,14 +158,16 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     5: Southwest (202.5-247.5)
     6: West (247.5-292.5)
     7: Northwest (292.5-337.5)
-    Parameters:
-    -----------
+
+    Parameters
+    ----------
     wind_direction_ds : xarray.DataArray
-        Dataset containing wind direction in degrees (0-360)
-    Returns:
-    --------
-    xarray.DataArray
-        Dataset with wind directions classified as integers 0-7
+        DataArray containing wind direction in degrees (0-360)
+
+    Returns
+    -------
+    result : xarray.DataArray
+        DataArray with wind directions classified as integers 0-7
     """
     # todo - make tests that ensure that our orientation is always initialized
     # to the north (0 index = north like direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
@@ -191,11 +193,10 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
 
         return classification.astype(np.float32)
 
-    # Apply the function using map_blocks
     result = wind_direction_ds.copy()
 
-    # It's a DataArray
     if hasattr(wind_direction_ds.data, 'map_blocks'):
+        # Apply the function using map_blocks
         result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
     else:
         # Fall back for non-dask arrays
