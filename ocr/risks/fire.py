@@ -198,13 +198,13 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # preserve NaN values instead of replacing them
         classification = np.where(np.isnan(block), np.nan, classification)
 
-        return classification.astype(np.int32)
+        return classification.astype(np.float32)
 
     result = wind_direction_ds.copy()
 
     if hasattr(wind_direction_ds.data, 'map_blocks'):
         # Apply the function using map_blocks
-        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.int32)
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
     else:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
