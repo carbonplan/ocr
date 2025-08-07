@@ -195,8 +195,8 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # explicitly set the North classification for values >= 337.5
         classification[north_mask] = 0
 
-        # TODO: preserve NaN values instead of replacing them
-        classification = np.where(np.isnan(block), -1, classification)
+        # preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), np.nan, classification)
 
         return classification.astype(np.int32)
 
