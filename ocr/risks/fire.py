@@ -1,6 +1,5 @@
 import typing
 
-import dask.array as da
 import numpy as np
 import xarray as xr
 
@@ -196,16 +195,16 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # explicitly set the North classification for values >= 337.5
         classification[north_mask] = 0
 
-        # preserve NaN values instead of replacing them
-        classification = np.where(np.isnan(block), np.nan, classification)
+        # TODO: preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), -1, classification)
 
-        return classification.astype(np.float32)
+        return classification.astype(np.int32)
 
     result = wind_direction_ds.copy()
 
     if hasattr(wind_direction_ds.data, 'map_blocks'):
         # Apply the function using map_blocks
-        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.int32)
     else:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
@@ -277,9 +276,7 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     result = xr.DataArray(
         result_data,
         dims=direction_indices_ds.dims[1:],  # Use lat/lon dimensions
-        coords={
-            dim: direction_indices_ds[dim] for dim in direction_indices_ds.dims[1:]
-        },  # Copy coordinates
+        coords={dim: direction_indices_ds[dim] for dim in direction_indices_ds.dims[1:]},
         name='modal_wind_direction',
     )
 
@@ -493,7 +490,7 @@ def calculate_rh(q2, t2, psfc):
     return rh
 
 
-def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
+def direction_histogram(data_array: xr.DataArray):
     """
     Compute direction histogram on xarray DataArray with dask chunks.
     Parameters:
@@ -506,56 +503,39 @@ def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
         Normalized histogram counts as a probability distribution
     """
 
-    # Create a mask for non-negative values
-    mask = data_array >= 0
+    def _compute_bin_count(arr):
+        # Filter out negative values
+        valid_arr = arr[arr >= 0]
 
-    # Apply the mask (this preserves chunking)
-    filtered_data = data_array.where(mask, drop=False)
-
-    def _compute_histogram(block):
-        # Convert block to numpy array to avoid issues with unknown chunks
-        block_np = np.asarray(block)
-
-        # Handle NaN values from the where operation
-        valid_mask = ~np.isnan(block_np)
-        if not np.any(valid_mask):
+        # Return zeros immediately if no valid data
+        if len(valid_arr) == 0:
             return np.zeros(8, dtype=np.float32)
 
-        # Extract valid values
-        valid_data = block_np[valid_mask].astype(np.int32)
+        int_arr = valid_arr.astype(np.int64)
+        counts = np.bincount(int_arr, minlength=8)
 
-        # Only process if we have valid data
-        if valid_data.size > 0:
-            counts = np.bincount(valid_data, minlength=8)
-            return counts
-        else:
-            return np.zeros(8, dtype=np.float32)
+        total = counts.sum()
 
-    # Define chunk sizes for the output
-    chunks = ((8,),)  # Explicitly define that we want 8 elements in the new dimension
+        # Avoid division if possible
+        return counts / total
 
-    # Compute histogram over the entire array
-    result = filtered_data.data.map_blocks(
-        _compute_histogram,
-        dtype=np.float32,
-        drop_axis=(0, 1, 2),  # Drop all input dimensions
-        new_axis=(0,),  # Create a new axis for the histogram bins
-        chunks=chunks,  # Specify the output chunks explicitly
+    fraction = xr.apply_ufunc(
+        _compute_bin_count,
+        data_array,
+        input_core_dims=[['time']],
+        output_core_dims=[['wind_direction']],
+        vectorize=True,
+        dask='parallelized',
+        output_dtypes=[np.float32],
+        kwargs={},
+        dask_gufunc_kwargs={
+            'output_sizes': {'wind_direction': 8},
+        },
+        keep_attrs=False,
     )
-
-    # Normalize to get a probability distribution
-    total = result.sum()
-    normalized = da.where(total > 0, result / total, result)
-
-    # Convert back to xarray with appropriate coordinates
-    attrs = {
+    fraction = fraction.rename('wind_direction_histogram')
+    fraction.attrs = {
         'long_name': 'Wind Direction Histogram',
         'units': 'probability',
     }
-    return xr.DataArray(
-        normalized,
-        dims=['direction'],
-        coords={'direction': np.arange(8).astype(np.float32)},
-        name='wind_direction_histogram',
-        attrs=attrs,
-    )
+    return fraction
