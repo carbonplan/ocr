@@ -44,6 +44,16 @@ def interpolate_and_reproject():
     rps_30 = assign_crs(rps_30, crs='EPSG:5070')
     rps_30_4326 = xr_reproject(rps_30, how='EPSG:4326')
 
+    # assign processing attributes
+    rps_30.attrs = {
+        'title': 'RDS-2020-0016-02',
+        'version': '2024-V2',
+        'data_source': 'https://www.fs.usda.gov/rds/archive/catalog/RDS-2020-0016-2',
+        'description': 'Modified version of: Wildfire Risk to Communities: Spatial datasets of landscape-wide wildfire risk components for the United States (2nd Edition). This dataset was created by combining from multiple source tif files and re-projecting from EPSG:5070 to EPSG:4326. It is stored in the Icechunk storage format.',
+        'EPSG': '4326',
+        'resolution': '30m',
+    }
+
     # Write to icechunk
     write_to_icechunk(rps_30_4326)
 
