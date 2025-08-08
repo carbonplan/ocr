@@ -18,7 +18,9 @@ class CoiledConfig(pydantic_settings.BaseSettings):
         True, description='Whether to forward AWS credentials to the worker nodes'
     )
     region: str = pydantic.Field('us-west-2', description='AWS region to use for the worker nodes')
-    ntasks: int = pydantic.Field(1, description='Number of tasks to run in parallel')
+    ntasks: pydantic.PositiveInt = pydantic.Field(
+        1, description='Number of tasks to run in parallel'
+    )
     vm_type: str = pydantic.Field('m8g.large', description='VM type to use for the worker nodes')
 
     class Config:
