@@ -12,6 +12,24 @@ from ocr.icechunk_utils import get_commit_messages_ancestry
 from ocr.types import Branch
 
 
+class CoiledConfig(pydantic_settings.BaseSettings):
+    tag: dict[str, str] = pydantic.Field({'Project': 'OCR'})
+    forward_aws_credentials: bool = pydantic.Field(
+        True, description='Whether to forward AWS credentials to the worker nodes'
+    )
+    region: str = pydantic.Field('us-west-2', description='AWS region to use for the worker nodes')
+    ntasks: pydantic.PositiveInt = pydantic.Field(
+        1, description='Number of tasks to run in parallel'
+    )
+    vm_type: str = pydantic.Field('m8g.large', description='VM type to use for the worker nodes')
+
+    class Config:
+        """Configuration for Pydantic settings."""
+
+        env_prefix = 'ocr_coiled_'
+        case_sensitive = False
+
+
 class ChunkingConfig(pydantic_settings.BaseSettings):
     chunks: dict | None = pydantic.Field(None, description='Chunk sizes for longitude and latitude')
 
@@ -980,6 +998,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
     chunking: ChunkingConfig | None = pydantic.Field(
         None, description='Chunking configuration for OCR processing'
     )
+    coiled: CoiledConfig | None = pydantic.Field(None, description='Coiled configuration')
 
     class Config:
         """Configuration for Pydantic settings."""
@@ -1009,4 +1028,11 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 self,
                 'chunking',
                 ChunkingConfig(),
+            )
+
+        if self.coiled is None:
+            object.__setattr__(
+                self,
+                'coiled',
+                CoiledConfig(),
             )
