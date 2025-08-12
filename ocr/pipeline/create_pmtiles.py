@@ -20,58 +20,52 @@ def create_pmtiles(*, input_path: UPath, output_path: UPath):
     Convert consolidated geoparquet to PMTiles format.
 
     This function:
-    1. Downloads the consolidated geoparquet file from S3
-    2. Converts it to FlatGeobuf format using ogr2ogr
+    2. Reads the geoparquet with duckdb spatial
     3. Creates PMTiles using tippecanoe
     4. Uploads the result back to S3
     """
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
-        local_parquet = tmp_path / 'region.parquet'
-        local_fgb = tmp_path / 'region.fgb'
         local_pmtiles = tmp_path / 'aggregated.pmtiles'
 
-        console.log(f'Downloading consolidated geoparquet from {input_path}')
-        copy_or_upload(input_path, local_parquet)
-
-        console.log('Converting to FlatGeobuf format')
-        subprocess.run(
-            [
-                'ogr2ogr',
-                '-progress',
-                '-f',
-                'FlatGeobuf',
-                str(local_fgb),
-                str(local_parquet),
-                '-nlt',
-                'PROMOTE_TO_MULTI',
-            ],
-            check=True,
+        # Run duckdb to generate GeoJSON and pipe to tippecanoe
+        duckdb_building_query = f"""
+        install spatial; load spatial; install httpfs; load httpfs;
+        COPY (
+            SELECT
+                'Feature' AS type,
+                json_object(
+                    'risk_2011', risk_2011,
+                    'risk_2047', risk_2047,
+                    'wind_risk_2011', wind_risk_2011,
+                    'wind_risk_2047', wind_risk_2047
+                     ) AS properties,
+                json(ST_AsGeoJson(geometry)) AS geometry
+            FROM read_parquet('{input_path}')
+        ) TO STDOUT (FORMAT json);
+        """
+        duckdb_proc = subprocess.Popen(
+            ['duckdb', '-c', duckdb_building_query], stdout=subprocess.PIPE
         )
 
-        console.log('GDAL conversion complete')
+        tippecanoe_cmd = [
+            'tippecanoe',
+            '-o',
+            str(local_pmtiles),
+            '-l',
+            'risk',
+            '-n',
+            'building',
+            '-f',
+            '-P',
+            '--drop-smallest-as-needed',
+            '-q',
+            '--extend-zooms-if-still-dropping',
+            '-zg',
+        ]
 
-        console.log('Generating PMTiles using tippecanoe')
-        subprocess.run(
-            [
-                'tippecanoe',
-                '-o',
-                str(local_pmtiles),
-                '-l',
-                'risk',
-                '-n',
-                'USFS BP Risk',
-                '-f',
-                '-P',
-                '--drop-smallest-as-needed',
-                '-q',
-                '--extend-zooms-if-still-dropping',
-                '-zg',
-                str(local_fgb),
-            ],
-            check=True,
-        )
+        _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
         console.log('Tippecanoe tiles generation complete')
 

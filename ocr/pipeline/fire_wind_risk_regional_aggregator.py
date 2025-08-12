@@ -207,7 +207,7 @@ def compute_regional_fire_wind_risk_statistics(
         dataset = catalog.get_dataset('us-census-tracts')
         tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
     con = duckdb.connect(database=':memory:')
-    con.execute("""INSTALL SPATIAL; LOAD SPATIAL; INSTALL HTTPS; LOAD HTTPFS""")
+    con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
     hist_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
