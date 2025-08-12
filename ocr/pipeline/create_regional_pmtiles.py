@@ -27,7 +27,7 @@ def create_regional_pmtiles(
 
         console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
         duckdb_tract_query = f"""
-        load spatial;
+        install spatial; load spatial; install httpfs; load httpfs;
 
         COPY (
             SELECT
@@ -91,7 +91,7 @@ def create_regional_pmtiles(
 
         console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
         duckdb_county_query = f"""
-        load spatial;
+        install spatial; load spatial; install httpfs; load httpfs;
 
         COPY (
             SELECT
