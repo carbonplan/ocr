@@ -31,7 +31,7 @@ def create_pmtiles(*, input_path: UPath, output_path: UPath):
 
         # Run duckdb to generate GeoJSON and pipe to tippecanoe
         duckdb_building_query = f"""
-        load spatial;
+        install spatial; load spatial; install httpfs; load httpfs;
         COPY (
             SELECT
                 'Feature' AS type,
