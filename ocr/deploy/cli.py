@@ -121,13 +121,6 @@ def run(
         raise ValueError(error_message)
 
     if platform == Platform.COILED:
-        shared_coiled_kwargs = {
-            'ntasks': 1,
-            'region': 'us-west-2',
-            'forward_aws_credentials': True,
-            'tag': {'Project': 'OCR'},
-        }
-
         env_vars = {}
         if env_file is not None:
             env_vars = dotenv.dotenv_values(str(env_file))
@@ -140,7 +133,7 @@ def run(
             batch_manager_01.submit_job(
                 command=f'ocr process-region {rid} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{config.branch.value}',
-                kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env': env_vars},
+                kwargs={**config.coiled.model_dump(), 'env': env_vars},
             )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
@@ -151,7 +144,7 @@ def run(
         batch_manager_aggregate_02.submit_job(
             command='ocr aggregate',
             name=f'aggregate-geoparquet-{config.branch.value}',
-            kwargs={**shared_coiled_kwargs, 'vm_type': 'm8g.large', 'env': env_vars},
+            kwargs={**config.coiled.model_dump(), 'env': env_vars},
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
 
@@ -161,7 +154,7 @@ def run(
                 command='ocr aggregate-regional-risk',
                 name=f'create-aggregated-region-summary-stats-{config.branch.value}',
                 kwargs={
-                    **shared_coiled_kwargs,
+                    **config.coiled.model_dump(),
                     'vm_type': 'm8g.2xlarge',
                     'env': env_vars,
                 },
@@ -174,7 +167,7 @@ def run(
                 command='ocr create-regional-pmtiles',
                 name=f'create-aggregated-region-pmtiles-{config.branch.value}',
                 kwargs={
-                    **shared_coiled_kwargs,
+                    **config.coiled.model_dump(),
                     'vm_type': 'c8g.2xlarge',
                     'env': env_vars,
                 },
@@ -186,7 +179,7 @@ def run(
             command='ocr create-pmtiles',
             name=f'create-pmtiles-{config.branch.value}',
             kwargs={
-                **shared_coiled_kwargs,
+                **config.coiled.model_dump(),
                 'vm_type': 'c8g.xlarge',
                 'env': env_vars,
             },
