@@ -512,31 +512,31 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
             'y15_x34',
         ]
 
-    def generate_valid_region_ids(self) -> list:
-        # could be refactored - gets all the region_ids and their lat_lon slices
-        # This was used once to generate the stored list in `valid_region_ids()`
-        from tqdm import tqdm
+    # def generate_valid_region_ids(self) -> list:
+    #     # could be refactored - gets all the region_ids and their lat_lon slices
+    #     # This was used once to generate the stored list in `valid_region_ids()`
+    #     from tqdm import tqdm
 
-        region_id_chunk_slices = {}
-        chunk_info = self.chunk_info
-        y_starts = chunk_info['y_starts']
-        x_starts = chunk_info['x_starts']
-        for iy, _ in enumerate(y_starts):
-            for ix, _ in enumerate(x_starts):
-                region_id = f'y{iy}_x{ix}'
-                y_slice, x_slice = self.region_id_to_latlon_slices(region_id=region_id)
-                region_id_chunk_slices[region_id] = (y_slice, x_slice)
+    #     region_id_chunk_slices = {}
+    #     chunk_info = self.chunk_info
+    #     y_starts = chunk_info['y_starts']
+    #     x_starts = chunk_info['x_starts']
+    #     for iy, _ in enumerate(y_starts):
+    #         for ix, _ in enumerate(x_starts):
+    #             region_id = f'y{iy}_x{ix}'
+    #             y_slice, x_slice = self.region_id_to_latlon_slices(region_id=region_id)
+    #             region_id_chunk_slices[region_id] = (y_slice, x_slice)
 
-        # For a given region_id, this will check if the data array is empty.
-        empty_region_ids = []
-        valid_region_ids = []
-        for region_id, region_slice in tqdm(region_id_chunk_slices.items()):
-            subds = self.ds.sel(latitude=region_slice[0], longitude=region_slice[1])
-            all_null = bool(subds.CRPS.isnull().all().values)
-            if not all_null:
-                valid_region_ids.append(region_id)
-            else:
-                empty_region_ids.append(region_id)
+    #     # For a given region_id, this will check if the data array is empty.
+    #     empty_region_ids = []
+    #     valid_region_ids = []
+    #     for region_id, region_slice in tqdm(region_id_chunk_slices.items()):
+    #         subds = self.ds.sel(latitude=region_slice[0], longitude=region_slice[1])
+    #         all_null = bool(subds.CRPS.isnull().all().values)
+    #         if not all_null:
+    #             valid_region_ids.append(region_id)
+    #         else:
+    #             empty_region_ids.append(region_id)
 
     def index_to_coords(self, x_idx, y_idx):
         """Convert array indices to EPSG:4326 coordinates"""
