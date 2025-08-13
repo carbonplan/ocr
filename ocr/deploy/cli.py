@@ -107,11 +107,55 @@ def run(
         help='Wipe the icechunk and vector data storages before running the pipeline',
         show_default=True,
     ),
+    dispatch_platform: Platform | None = typer.Option(
+        None,
+        '--dispatch-platform',
+        help='If set, schedule this run command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        None, '--vm-type', help='VM type override for dispatch-platform (Coiled only).'
+    ),
 ):
     """
     Run the OCR deployment pipeline. This will process regions, aggregate geoparquet files,
     and create PMTiles layers for the specified risk type.
     """
+
+    if dispatch_platform is not None and not _in_batch():
+        # rebuild the command to execute inside the dispatched job
+        parts: list[str] = ['ocr run']
+        if region_id:
+            for rid in region_id:
+                parts += ['-r', rid]
+        if all_region_ids:
+            parts += ['--all-region-ids']
+        parts += ['--risk-type', risk_type.value]
+        parts += ['--platform', platform.value]
+        if summary_stats:
+            parts += ['--summary-stats']
+        if wipe:
+            parts += ['--wipe']
+        if debug:
+            parts += ['--debug']
+        # forward --env-file
+        parts += ['--env-file', str(env_file)] if env_file else []
+
+        command = ' '.join(parts)
+
+        config = load_config(env_file)
+        manager = _get_manager(dispatch_platform, debug)
+        name = f'run-{config.branch.value}'
+
+        if dispatch_platform == Platform.COILED:
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            if vm_type:
+                kwargs['vm_type'] = vm_type
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        return
 
     if all_region_ids and region_id:
         raise typer.BadParameter(
