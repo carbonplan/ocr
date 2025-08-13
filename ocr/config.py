@@ -8,8 +8,8 @@ from upath import UPath
 
 from ocr import catalog
 from ocr.console import console
-from ocr.icechunk_utils import get_commit_messages_ancestry
 from ocr.types import Branch
+from ocr.utils import get_commit_messages_ancestry
 
 
 class CoiledConfig(pydantic_settings.BaseSettings):

@@ -1,5 +1,54 @@
+from __future__ import annotations
+
+import typing
+
 import geopandas as gpd
+import icechunk
 import xarray as xr
+
+from ocr.console import console
+
+if typing.TYPE_CHECKING:
+    import xarray as xr
+
+
+def get_commit_messages_ancestry(repo: icechunk.Repository, *, branch: str = 'main') -> list:
+    commit_messages = [commit.message for commit in list(repo.ancestry(branch=branch))]
+    # separate commits by ',' and handle case of single length ancestry commit history
+    split_commits = [
+        msg
+        for message in commit_messages
+        for msg in (message.split(',') if ',' in message else [message])
+    ]
+    return split_commits
+
+
+def insert_region_uncoop(
+    session: icechunk.Session,
+    *,
+    subset_ds: xr.Dataset,
+    region_id: str,
+):
+    import icechunk
+
+    console.log(f'Inserting region: {region_id} into Icechunk store: ')
+
+    while True:
+        try:
+            subset_ds.to_zarr(
+                session.store,
+                region='auto',
+                consolidated=False,
+            )
+            # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
+            # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
+            session.commit(f'{region_id}', rebase_with=icechunk.ConflictDetector())
+            console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
+            break
+
+        except icechunk.ConflictError:
+            console.log(f'conflict for region_commit_history {region_id}, retrying')
+            pass
 
 
 def apply_s3_creds(region: str = 'us-west-2') -> None:
@@ -69,131 +118,6 @@ def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
     lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
     ds = ds.assign_coords(longitude=lon)
     return ds
-
-
-# TODO: unused DEPRECIATE?
-
-# def subset_region_latlon(ds: xr.Dataset, lon_range: Iterable, lat_range: Iterable) -> xr.Dataset:
-#     """Subset an Xarray dataset by a lat / lon range.
-
-#     Parameters
-#     ----------
-#     ds : xr.Dataset
-#         Input Xarray dataset
-#     lon_range : Iterable
-#         Longitude range as [min_lon, max_lon]
-#     lat_range : Iterable
-#         Latitude range as [min_lat, max_lat]
-
-#     Returns
-#     -------
-#     xr.Dataset
-#         Dataset subset to the specified lat/lon range
-#     """
-#     import geopandas as gpd
-
-#     points = gpd.points_from_xy(lon_range, lat_range, crs='EPSG:4326')
-#     points = points.to_crs('EPSG:5070')
-#     region = ds.sel(x=slice(points.x[0], points.x[1]), y=slice(points.y[1], points.y[0]))
-#     return region
-
-# TODO: unused DEPRECIATE?
-# def subset_region_xy(ds: xr.Dataset, x_range, y_range) -> xr.Dataset:
-#     """
-#     Subset an Xarray dataset by x/y coordinate range.
-
-#     Parameters
-#     ----------
-#     ds : xr.Dataset
-#         Input Xarray dataset
-#     x_range : tuple or list
-#         X coordinate range as [min_x, max_x]
-#     y_range : tuple or list
-#         Y coordinate range as [min_y, max_y]
-
-#     Returns
-#     -------
-#     xr.Dataset
-#         Dataset subset to the specified x/y range
-#     """
-#     region = ds.sel(x=slice(x_range[0], x_range[1]), y=slice(y_range[1], y_range[0]))
-#     return region
-
-
-# TODO: single line function DEPRECIATE?
-# def interpolate_to_30(da, target):
-#     """
-#     Interpolate DataArray to match target coordinates.
-
-#     Parameters
-#     ----------
-#     da : xr.DataArray
-#         Input DataArray to interpolate
-#     target : xr.DataArray
-#         Target DataArray with desired coordinates
-
-#     Returns
-#     -------
-#     xr.DataArray
-#         Interpolated DataArray
-
-#     Notes
-#     -----
-#     TODO - prevent the interpolation from making negative risk values
-#     """
-#     return da.interp_like(target, kwargs={'fill_value': 'extrapolate', 'bounds_error': False})
-
-
-def convert_coords(
-    coords: list[tuple[float, float]] | gpd.GeoDataFrame, from_crs: str, to_crs: str
-) -> list[tuple[float, float]] | gpd.GeoDataFrame:
-    """
-    Convert coordinates between xy and latlon using GeoPandas.
-
-    Parameters
-    ----------
-    coords : list of tuple or gpd.GeoDataFrame
-        The coordinates to convert. Can be a list of (x, y) or (lon, lat) tuples,
-        or a GeoDataFrame with a geometry column
-    from_crs : str
-        The CRS of the input coordinates (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy)
-    to_crs : str
-        The CRS to convert the coordinates to (e.g., "EPSG:4326" for latlon or "EPSG:5070" for xy)
-
-    Returns
-    -------
-    list of tuple or gpd.GeoDataFrame
-        The converted coordinates in the target CRS
-
-    Raises
-    ------
-    ValueError
-        If input GeoDataFrame does not have a CRS defined
-    TypeError
-        If input is not a list of tuples or a GeoDataFrame
-    """
-    import geopandas as gpd
-    from shapely.geometry import Point
-
-    # If input is a list of tuples, create a GeoDataFrame
-    if isinstance(coords, list):
-        gdf = gpd.GeoDataFrame(geometry=[Point(x, y) for x, y in coords], crs=from_crs)
-    elif isinstance(coords, gpd.GeoDataFrame):
-        gdf = coords
-        if gdf.crs is None:
-            raise ValueError('Input GeoDataFrame must have a CRS defined.')
-    else:
-        raise TypeError('Input must be a list of tuples or a GeoDataFrame.')
-
-    # Convert to the target CRS
-    gdf_converted = gdf.to_crs(to_crs)
-
-    # If input was a list, return the converted coordinates as a list of tuples
-    if isinstance(coords, list):
-        return [(geom.x, geom.y) for geom in gdf_converted.geometry]
-
-    # If input was a GeoDataFrame, return the converted GeoDataFrame
-    return gdf_converted
 
 
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:

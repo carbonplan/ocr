@@ -5,10 +5,9 @@ from upath import UPath
 
 from ocr.console import console
 from ocr.datasets import catalog
-from ocr.icechunk_utils import insert_region_uncoop
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
-from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
+from ocr.utils import bbox_tuple_from_xarray_extent, extract_points, insert_region_uncoop
 
 
 def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, region_id: str):

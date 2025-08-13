@@ -84,7 +84,7 @@ def run(
     if not all_region_ids and not region_id:
         raise typer.BadParameter('You must specify either --region-id or --all-region-ids.')
 
-    from ocr.icechunk_utils import get_commit_messages_ancestry
+    from ocr.utils import get_commit_messages_ancestry
 
     # ------------- CONFIG ---------------
 
@@ -170,6 +170,7 @@ def run(
                     **config.coiled.model_dump(),
                     'vm_type': 'c8g.2xlarge',
                     'env': env_vars,
+                    'container': 'quay.io/carbonplan/ocr:latest',
                 },
             )
 
@@ -182,6 +183,7 @@ def run(
                 **config.coiled.model_dump(),
                 'vm_type': 'c8g.xlarge',
                 'env': env_vars,
+                'container': 'quay.io/carbonplan/ocr:latest',
             },
         )
 
