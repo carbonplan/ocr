@@ -790,7 +790,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def region_geoparquet_uri(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.region_geoparquet_prefix}')
+        path = UPath(f'{self.storage_root}/{self.region_geoparquet_prefix}')
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @functools.cached_property
     def consolidated_geoparquet_prefix(self) -> str:
@@ -798,7 +800,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def consolidated_geoparquet_uri(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.consolidated_geoparquet_prefix}')
+        path = UPath(f'{self.storage_root}/{self.consolidated_geoparquet_prefix}')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     @functools.cached_property
     def pmtiles_prefix(self) -> str:
@@ -806,11 +810,15 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def pmtiles_prefix_uri(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.output_prefix}')
+        path = UPath(f'{self.storage_root}/{self.output_prefix}')
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @functools.cached_property
     def aggregated_regions_prefix(self) -> UPath:
-        return UPath(f'{self.storage_root}/{self.output_prefix}/aggregated-regions/')
+        path = UPath(f'{self.storage_root}/{self.output_prefix}/aggregated-regions/')
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @functools.cached_property
     def tracts_summary_stats_uri(self) -> UPath:

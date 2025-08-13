@@ -187,7 +187,7 @@ def run(
         if summary_stats:
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
             batch_manager_county_aggregation_01.submit_job(
-                command='ocr aggregate-regional-risk',
+                command='ocr aggregate-region-risk-summary-stats',
                 name=f'create-aggregated-region-summary-stats-{config.branch.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
@@ -248,7 +248,7 @@ def run(
             manager = LocalBatchManager(debug=debug)
             # Aggregate regional fire and wind risk statistics
             manager.submit_job(
-                command='ocr aggregate-regional-risk',
+                command='ocr aggregate-region-risk-summary-stats',
                 name=f'create-aggregated-region-summary-stats-{config.branch.value}',
                 kwargs={
                     **_local_kwargs(),
@@ -413,7 +413,7 @@ def aggregate(
 
 
 @app.command()
-def aggregate_regional_risk(
+def aggregate_region_risk_summary_stats(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -450,7 +450,7 @@ def aggregate_regional_risk(
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
-        command = 'ocr aggregate-regional-risk'
+        command = 'ocr aggregate-region-risk-summary-stats'
         name = f'create-aggregated-region-summary-stats-{config.branch.value}'
 
         if platform == Platform.COILED:
