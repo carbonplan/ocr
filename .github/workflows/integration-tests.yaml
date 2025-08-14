@@ -59,6 +59,19 @@ jobs:
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
-      - name: Run end-to-end tests
+      - name: process-region
         run: |
           pixi run ocr process-region y2_x4 --debug --platform local --env-file ocr-local.env
+      - name: aggregate geoparquet regions
+        run: |
+          pixi run ocr aggregate --debug --platform local --env-file ocr-local.env
+      - name: aggregate region risk summary stats
+        run: |
+          pixi run ocr aggregate-region-risk-summary-stats --debug --platform local --env-file ocr-local.env
+      - name: create regional pmtiles
+        run: |
+          pixi run ocr create-regional-pmtiles --debug --platform local --env-file ocr-local.env
+
+      - name: create pmtiles
+        run: |
+          pixi run ocr create-pmtiles --debug --platform local --env-file ocr-local.env
