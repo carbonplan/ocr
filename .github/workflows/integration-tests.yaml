@@ -56,4 +56,4 @@ jobs:
           pixi list -e dev
       - name: Run end-to-end tests
         run: |
-          pixi run ocr process-region --region-id y2_x4 --debug --platform local --env-file ocr-local.env
+          pixi run ocr process-region y2_x4 --debug --platform local --env-file ocr-local.env
