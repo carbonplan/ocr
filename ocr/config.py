@@ -26,21 +26,19 @@ class CoiledConfig(pydantic_settings.BaseSettings):
         'm8g.large', description='VM type to use for the scheduler node'
     )
 
-    class Config:
-        """Configuration for Pydantic settings."""
-
-        env_prefix = 'ocr_coiled_'
-        case_sensitive = False
+    model_config = {
+        'env_prefix': 'ocr_coiled_',
+        'case_sensitive': False,
+    }
 
 
 class ChunkingConfig(pydantic_settings.BaseSettings):
     chunks: dict | None = pydantic.Field(None, description='Chunk sizes for longitude and latitude')
 
-    class Config:
-        """Configuration for Pydantic settings."""
-
-        env_prefix = 'ocr_chunking_'
-        case_sensitive = False
+    model_config = {
+        'env_prefix': 'ocr_chunking_',
+        'case_sensitive': False,
+    }
 
     def model_post_init(self, __context):
         self.chunks = self.chunks or dict(
@@ -769,11 +767,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
         None, description='Sub-path within the storage root for pipeline output products'
     )
 
-    class Config:
-        """Configuration for Pydantic settings."""
-
-        env_prefix = 'ocr_vector_'
-        case_sensitive = False
+    model_config = {'env_prefix': 'ocr_vector_', 'case_sensitive': False}
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
@@ -1011,11 +1005,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
     )
     coiled: CoiledConfig | None = pydantic.Field(None, description='Coiled configuration')
 
-    class Config:
-        """Configuration for Pydantic settings."""
-
-        env_prefix = 'ocr_'
-        case_sensitive = False
+    model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
     def model_post_init(self, __context):
         # Pass branch and wipe to VectorConfig if not already set
