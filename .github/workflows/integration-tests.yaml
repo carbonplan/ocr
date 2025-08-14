@@ -57,8 +57,6 @@ jobs:
         run: |
           pixi list -e dev
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: process-region
         run: |
           pixi run ocr process-region y2_x4 --debug --platform local --env-file ocr-local.env
