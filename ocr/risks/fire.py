@@ -188,16 +188,16 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # explicitly set the North classification for values >= 337.5
         classification[north_mask] = 0
 
-        # preserve NaN values instead of replacing them
-        classification = np.where(np.isnan(block), np.nan, classification)
+        # TODO: preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), -1, classification)
 
-        return classification.astype(np.float32)
+        return classification.astype(np.int16)
 
     result = wind_direction_ds.copy()
 
     if hasattr(wind_direction_ds.data, 'map_blocks'):
         # Apply the function using map_blocks
-        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.int16)
     else:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
@@ -246,6 +246,8 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
         vectorize=True,
         dask='parallelized',
         output_dtypes=[np.int16],
+        dask_gufunc_kwargs={'allow_rechunk': True},
+        keep_attrs=True,
     )
 
     result = result.rename('modal_wind_direction')
