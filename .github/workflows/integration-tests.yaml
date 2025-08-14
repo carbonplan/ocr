@@ -19,6 +19,8 @@ permissions:
   id-token: write # This is required for requesting the JWT
   contents: read # This is required for actions/checkout
 
+env:
+  COLUMNS: 120 # Set the terminal width to 120 columns for rich
 jobs:
   test:
     runs-on: ubuntu-latest
