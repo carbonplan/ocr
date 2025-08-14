@@ -205,14 +205,17 @@ def run(
 
         batch_manager_01 = CoiledBatchManager(debug=debug)
 
-        for rid in unprocessed_valid_region_ids:
-            batch_manager_01.submit_job(
-                command=f'ocr process-region {rid} --risk-type {risk_type.value}',
-                name=f'process-region-{rid}-{config.branch.value}',
-                kwargs={
-                    **_coiled_kwargs(config, env_file),
-                },
-            )
+        # Submit one mapped job instead of one job per region
+        kwargs = _coiled_kwargs(config, env_file)
+        del kwargs['ntasks']
+        batch_manager_01.submit_job(
+            command=f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}',
+            name=f'process-region-{config.branch.value}',
+            kwargs={
+                **kwargs,
+                'map_over_values': sorted(list(unprocessed_valid_region_ids)),
+            },
+        )
 
         # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
         batch_manager_01.wait_for_completion(exit_on_failure=True)
