@@ -4,11 +4,11 @@ import icechunk
 import numpy as np
 import pydantic
 import pydantic_settings
+import xarray as xr
 from upath import UPath
 
 from ocr import catalog
 from ocr.console import console
-from ocr.icechunk_utils import get_commit_messages_ancestry
 from ocr.types import Branch
 
 
@@ -903,7 +903,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         icechunk.Repository.open_or_create(self.storage)
         console.log('Initialized/Opened icechunk repository')
-        commits = get_commit_messages_ancestry(self.repo_and_session()['repo'])
+        commits = self.commit_messages_ancestry()
         if 'initialize store with template' not in commits:
             console.log('No template found in icechunk store. Creating a new template dataset.')
             self.create_template()
@@ -989,6 +989,56 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         )
         repo_and_session['session'].commit('initialize store with template')
         console.log('Created icechunk template')
+
+    def commit_messages_ancestry(self, branch: str = 'main') -> list[str]:
+        """Get the commit messages ancestry for the icechunk repository."""
+        repo_and_session = self.repo_and_session()
+        repo = repo_and_session['repo']
+
+        commit_messages = [commit.message for commit in list(repo.ancestry(branch=branch))]
+        # separate commits by ',' and handle case of single length ancestry commit history
+
+        split_commits = [
+            msg
+            for message in commit_messages
+            for msg in (message.split(',') if ',' in message else [message])
+        ]
+        return split_commits
+
+    def region_id_exists(self, region_id: str, *, branch: str = 'main') -> bool:
+        region_ids_in_ancestry = self.commit_messages_ancestry(branch=branch)
+
+        if region_id in region_ids_in_ancestry:
+            return True
+
+        return False
+
+    def insert_region_uncooperative(
+        self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
+    ):
+        """Insert region into Icechunk store"""
+        import icechunk
+
+        session = self.repo_and_session(readonly=False, branch=branch)['session']
+
+        console.log(f'Inserting region: {region_id} into Icechunk store: ')
+
+        while True:
+            try:
+                subset_ds.to_zarr(
+                    session.store,
+                    region='auto',
+                    consolidated=False,
+                )
+                # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
+                # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
+                session.commit(f'{region_id}', rebase_with=icechunk.ConflictDetector())
+                console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
+                break
+
+            except icechunk.ConflictError:
+                console.log(f'conflict for region_commit_history {region_id}, retrying')
+                pass
 
 
 class OCRConfig(pydantic_settings.BaseSettings):

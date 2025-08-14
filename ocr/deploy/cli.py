@@ -386,15 +386,10 @@ def process_region(
 
     config = load_config(env_file)
 
-    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
-
     calculate_risk(
-        region_geoparquet_uri=config.vector.region_geoparquet_uri,
+        config=config,
         region_id=region_id,
-        y_slice=y_slice,
-        x_slice=x_slice,
         risk_type=risk_type,
-        session=config.icechunk.repo_and_session()['session'],
     )
 
 

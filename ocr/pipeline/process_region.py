@@ -1,22 +1,14 @@
 import geopandas as gpd
-import icechunk
 import xarray as xr
 from upath import UPath
 
 from ocr.console import console
 from ocr.datasets import catalog
-from ocr.icechunk_utils import insert_region_uncoop
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
-
-def write_region_to_icechunk(session: icechunk.Session, *, ds: xr.Dataset, region_id: str):
-    insert_region_uncoop(
-        session=session,
-        subset_ds=ds,
-        region_id=region_id,
-    )
+from ..config import OCRConfig
 
 
 def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
@@ -50,22 +42,21 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
 
 
 def calculate_risk(
+    config: OCRConfig,
     *,
-    region_geoparquet_uri: UPath,
     region_id: str,
-    x_slice: slice,
-    y_slice: slice,
     risk_type: RiskType,
-    session: icechunk.Session,
 ):
+    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
+    region_geoparquet_uri = config.vector.region_geoparquet_uri
+
     if risk_type == RiskType.FIRE:
         ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
-    write_region_to_icechunk(
-        session=session,
-        ds=ds,
+    config.icechunk.insert_region_uncooperative(
+        ds,
         region_id=region_id,
     )
 
