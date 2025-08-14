@@ -179,7 +179,7 @@
 
 [tool.pixi.environments]
     all-deps = ["data-mgmt", "dev", "docs"]
-    default  = ["data-mgmt", "dev"]
+    default  = ["data-mgmt", "dev", "coiled-deploy"]
     dev      = ["data-mgmt", "dev"]
     docs     = ["docs"]
     coiled-deploy = ["data-mgmt", "dev", "coiled-deploy"]
@@ -209,3 +209,4 @@
 [tool.pixi.dependencies]
     duckdb-cli            = ">=1.3.2,<2"
     s5cmd                 = ">=2.3.0,<3"
+pyproj = ">=3.7.1,<4"
