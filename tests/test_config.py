@@ -148,8 +148,9 @@ class TestChunkingConfig:
         assert 'longitude' in result.coords
         assert 'latitude' in result.coords
 
-        # Test that it's properly configured
-        assert result.rio.crs.to_string() == 'EPSG:4326'
+        # Check that EPSG code is correct
+        # We're using odc-geo instead of rioxarray here.
+        assert result.odc.crs.to_epsg() == 4326
 
     def test_extent_property(self):
         """Test the extent cached property."""

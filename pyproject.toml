@@ -36,8 +36,8 @@
 [project.optional-dependencies]
     coiled-deploy = [
         "jupyter-server-proxy>=4.4.0",
-        "coiled==1.112.1",
         "bokeh>=3.7.3",
+        "coiled>=1.118.1,<2"
 
 ]
     data-mgmt = [
@@ -182,6 +182,7 @@
     default  = ["data-mgmt", "dev"]
     dev      = ["data-mgmt", "dev"]
     docs     = ["docs"]
+    coiled-deploy = ["data-mgmt", "dev", "coiled-deploy"]
 
 [tool.pixi.feature.dev.tasks]
     format         = { cmd = "ruff format" }
@@ -208,6 +209,3 @@
 [tool.pixi.dependencies]
     duckdb-cli            = ">=1.3.2,<2"
     s5cmd                 = ">=2.3.0,<3"
-
-[dependency-groups]
-coiled = ["pytest", "coiled"]
