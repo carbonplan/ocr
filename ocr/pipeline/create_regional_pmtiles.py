@@ -92,7 +92,6 @@ def create_regional_pmtiles(
         console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
         duckdb_county_query = f"""
         install spatial; load spatial; install httpfs; load httpfs;
-
         COPY (
             SELECT
                 'Feature' AS type,
@@ -110,7 +109,7 @@ def create_regional_pmtiles(
                     'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
                     'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
                     'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                    'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
+                    'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
                     'risk_2011_horizon_1', risk_2011_horizon_1,
                     'risk_2011_horizon_15', risk_2011_horizon_15,
                     'risk_2011_horizon_30', risk_2011_horizon_30,

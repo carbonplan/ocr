@@ -79,6 +79,7 @@ def calculate_risk(
         outpath.parent.mkdir(parents=True, exist_ok=True)
     buildings_gdf.to_parquet(
         str(outpath),
+        index=False,
         compression='zstd',
         geometry_encoding='WKB',
         write_covering_bbox=True,
