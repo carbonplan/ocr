@@ -792,19 +792,19 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def buildings_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/buildings.pmtiles')
-        path.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
     def tracts_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
-        path.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
     def counties_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/counties.pmtiles')
-        path.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     # ----------------------------
@@ -828,7 +828,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def building_geoparquet_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
-        path.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
