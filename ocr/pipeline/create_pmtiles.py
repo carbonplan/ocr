@@ -3,6 +3,7 @@ import tempfile
 
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
 
 
@@ -15,7 +16,7 @@ def copy_or_upload(src: UPath, dest: UPath):
         shutil.copy(str(src), str(dest))
 
 
-def create_pmtiles(*, input_path: UPath, output_path: UPath):
+def create_pmtiles(config: OCRConfig):
     """
     Convert consolidated geoparquet to PMTiles format.
 
@@ -24,6 +25,9 @@ def create_pmtiles(*, input_path: UPath, output_path: UPath):
     3. Creates PMTiles using tippecanoe
     4. Uploads the result back to S3
     """
+
+    input_path = config.vector.building_geoparquet_uri
+    output_path = config.vector.buildings_pmtiles_uri
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)

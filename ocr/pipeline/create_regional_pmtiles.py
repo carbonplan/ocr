@@ -3,15 +3,12 @@ import tempfile
 
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
 
 
 def create_regional_pmtiles(
-    *,
-    tracts_summary_stats_path: UPath,
-    counties_summary_stats_path: UPath,
-    tract_pmtiles_output: UPath,
-    county_pmtiles_output: UPath,
+    config: OCRConfig,
 ):
     """
     Create PMTiles for tract and county regional risk statistics.
@@ -19,6 +16,11 @@ def create_regional_pmtiles(
     This function runs DuckDB queries on regional statistics, creates PMTiles using tippecanoe,
     and uploads the results to S3.
     """
+
+    tracts_summary_stats_path = (config.vector.tracts_summary_stats_uri,)
+    counties_summary_stats_path = (config.vector.counties_summary_stats_uri,)
+    tract_pmtiles_output = (config.vector.tracts_pmtiles_uri,)
+    county_pmtiles_output = (config.vector.counties_pmtiles_uri,)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
