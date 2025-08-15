@@ -30,7 +30,9 @@
         "typer>=0.16.0,<0.17",
         "universal-pathlib>=0.2.6,<0.3",
         "xarray>=2025.4.0",
-        "zarr>=3.0.8", "s5cmd>=0.2.0,<0.3", "icechunk>=1.1.2,<2",
+        "zarr>=3.0.8",
+        "s5cmd>=0.2.0,<0.3",
+        "icechunk>=1.1.2,<2",
     ]
 
     dynamic         = ["version"]
