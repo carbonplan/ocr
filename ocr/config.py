@@ -826,7 +826,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def building_geoparquet_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.geoparquet')
+        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
         return path
 
     @functools.cached_property

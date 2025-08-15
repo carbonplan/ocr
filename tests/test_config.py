@@ -60,8 +60,8 @@ class TestCoiledConfig:
         assert config.forward_aws_credentials is True
         assert config.region == 'us-west-2'
         assert config.ntasks == 1
-        assert config.vm_type == 'm8g.large'
-        assert config.scheduler_vm_type == 'm8g.large'
+        assert config.vm_type == 'm8g.xlarge'
+        assert config.scheduler_vm_type == 'm8g.xlarge'
 
     def test_custom_initialization(self):
         """Test CoiledConfig initialization with custom values."""
@@ -380,22 +380,24 @@ class TestVectorConfig:
 
         # Test region_geoparquet_prefix
         assert (
-            config.region_geoparquet_prefix
-            == 'intermediate/fire-risk/vector/QA/geoparquet-regions/'
+            config.region_geoparquet_prefix == 'intermediate/fire-risk/vector/QA/geoparquet-regions'
         )
 
         # Test region_geoparquet_uri
         expected_uri = f'{temp_dir}/intermediate/fire-risk/vector/QA/geoparquet-regions'
         assert str(config.region_geoparquet_uri) == expected_uri
 
-        # Test consolidated_geoparquet_prefix
+        # Test building_geoparquet_uri
         assert (
-            config.consolidated_geoparquet_prefix
-            == 'output/fire-risk/vector/QA/consolidated-geoparquet.parquet'
+            str(config.building_geoparquet_uri)
+            == f'{temp_dir}/output/fire-risk/vector/QA/geoparquet/buildings.parquet'
         )
 
         # Test pmtiles_prefix
-        assert config.pmtiles_prefix == 'output/fire-risk/vector/QA/consolidated.pmtiles'
+        assert (
+            str(config.buildings_pmtiles_uri)
+            == f'{temp_dir}/output/fire-risk/vector/QA/pmtiles/buildings.pmtiles'
+        )
 
     def test_summary_stats_uris(self, temp_dir):
         """Test summary statistics URI properties."""
