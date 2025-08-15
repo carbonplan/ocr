@@ -17,10 +17,10 @@ def create_regional_pmtiles(
     and uploads the results to S3.
     """
 
-    tracts_summary_stats_path = (config.vector.tracts_summary_stats_uri,)
-    counties_summary_stats_path = (config.vector.counties_summary_stats_uri,)
-    tract_pmtiles_output = (config.vector.tracts_pmtiles_uri,)
-    county_pmtiles_output = (config.vector.counties_pmtiles_uri,)
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
+    counties_summary_stats_path = config.vector.counties_summary_stats_uri
+    tract_pmtiles_output = config.vector.tracts_pmtiles_uri
+    county_pmtiles_output = config.vector.counties_pmtiles_uri
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
