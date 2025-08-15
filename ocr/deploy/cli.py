@@ -386,15 +386,10 @@ def process_region(
 
     config = load_config(env_file)
 
-    y_slice, x_slice = config.chunking.region_id_to_latlon_slices(region_id=region_id)
-
     calculate_risk(
-        region_geoparquet_uri=config.vector.region_geoparquet_uri,
+        config=config,
         region_id=region_id,
-        y_slice=y_slice,
-        x_slice=x_slice,
         risk_type=risk_type,
-        session=config.icechunk.repo_and_session()['session'],
     )
 
 
@@ -453,10 +448,7 @@ def aggregate(
     from ocr.pipeline.aggregate import aggregated_gpq
 
     config = load_config(env_file)
-    aggregated_gpq(
-        input_path=config.vector.region_geoparquet_uri,
-        output_path=config.vector.consolidated_geoparquet_uri,
-    )
+    aggregated_gpq(config=config)
 
 
 @app.command()
@@ -517,11 +509,7 @@ def aggregate_region_risk_summary_stats(
 
     config = load_config(env_file)
 
-    compute_regional_fire_wind_risk_statistics(
-        tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
-        counties_summary_stats_path=config.vector.counties_summary_stats_uri,
-        consolidated_buildings_path=config.vector.consolidated_geoparquet_uri,
-    )
+    compute_regional_fire_wind_risk_statistics(config=config)
 
 
 @app.command()
@@ -580,12 +568,7 @@ def create_regional_pmtiles(
 
     config = load_config(env_file)
 
-    create_regional_pmtiles(
-        tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
-        counties_summary_stats_path=config.vector.counties_summary_stats_uri,
-        tract_pmtiles_output=config.vector.region_geoparquet_uri / 'tract.pmtiles',
-        county_pmtiles_output=config.vector.region_geoparquet_uri / 'counties.pmtiles',
-    )
+    create_regional_pmtiles(config=config)
 
 
 @app.command()
@@ -644,10 +627,7 @@ def create_pmtiles(
 
     config = load_config(env_file)
 
-    create_pmtiles(
-        input_path=config.vector.consolidated_geoparquet_uri,
-        output_path=config.vector.pmtiles_prefix_uri,
-    )
+    create_pmtiles(config=config)
 
 
 ocr = typer.main.get_command(

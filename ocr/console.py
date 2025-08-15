@@ -1,3 +1,3 @@
 import rich.console
 
-console = rich.console.Console(width=88)
+console = rich.console.Console()

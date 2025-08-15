@@ -2,6 +2,7 @@ import duckdb
 from upath import UPath
 
 from ocr import catalog
+from ocr.config import OCRConfig
 from ocr.console import console
 
 
@@ -193,19 +194,17 @@ def custom_histogram_query(
 
 
 def compute_regional_fire_wind_risk_statistics(
-    *,
-    consolidated_buildings_path: UPath,
-    tracts_summary_stats_path: UPath,
-    counties_summary_stats_path: UPath,
-    counties_path: UPath | None = None,
-    tracts_path: UPath | None = None,
+    config: OCRConfig,
 ):
-    if counties_path is None:
-        dataset = catalog.get_dataset('us-census-counties')
-        counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
-    if tracts_path is None:
-        dataset = catalog.get_dataset('us-census-tracts')
-        tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
+    counties_summary_stats_path = config.vector.counties_summary_stats_uri
+    consolidated_buildings_path = config.vector.consolidated_geoparquet_uri
+
+    dataset = catalog.get_dataset('us-census-counties')
+    counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+
+    dataset = catalog.get_dataset('us-census-tracts')
+    tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
     con = duckdb.connect(database=':memory:')
     con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
 

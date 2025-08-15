@@ -19,6 +19,8 @@ permissions:
   id-token: write # This is required for requesting the JWT
   contents: read # This is required for actions/checkout
 
+env:
+  COLUMNS: 120 # Set the terminal width to 120 columns for rich
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -54,6 +56,20 @@ jobs:
       - name: List installed libraries/packages
         run: |
           pixi list -e dev
-      - name: Run end-to-end tests
+
+      - name: process-region
         run: |
-          pixi run ocr run --region-id y2_x4 --debug --platform local --summary-stats --env-file ocr-local.env
+          pixi run ocr process-region y2_x4 --debug --platform local --env-file ocr-local.env
+      - name: aggregate geoparquet regions
+        run: |
+          pixi run ocr aggregate --debug --platform local --env-file ocr-local.env
+      - name: aggregate region risk summary stats
+        run: |
+          pixi run ocr aggregate-region-risk-summary-stats --debug --platform local --env-file ocr-local.env
+      - name: create regional pmtiles
+        run: |
+          pixi run ocr create-regional-pmtiles --debug --platform local --env-file ocr-local.env
+
+      - name: create pmtiles
+        run: |
+          pixi run ocr create-pmtiles --debug --platform local --env-file ocr-local.env
