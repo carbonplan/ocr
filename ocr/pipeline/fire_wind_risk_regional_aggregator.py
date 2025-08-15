@@ -198,7 +198,7 @@ def compute_regional_fire_wind_risk_statistics(
 ):
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    consolidated_buildings_path = config.vector.consolidated_geoparquet_uri
+    consolidated_buildings_path = config.vector.building_geoparquet_uri
 
     dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')

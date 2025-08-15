@@ -21,9 +21,9 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     ntasks: pydantic.PositiveInt = pydantic.Field(
         1, description='Number of tasks to run in parallel'
     )
-    vm_type: str = pydantic.Field('m8g.large', description='VM type to use for the worker nodes')
+    vm_type: str = pydantic.Field('m8g.xlarge', description='VM type to use for the worker nodes')
     scheduler_vm_type: str = pydantic.Field(
-        'm8g.large', description='VM type to use for the scheduler node'
+        'm8g.xlarge', description='VM type to use for the scheduler node'
     )
 
     model_config = {
@@ -778,12 +778,46 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def wipe(self):
         """Wipe the vector data storage."""
-        console.log(f'Wiping vector data storage at {self.storage_root}/{self.prefix}')
+        console.log(f'Wiping intermediate vector data storage at {self.storage_root}/{self.prefix}')
         self.delete_region_gpqs()
+
+    # ----------------------------
+    # output pmtiles
+    # ----------------------------
+
+    @functools.cached_property
+    def pmtiles_prefix(self) -> str:
+        return f'{self.output_prefix}/pmtiles'
+
+    @functools.cached_property
+    def buildings_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/buildings.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def tracts_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def counties_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/counties.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    # ----------------------------
+    # geoparquet
+    # ----------------------------
 
     @functools.cached_property
     def region_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}/geoparquet-regions/'
+        return f'{self.prefix}/geoparquet-regions'
+
+    @functools.cached_property
+    def geoparquet_prefix(self) -> str:
+        return f'{self.output_prefix}/geoparquet'
 
     @functools.cached_property
     def region_geoparquet_uri(self) -> UPath:
@@ -792,42 +826,28 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
-    def consolidated_geoparquet_prefix(self) -> str:
-        return f'{self.output_prefix}/consolidated-geoparquet.parquet'
-
-    @functools.cached_property
-    def consolidated_geoparquet_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.consolidated_geoparquet_prefix}')
+    def building_geoparquet_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
-    def pmtiles_prefix(self) -> str:
-        return f'{self.output_prefix}/consolidated.pmtiles'
-
-    @functools.cached_property
-    def pmtiles_prefix_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}')
-        path.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def aggregated_regions_prefix(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}/aggregated-regions/')
-        path.mkdir(parents=True, exist_ok=True)
+    def region_summary_stats_prefix(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
     def tracts_summary_stats_uri(self) -> UPath:
         """URI for the tracts summary statistics file."""
         geo_table_name = 'tracts'
-        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     @functools.cached_property
     def counties_summary_stats_uri(self) -> UPath:
         """URI for the counties summary statistics file."""
         geo_table_name = 'counties'
-        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
@@ -838,7 +858,6 @@ class VectorConfig(pydantic_settings.BaseSettings):
             raise ValueError(
                 'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
             )
-
         # Use UPath to handle deletion in a cloud-agnostic way
         # First, get a list of all files in the region geoparquet prefix
         region_path = UPath(self.region_geoparquet_uri)
@@ -862,7 +881,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on branch."""
         if self.prefix is None:
-            self.prefix = f'intermediate/fire-risk/tensor/{self.branch.value}/template.icechunk'
+            self.prefix = f'output/fire-risk/tensor/{self.branch.value}/template.icechunk'
         self.init_repo()
 
     def wipe(self):

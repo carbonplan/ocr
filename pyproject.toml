@@ -14,7 +14,6 @@
         "flox>=0.10.4",
         "fsspec>=2025.5.1",
         "geopandas>=1.0.1",
-        "icechunk>1.0.1",
         "jupyter-server-proxy>=4.4.0",
         "jupyterlab>=4.4.0",
         "numpy>=2.2.6",
@@ -32,6 +31,7 @@
         "universal-pathlib>=0.2.6,<0.3",
         "xarray>=2025.4.0",
         "zarr>=3.0.8",
+        "icechunk>=1.1.2,<2",
     ]
 
     dynamic         = ["version"]
@@ -217,4 +217,4 @@
     numba                 = ">=0.61.2,<0.62"
     pyproj                = ">=3.7.1,<4"
     rasterio              = ">=1.4.3,<2"
-    s5cmd                 = ">=2.3.0,<3"
+s5cmd = ">=2.3.0,<3"

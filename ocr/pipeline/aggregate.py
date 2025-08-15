@@ -14,7 +14,7 @@ def aggregated_gpq(config: OCRConfig):
     apply_s3_creds()
 
     input_path = config.vector.region_geoparquet_uri
-    output_path = config.vector.consolidated_geoparquet_uri
+    output_path = config.vector.building_geoparquet_uri
     path = input_path / '*.parquet'
 
     console.log(f'Aggregating geoparquet regions from: {path}')

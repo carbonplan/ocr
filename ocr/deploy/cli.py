@@ -164,8 +164,6 @@ def run(
     if not all_region_ids and not region_id:
         raise typer.BadParameter('You must specify either --region-id or --all-region-ids.')
 
-    from ocr.icechunk_utils import get_commit_messages_ancestry
-
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
@@ -179,7 +177,9 @@ def run(
     else:
         provided_region_ids = set(region_id or [])
     valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
-    processed_region_ids = set(get_commit_messages_ancestry(icechunk_repo_and_session['repo']))
+    processed_region_ids = set(
+        config.icechunk.commit_messages_ancestry(icechunk_repo_and_session['repo'])
+    )
     unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
 
     if len(unprocessed_valid_region_ids) == 0:
@@ -255,6 +255,7 @@ def run(
             )
 
         # ------------- 03  Tiles ---------------
+
         batch_manager_03 = CoiledBatchManager(debug=debug)
         batch_manager_03.submit_job(
             command='ocr create-pmtiles',
