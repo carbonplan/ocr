@@ -7,13 +7,7 @@ import numpy as np
 import pydantic
 import pytest
 
-from ocr.config import (
-    ChunkingConfig,
-    CoiledConfig,
-    IcechunkConfig,
-    OCRConfig,
-    VectorConfig,
-)
+from ocr.config import ChunkingConfig, CoiledConfig, IcechunkConfig, OCRConfig, VectorConfig
 from ocr.types import Branch
 
 # ============= Mock and Fixture Helpers =============
@@ -67,6 +61,7 @@ class TestCoiledConfig:
         assert config.region == 'us-west-2'
         assert config.ntasks == 1
         assert config.vm_type == 'm8g.large'
+        assert config.scheduler_vm_type == 'm8g.large'
 
     def test_custom_initialization(self):
         """Test CoiledConfig initialization with custom values."""
@@ -94,6 +89,7 @@ class TestCoiledConfig:
                 'OCR_COILED_REGION': 'us-east-2',
                 'OCR_COILED_NTASKS': '8',
                 'OCR_COILED_VM_TYPE': 'm8g.2xlarge',
+                'OCR_COILED_SCHEDULER_VM_TYPE': 'm8g.2xlarge',
             },
         ):
             config = CoiledConfig()
@@ -102,6 +98,7 @@ class TestCoiledConfig:
             assert config.region == 'us-east-2'
             assert config.ntasks == 8
             assert config.vm_type == 'm8g.2xlarge'
+            assert config.scheduler_vm_type == 'm8g.2xlarge'
 
     def test_field_validation(self):
         """Test field validation for CoiledConfig."""
@@ -639,6 +636,32 @@ class TestIcechunkConfig:
             error_msg = str(e).lower()
             expected_errors = ['icechunk', 'storage', 'xarray', 'zarr', 'dask']
             assert any(err in error_msg for err in expected_errors)
+
+    def test_commit_messages_ancestry(self, temp_dir):
+        """Test commit messages ancestry."""
+        with patch.object(IcechunkConfig, 'init_repo'):
+            config = OCRConfig(storage_root=temp_dir)
+
+            commit_message = 'Repository initialized'
+
+            # Check the commit messages ancestry
+            ancestry = config.icechunk.commit_messages_ancestry()
+            assert ancestry == [commit_message]
+
+    def test_region_id_exists(self, temp_dir):
+        """Test region_id_exists method."""
+        with patch.object(IcechunkConfig, 'init_repo'):
+            config = IcechunkConfig(storage_root=temp_dir)
+
+            # Create a mock region ID
+            region_id = 'test_region'
+
+            # Check if the region ID exists
+            exists = config.region_id_exists(region_id)
+            assert not exists
+
+            exists = config.region_id_exists('Repository initialized')
+            assert exists
 
 
 # ============= OCRConfig Tests =============

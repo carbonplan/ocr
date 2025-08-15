@@ -250,7 +250,7 @@ def run(
                 name=f'create-aggregated-region-pmtiles-{config.branch.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'c8g.8xlarge',
+                    'vm_type': 'c8g.2xlarge',
                 },
             )
 
@@ -262,7 +262,7 @@ def run(
             name=f'create-pmtiles-{config.branch.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.xlarge',
             },
         )
 
