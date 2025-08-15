@@ -250,18 +250,19 @@ def run(
                 name=f'create-aggregated-region-pmtiles-{config.branch.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'c8g.2xlarge',
+                    'vm_type': 'c8g.8xlarge',
                 },
             )
 
         # ------------- 03  Tiles ---------------
+
         batch_manager_03 = CoiledBatchManager(debug=debug)
         batch_manager_03.submit_job(
             command='ocr create-pmtiles',
             name=f'create-pmtiles-{config.branch.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.xlarge',
+                'vm_type': 'c8g.8xlarge',
             },
         )
 
@@ -455,7 +456,7 @@ def aggregate(
     config = load_config(env_file)
     aggregated_gpq(
         input_path=config.vector.region_geoparquet_uri,
-        output_path=config.vector.consolidated_geoparquet_uri,
+        output_path=config.vector.building_geoparquet_uri,
     )
 
 
@@ -520,7 +521,7 @@ def aggregate_region_risk_summary_stats(
     compute_regional_fire_wind_risk_statistics(
         tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
         counties_summary_stats_path=config.vector.counties_summary_stats_uri,
-        consolidated_buildings_path=config.vector.consolidated_geoparquet_uri,
+        consolidated_buildings_path=config.vector.building_geoparquet_uri,
     )
 
 
@@ -583,8 +584,8 @@ def create_regional_pmtiles(
     create_regional_pmtiles(
         tracts_summary_stats_path=config.vector.tracts_summary_stats_uri,
         counties_summary_stats_path=config.vector.counties_summary_stats_uri,
-        tract_pmtiles_output=config.vector.region_geoparquet_uri / 'tract.pmtiles',
-        county_pmtiles_output=config.vector.region_geoparquet_uri / 'counties.pmtiles',
+        tract_pmtiles_output=config.vector.tracts_pmtiles_uri,
+        county_pmtiles_output=config.vector.counties_pmtiles_uri,
     )
 
 
@@ -645,8 +646,8 @@ def create_pmtiles(
     config = load_config(env_file)
 
     create_pmtiles(
-        input_path=config.vector.consolidated_geoparquet_uri,
-        output_path=config.vector.pmtiles_prefix_uri,
+        input_path=config.vector.building_geoparquet_uri,
+        output_path=config.vector.buildings_pmtiles_uri,
     )
 
 
