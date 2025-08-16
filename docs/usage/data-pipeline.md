@@ -90,7 +90,7 @@ ocr run --env-file .env --region-id y10_x2
 
 - **Icechunk Store** - Version-controlled data storage backend
 - **Vector Output** - Location for processed geoparquet and PMTiles files
-- **Branch** - Data version/environment (prod, QA, etc.)
+- **Environment** - Data version/environment (prod, QA, etc.)
 - **Chunking** - Defines valid region boundaries and IDs
 
 ## CLI Commands

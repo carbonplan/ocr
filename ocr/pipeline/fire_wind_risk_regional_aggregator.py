@@ -13,8 +13,6 @@ def create_summary_stat_tmp_tables(
     tracts_path: UPath,
     consolidated_buildings_path: UPath,
 ):
-    console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
-
     # tmp table for buildings
     con.execute(f"""
         CREATE TEMP TABLE buildings AS
@@ -74,7 +72,6 @@ def custom_histogram_query(
     """
 
     hist_bins = hist_bins or [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    console.log(f'Creating custom histogram query for {geo_table_name} with bins: {hist_bins}')
 
     # First temp table: zero counts by county
     zero_counts_query = f"""
@@ -141,13 +138,11 @@ def custom_histogram_query(
     GROUP BY NAME, b.geometry
 
     """
-    console.log(f'Executing nonzero histogram query for {geo_table_name}')
 
     con.execute(nonzero_hist_query)
 
     output_path = summary_stats_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    console.log(f'Writing summary statistics for {geo_table_name} to {output_path}')
 
     # Now we merge the two temp tables together, the 0 counts table and the histograms that exclude 0.
     # duckdb has a func called `list_concat` for this.
@@ -190,7 +185,6 @@ def custom_histogram_query(
                 OVERWRITE_OR_IGNORE true);
     """
     con.execute(merge_and_write)
-    console.log(f'Wrote summary statistics for {geo_table_name} to {output_path}')
 
 
 def compute_regional_fire_wind_risk_statistics(
@@ -211,21 +205,33 @@ def compute_regional_fire_wind_risk_statistics(
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
     hist_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
+    if config.debug:
+        console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
+
     create_summary_stat_tmp_tables(
         con=con,
         counties_path=counties_path,
         tracts_path=tracts_path,
         consolidated_buildings_path=consolidated_buildings_path,
     )
+
+    if config.debug:
+        console.log('Computing county summary statistics')
     custom_histogram_query(
         con=con,
         geo_table_name='county',
         summary_stats_path=counties_summary_stats_path,
         hist_bins=hist_bins,
     )
+    if config.debug:
+        console.log(f'Wrote summary statistics for county to {counties_summary_stats_path}')
+    if config.debug:
+        console.log('Computing tract summary statistics')
     custom_histogram_query(
         con=con,
         geo_table_name='tract',
         summary_stats_path=tracts_summary_stats_path,
         hist_bins=hist_bins,
     )
+    if config.debug:
+        console.log(f'Wrote summary statistics for tract to {tracts_summary_stats_path}')
