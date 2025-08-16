@@ -71,10 +71,11 @@ def create_pmtiles(config: OCRConfig):
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
-        console.log('Tippecanoe tiles generation complete')
-
-        console.log(f'Uploading PMTiles to {output_path}')
+        if config.debug:
+            console.log('Tippecanoe tiles generation complete')
+            console.log(f'Uploading PMTiles to {output_path}')
 
         copy_or_upload(local_pmtiles, output_path)
 
-        console.log('PMTiles upload completed successfully')
+        if config.debug:
+            console.log('PMTiles upload completed successfully')

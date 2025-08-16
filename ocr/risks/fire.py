@@ -3,8 +3,6 @@ import typing
 import numpy as np
 import xarray as xr
 
-from ocr.console import console
-
 
 # Depreciate? - potentially unused
 def generate_angles() -> dict[str, float]:
@@ -334,8 +332,6 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
 
     from ocr import catalog
     from ocr.utils import lon_to_180
-
-    console.log(f'Calculating wind risk for region with x_slice: {x_slice} and y_slice: {y_slice}')
 
     # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]

@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Branch(str, Enum):
+class Environment(str, Enum):
     QA = 'QA'
     PROD = 'prod'
 

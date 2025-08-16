@@ -8,7 +8,7 @@ import pydantic
 import pytest
 
 from ocr.config import ChunkingConfig, CoiledConfig, IcechunkConfig, OCRConfig, VectorConfig
-from ocr.types import Branch
+from ocr.types import Environment
 
 # ============= Mock and Fixture Helpers =============
 
@@ -348,7 +348,7 @@ class TestVectorConfig:
         """Test VectorConfig initialization with default values."""
         config = VectorConfig(storage_root=temp_dir)
 
-        assert config.branch == Branch.QA
+        assert config.environment == Environment.QA
         assert config.storage_root == temp_dir
         assert config.prefix == 'intermediate/fire-risk/vector/QA'
         assert config.output_prefix == 'output/fire-risk/vector/QA'
@@ -356,20 +356,20 @@ class TestVectorConfig:
     def test_custom_initialization(self, temp_dir):
         """Test VectorConfig initialization with custom values."""
         config = VectorConfig(
-            branch=Branch.PROD,
+            environment=Environment.PROD,
             storage_root=temp_dir,
             prefix='custom-prefix',
             output_prefix='custom-output',
         )
 
-        assert config.branch == Branch.PROD
+        assert config.environment == Environment.PROD
         assert config.storage_root == temp_dir
         assert config.prefix == 'custom-prefix'
         assert config.output_prefix == 'custom-output'
 
     def test_model_post_init_prefixes(self, temp_dir):
-        """Test model_post_init sets prefixes based on branch."""
-        config = VectorConfig(storage_root=temp_dir, branch=Branch.PROD)
+        """Test model_post_init sets prefixes based on Environment."""
+        config = VectorConfig(storage_root=temp_dir, environment=Environment.PROD)
 
         assert config.prefix == 'intermediate/fire-risk/vector/prod'
         assert config.output_prefix == 'output/fire-risk/vector/prod'
@@ -412,7 +412,7 @@ class TestVectorConfig:
     @patch('ocr.console.console.log')
     def test_wipe_method(self, mock_log, temp_dir):
         """Test the wipe method."""
-        config = VectorConfig(storage_root=temp_dir)
+        config = VectorConfig(storage_root=temp_dir, debug=True)
 
         # Create directory structure
         region_dir = Path(temp_dir) / 'intermediate/fire-risk/vector/QA/geoparquet-regions'
@@ -477,7 +477,7 @@ class TestIcechunkConfig:
         try:
             config = IcechunkConfig(storage_root=temp_dir)
 
-            assert config.branch == Branch.QA
+            assert config.environment == Environment.QA
             assert config.storage_root == temp_dir
             assert config.prefix == 'intermediate/fire-risk/tensor/QA/template.icechunk'
         except Exception as e:
@@ -488,12 +488,12 @@ class TestIcechunkConfig:
         """Test IcechunkConfig initialization with custom values."""
         try:
             config = IcechunkConfig(
-                branch=Branch.PROD,
+                environment=Environment.PROD,
                 storage_root=temp_dir,
                 prefix='custom/path/template.icechunk',
             )
 
-            assert config.branch == Branch.PROD
+            assert config.environment == Environment.PROD
             assert config.storage_root == temp_dir
             assert config.prefix == 'custom/path/template.icechunk'
         except Exception as e:
@@ -677,7 +677,7 @@ class TestOCRConfig:
         with patch.object(IcechunkConfig, 'init_repo'):
             config = OCRConfig(storage_root=temp_dir)
 
-            assert config.branch == Branch.QA
+            assert config.environment == Environment.QA
             assert config.storage_root == temp_dir
             assert isinstance(config.vector, VectorConfig)
             assert isinstance(config.icechunk, IcechunkConfig)
@@ -699,20 +699,20 @@ class TestOCRConfig:
     def test_model_post_init_creates_sub_configs(self, temp_dir):
         """Test that model_post_init creates sub-configs when None."""
         with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir, branch=Branch.PROD)
+            config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
 
             assert config.vector.storage_root == temp_dir
-            assert config.vector.branch == Branch.PROD
+            assert config.vector.environment == Environment.PROD
             assert config.icechunk.storage_root == temp_dir
-            assert config.icechunk.branch == Branch.PROD
+            assert config.icechunk.environment == Environment.PROD
 
     def test_environment_variable_override(self, temp_dir):
         """Test that environment variables work with OCRConfig."""
-        with patch.dict(os.environ, {'OCR_BRANCH': 'prod'}):
+        with patch.dict(os.environ, {'OCR_ENVIRONMENT': 'prod'}):
             with patch.object(IcechunkConfig, 'init_repo'):
                 config = OCRConfig(storage_root=temp_dir)
 
-                assert config.branch == Branch.PROD
+                assert config.environment == Environment.PROD
                 assert config.storage_root == temp_dir
 
 
@@ -746,11 +746,11 @@ class TestConfigIntegration:
     def test_branch_consistency_across_configs(self, temp_dir):
         """Test that branch is consistently applied across sub-configurations."""
         with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir, branch=Branch.PROD)
+            config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
 
-            assert config.branch == Branch.PROD
-            assert config.vector.branch == Branch.PROD
-            assert config.icechunk.branch == Branch.PROD
+            assert config.environment == Environment.PROD
+            assert config.vector.environment == Environment.PROD
+            assert config.icechunk.environment == Environment.PROD
 
     @patch.dict(os.environ, {'OCR_COILED_NTASKS': '16', 'OCR_VECTOR_PREFIX': 'custom/vector/path'})
     def test_environment_variables_sub_configs(self, temp_dir):

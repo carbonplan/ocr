@@ -17,7 +17,8 @@ def aggregated_gpq(config: OCRConfig):
     output_path = config.vector.building_geoparquet_uri
     path = input_path / '*.parquet'
 
-    console.log(f'Aggregating geoparquet regions from: {path}')
+    if config.debug:
+        console.log(f'Aggregating geoparquet regions from: {path}')
 
     duckdb.sql(f"""
         SET preserve_insertion_order=false;
@@ -28,5 +29,5 @@ def aggregated_gpq(config: OCRConfig):
         FORMAT 'parquet',
         COMPRESSION 'zstd',
         OVERWRITE_OR_IGNORE true);""")
-
-    console.log(f'Aggregation complete. Consolidated geoparquet written to: {output_path}')
+    if config.debug:
+        console.log(f'Aggregation complete. Consolidated geoparquet written to: {output_path}')
