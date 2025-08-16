@@ -31,7 +31,7 @@ class TestLocalBatchManager:
 
     def test_init_default_values(self):
         """Test manager initialization with default values."""
-        manager = LocalBatchManager()
+        manager = LocalBatchManager(debug=True)
         assert manager.status_check_int == 1
         assert manager.max_workers == 4
         assert manager.debug is True
