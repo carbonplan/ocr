@@ -27,14 +27,14 @@ class TestLocalBatchManager:
     @pytest.fixture
     def manager(self):
         """Create a LocalBatchManager instance for testing."""
-        return LocalBatchManager(max_workers=2)
+        return LocalBatchManager(max_workers=2, debug=True)
 
     def test_init_default_values(self):
         """Test manager initialization with default values."""
         manager = LocalBatchManager()
         assert manager.status_check_int == 1
         assert manager.max_workers == 4
-        assert manager.debug is False
+        assert manager.debug is True
         assert manager.jobs == {}
         assert manager._executor is not None
         assert isinstance(manager._executor, ThreadPoolExecutor)
