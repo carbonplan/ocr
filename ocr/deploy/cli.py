@@ -145,7 +145,7 @@ def run(
 
         config = load_config(env_file)
         manager = _get_manager(dispatch_platform, debug)
-        name = f'run-{config.branch.value}'
+        name = f'run-{config.environment.value}'
 
         if dispatch_platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -210,7 +210,7 @@ def run(
         del kwargs['ntasks']
         batch_manager_01.submit_job(
             command=f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}',
-            name=f'process-region-{config.branch.value}',
+            name=f'process-region-{config.environment.value}',
             kwargs={
                 **kwargs,
                 'map_over_values': sorted(list(unprocessed_valid_region_ids)),
@@ -224,7 +224,7 @@ def run(
         batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
         batch_manager_aggregate_02.submit_job(
             command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.branch.value}',
+            name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
             },
@@ -235,7 +235,7 @@ def run(
             batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
             batch_manager_county_aggregation_01.submit_job(
                 command='ocr aggregate-region-risk-summary-stats',
-                name=f'create-aggregated-region-summary-stats-{config.branch.value}',
+                name=f'create-aggregated-region-summary-stats-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
                     'vm_type': 'm8g.2xlarge',
@@ -247,7 +247,7 @@ def run(
             batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
             batch_manager_county_tiles_02.submit_job(
                 command='ocr create-regional-pmtiles',
-                name=f'create-aggregated-region-pmtiles-{config.branch.value}',
+                name=f'create-aggregated-region-pmtiles-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
                     'vm_type': 'c8g.2xlarge',
@@ -259,7 +259,7 @@ def run(
         batch_manager_03 = CoiledBatchManager(debug=debug)
         batch_manager_03.submit_job(
             command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.branch.value}',
+            name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.xlarge',
@@ -274,7 +274,7 @@ def run(
         for rid in unprocessed_valid_region_ids:
             manager.submit_job(
                 command=f'ocr process-region {rid} --risk-type {risk_type.value}',
-                name=f'process-region-{rid}-{config.branch.value}',
+                name=f'process-region-{rid}-{config.environment.value}',
                 kwargs={
                     **_local_kwargs(),
                 },
@@ -285,7 +285,7 @@ def run(
         manager = LocalBatchManager(debug=debug)
         manager.submit_job(
             command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.branch.value}',
+            name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
@@ -297,7 +297,7 @@ def run(
             # Aggregate regional fire and wind risk statistics
             manager.submit_job(
                 command='ocr aggregate-region-risk-summary-stats',
-                name=f'create-aggregated-region-summary-stats-{config.branch.value}',
+                name=f'create-aggregated-region-summary-stats-{config.environment.value}',
                 kwargs={
                     **_local_kwargs(),
                 },
@@ -308,7 +308,7 @@ def run(
             manager = LocalBatchManager(debug=debug)
             manager.submit_job(
                 command='ocr create-regional-pmtiles',
-                name=f'create-aggregated-region-pmtiles-{config.branch.value}',
+                name=f'create-aggregated-region-pmtiles-{config.environment.value}',
                 kwargs={
                     **_local_kwargs(),
                 },
@@ -319,7 +319,7 @@ def run(
         manager = LocalBatchManager(debug=debug)
         manager.submit_job(
             command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.branch.value}',
+            name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
@@ -370,7 +370,7 @@ def process_region(
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
         command = f'ocr process-region {region_id} --risk-type {risk_type.value}'
-        name = f'process-region-{region_id}-{config.branch.value}'
+        name = f'process-region-{region_id}-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -433,7 +433,7 @@ def aggregate(
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
         command = 'ocr aggregate'
-        name = f'aggregate-geoparquet-{config.branch.value}'
+        name = f'aggregate-geoparquet-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -491,7 +491,7 @@ def aggregate_region_risk_summary_stats(
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
         command = 'ocr aggregate-region-risk-summary-stats'
-        name = f'create-aggregated-region-summary-stats-{config.branch.value}'
+        name = f'create-aggregated-region-summary-stats-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -552,7 +552,7 @@ def create_regional_pmtiles(
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
         command = 'ocr create-regional-pmtiles'
-        name = f'create-aggregated-region-pmtiles-{config.branch.value}'
+        name = f'create-aggregated-region-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -611,7 +611,7 @@ def create_pmtiles(
         config = load_config(env_file)
         manager = _get_manager(platform, debug)
         command = 'ocr create-pmtiles'
-        name = f'create-pmtiles-{config.branch.value}'
+        name = f'create-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
