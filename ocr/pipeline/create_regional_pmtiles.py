@@ -19,8 +19,8 @@ def create_regional_pmtiles(
 
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    tract_pmtiles_output = config.vector.region_geoparquet_uri / 'tract.pmtiles'
-    county_pmtiles_output = config.vector.region_geoparquet_uri / 'counties.pmtiles'
+    tract_pmtiles_output = config.vector.tracts_pmtiles_uri
+    county_pmtiles_output = config.vector.counties_pmtiles_uri
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
@@ -94,7 +94,6 @@ def create_regional_pmtiles(
         console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
         duckdb_county_query = f"""
         install spatial; load spatial; install httpfs; load httpfs;
-
         COPY (
             SELECT
                 'Feature' AS type,
@@ -112,7 +111,7 @@ def create_regional_pmtiles(
                     'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
                     'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
                     'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                    'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
+                    'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
                     'risk_2011_horizon_1', risk_2011_horizon_1,
                     'risk_2011_horizon_15', risk_2011_horizon_15,
                     'risk_2011_horizon_30', risk_2011_horizon_30,

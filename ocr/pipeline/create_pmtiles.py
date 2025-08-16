@@ -26,8 +26,8 @@ def create_pmtiles(config: OCRConfig):
     4. Uploads the result back to S3
     """
 
-    input_path = config.vector.consolidated_geoparquet_uri
-    output_path = config.vector.pmtiles_prefix_uri
+    input_path = config.vector.building_geoparquet_uri
+    output_path = config.vector.buildings_pmtiles_uri
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
