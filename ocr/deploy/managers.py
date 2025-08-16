@@ -49,7 +49,8 @@ class CoiledBatchManager(AbstractBatchManager):
     job_ids: list[str] = pydantic.Field(default_factory=list)
 
     def submit_job(self, command: str, name: str, kwargs: dict[str, typing.Any]) -> str:
-        console.log(f'Submitting job: {name} with command: {command} and kwargs: {kwargs}')
+        if self.debug:
+            console.log(f'Submitting job: {name} with command: {command} and kwargs: {kwargs}')
         batch_result = coiled.batch.run(command=command, name=name, **kwargs)
         job_id = batch_result['job_id']
         self.job_ids.append(job_id)
@@ -112,28 +113,28 @@ class CoiledBatchManager(AbstractBatchManager):
                 )
                 if len(completed) + len(failed) < len(self.job_ids):
                     time.sleep(self.status_check_int)
+        if self.debug:
+            table = Table(title='Job Completion Summary')
+            table.add_column('Status', style='cyan')
+            table.add_column('Count', justify='right', style='magenta')
+            table.add_column('Job IDs', style='green')
+            table.add_row(
+                '✅ Completed',
+                str(len(completed)),
+                ', '.join([str(job_id) for job_id in list(completed)[:5]])
+                + ('...' if len(completed) > 5 else ''),
+            )
 
-        table = Table(title='Job Completion Summary')
-        table.add_column('Status', style='cyan')
-        table.add_column('Count', justify='right', style='magenta')
-        table.add_column('Job IDs', style='green')
-        table.add_row(
-            '✅ Completed',
-            str(len(completed)),
-            ', '.join([str(job_id) for job_id in list(completed)[:5]])
-            + ('...' if len(completed) > 5 else ''),
-        )
+            table.add_row(
+                '❌ Failed',
+                str(len(failed)),
+                ', '.join([str(job_id) for job_id in list(failed)[:5]])
+                + ('...' if len(failed) > 5 else ''),
+            )
 
-        table.add_row(
-            '❌ Failed',
-            str(len(failed)),
-            ', '.join([str(job_id) for job_id in list(failed)[:5]])
-            + ('...' if len(failed) > 5 else ''),
-        )
-
-        console.print('\n')
-        console.print(table)
-        console.print(f'\n[bold green]All {len(self.job_ids)} jobs finished![/bold green]')
+            console.print('\n')
+            console.print(table)
+            console.print(f'\n[bold green]All {len(self.job_ids)} jobs finished![/bold green]')
 
 
 class LocalBatchManager(AbstractBatchManager):
@@ -158,7 +159,8 @@ class LocalBatchManager(AbstractBatchManager):
     def submit_job(self, command: str, name: str, kwargs: dict[str, typing.Any]) -> str:
         """Submit a job to run locally."""
         job_id = str(uuid.uuid4())
-        console.log(f'Submitting local job: {name} (ID: {job_id}) with command: {command}')
+        if self.debug:
+            console.log(f'Submitting local job: {name} (ID: {job_id}) with command: {command}')
 
         # Extract relevant kwargs for subprocess (ignore coiled-specific ones)
         subprocess_kwargs = {}
@@ -205,7 +207,8 @@ class LocalBatchManager(AbstractBatchManager):
     def wait_for_completion(self, exit_on_failure: bool = False):
         """Wait for all tracked jobs to complete."""
         if not self.jobs:
-            console.log('No jobs to wait for')
+            if self.debug:
+                console.log('No jobs to wait for')
             return
 
         completed: set = set()
@@ -291,30 +294,31 @@ class LocalBatchManager(AbstractBatchManager):
                 if len(completed) + len(failed) < len(self.jobs):
                     time.sleep(self.status_check_int)
 
-        # Display summary table
-        table = Table(title='Local Job Completion Summary')
-        table.add_column('Status', style='cyan')
-        table.add_column('Count', justify='right', style='magenta')
-        table.add_column('Job IDs', style='green')
+        if self.debug:
+            # Display summary table
+            table = Table(title='Local Job Completion Summary')
+            table.add_column('Status', style='cyan')
+            table.add_column('Count', justify='right', style='magenta')
+            table.add_column('Job IDs', style='green')
 
-        completed_ids = [job_id for job_id in completed]
-        failed_ids = [job_id for job_id in failed]
+            completed_ids = [job_id for job_id in completed]
+            failed_ids = [job_id for job_id in failed]
 
-        table.add_row(
-            '✅ Completed',
-            str(len(completed)),
-            ', '.join(completed_ids[:5]) + ('...' if len(completed) > 5 else ''),
-        )
+            table.add_row(
+                '✅ Completed',
+                str(len(completed)),
+                ', '.join(completed_ids[:5]) + ('...' if len(completed) > 5 else ''),
+            )
 
-        table.add_row(
-            '❌ Failed',
-            str(len(failed)),
-            ', '.join(failed_ids[:5]) + ('...' if len(failed) > 5 else ''),
-        )
+            table.add_row(
+                '❌ Failed',
+                str(len(failed)),
+                ', '.join(failed_ids[:5]) + ('...' if len(failed) > 5 else ''),
+            )
 
-        console.print('\n')
-        console.print(table)
-        console.print(f'\n[bold green]All {len(self.jobs)} local jobs finished![/bold green]')
+            console.print('\n')
+            console.print(table)
+            console.print(f'\n[bold green]All {len(self.jobs)} local jobs finished![/bold green]')
 
         # Cleanup executor
         if self._executor:

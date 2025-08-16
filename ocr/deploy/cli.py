@@ -84,9 +84,6 @@ def run(
     risk_type: RiskType = typer.Option(
         RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
-    debug: bool = typer.Option(
-        False, '-d', '--debug', help='Enable Debugging Mode', show_default=True
-    ),
     summary_stats: bool = typer.Option(
         False,
         '-s',
@@ -136,15 +133,14 @@ def run(
             parts += ['--summary-stats']
         if wipe:
             parts += ['--wipe']
-        if debug:
-            parts += ['--debug']
+
         # forward --env-file
         parts += ['--env-file', str(env_file)] if env_file else []
 
         command = ' '.join(parts)
 
         config = load_config(env_file)
-        manager = _get_manager(dispatch_platform, debug)
+        manager = _get_manager(dispatch_platform, config.debug)
         name = f'run-{config.environment.value}'
 
         if dispatch_platform == Platform.COILED:
@@ -203,7 +199,7 @@ def run(
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
 
-        batch_manager_01 = CoiledBatchManager(debug=debug)
+        batch_manager_01 = _get_manager(Platform.COILED, config.debug)
 
         # Submit one mapped job instead of one job per region
         kwargs = _coiled_kwargs(config, env_file)
@@ -221,7 +217,7 @@ def run(
         batch_manager_01.wait_for_completion(exit_on_failure=True)
 
         # ----------- 02 Aggregate -------------
-        batch_manager_aggregate_02 = CoiledBatchManager(debug=debug)
+        batch_manager_aggregate_02 = _get_manager(Platform.COILED, config.debug)
         batch_manager_aggregate_02.submit_job(
             command='ocr aggregate',
             name=f'aggregate-geoparquet-{config.environment.value}',
@@ -232,7 +228,7 @@ def run(
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
 
         if summary_stats:
-            batch_manager_county_aggregation_01 = CoiledBatchManager(debug=debug)
+            batch_manager_county_aggregation_01 = _get_manager(Platform.COILED, config.debug)
             batch_manager_county_aggregation_01.submit_job(
                 command='ocr aggregate-region-risk-summary-stats',
                 name=f'create-aggregated-region-summary-stats-{config.environment.value}',
@@ -244,7 +240,7 @@ def run(
             batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
 
             # create summary stats PMTiles layer
-            batch_manager_county_tiles_02 = CoiledBatchManager(debug=debug)
+            batch_manager_county_tiles_02 = _get_manager(Platform.COILED, config.debug)
             batch_manager_county_tiles_02.submit_job(
                 command='ocr create-regional-pmtiles',
                 name=f'create-aggregated-region-pmtiles-{config.environment.value}',
@@ -256,7 +252,7 @@ def run(
 
         # ------------- 03  Tiles ---------------
 
-        batch_manager_03 = CoiledBatchManager(debug=debug)
+        batch_manager_03 = _get_manager(Platform.COILED, config.debug)
         batch_manager_03.submit_job(
             command='ocr create-pmtiles',
             name=f'create-pmtiles-{config.environment.value}',
@@ -269,7 +265,7 @@ def run(
         batch_manager_03.wait_for_completion(exit_on_failure=True)
 
     elif platform == Platform.LOCAL:
-        manager = LocalBatchManager(debug=debug)
+        manager = _get_manager(Platform.LOCAL, config.debug)
 
         for rid in unprocessed_valid_region_ids:
             manager.submit_job(
@@ -282,7 +278,7 @@ def run(
         manager.wait_for_completion(exit_on_failure=True)
 
         # Aggregate geoparquet regions
-        manager = LocalBatchManager(debug=debug)
+        manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
             command='ocr aggregate',
             name=f'aggregate-geoparquet-{config.environment.value}',
@@ -293,7 +289,7 @@ def run(
         manager.wait_for_completion(exit_on_failure=True)
 
         if summary_stats:
-            manager = LocalBatchManager(debug=debug)
+            manager = _get_manager(Platform.LOCAL, config.debug)
             # Aggregate regional fire and wind risk statistics
             manager.submit_job(
                 command='ocr aggregate-region-risk-summary-stats',
@@ -305,7 +301,7 @@ def run(
             manager.wait_for_completion(exit_on_failure=True)
 
             # Create summary stats PMTiles layer
-            manager = LocalBatchManager(debug=debug)
+            manager = _get_manager(Platform.LOCAL, config.debug)
             manager.submit_job(
                 command='ocr create-regional-pmtiles',
                 name=f'create-aggregated-region-pmtiles-{config.environment.value}',
@@ -316,7 +312,7 @@ def run(
             manager.wait_for_completion(exit_on_failure=True)
 
         # Create PMTiles from the consolidated geoparquet file
-        manager = LocalBatchManager(debug=debug)
+        manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
             command='ocr create-pmtiles',
             name=f'create-pmtiles-{config.environment.value}',
@@ -350,13 +346,6 @@ def process_region(
         help='If set, schedule this command on the specified platform instead of running inline.',
         show_default=True,
     ),
-    debug: bool = typer.Option(
-        False,
-        '-d',
-        '--debug',
-        help='Enable Debugging Mode for the batch manager',
-        show_default=True,
-    ),
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
@@ -368,7 +357,7 @@ def process_region(
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
-        manager = _get_manager(platform, debug)
+        manager = _get_manager(platform, config.debug)
         command = f'ocr process-region {region_id} --risk-type {risk_type.value}'
         name = f'process-region-{region_id}-{config.environment.value}'
 
@@ -413,13 +402,6 @@ def aggregate(
         help='If set, schedule this command on the specified platform instead of running inline.',
         show_default=True,
     ),
-    debug: bool = typer.Option(
-        False,
-        '-d',
-        '--debug',
-        help='Enable Debugging Mode for the batch manager',
-        show_default=True,
-    ),
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
@@ -431,7 +413,7 @@ def aggregate(
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
-        manager = _get_manager(platform, debug)
+        manager = _get_manager(platform, config.debug)
         command = 'ocr aggregate'
         name = f'aggregate-geoparquet-{config.environment.value}'
 
@@ -471,13 +453,6 @@ def aggregate_region_risk_summary_stats(
         help='If set, schedule this command on the specified platform instead of running inline.',
         show_default=True,
     ),
-    debug: bool = typer.Option(
-        False,
-        '-d',
-        '--debug',
-        help='Enable Debugging Mode for the batch manager',
-        show_default=True,
-    ),
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
@@ -489,7 +464,7 @@ def aggregate_region_risk_summary_stats(
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
-        manager = _get_manager(platform, debug)
+        manager = _get_manager(platform, config.debug)
         command = 'ocr aggregate-region-risk-summary-stats'
         name = f'create-aggregated-region-summary-stats-{config.environment.value}'
 
@@ -532,13 +507,6 @@ def create_regional_pmtiles(
         help='If set, schedule this command on the specified platform instead of running inline.',
         show_default=True,
     ),
-    debug: bool = typer.Option(
-        False,
-        '-d',
-        '--debug',
-        help='Enable Debugging Mode for the batch manager',
-        show_default=True,
-    ),
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
@@ -550,7 +518,7 @@ def create_regional_pmtiles(
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
-        manager = _get_manager(platform, debug)
+        manager = _get_manager(platform, config.debug)
         command = 'ocr create-regional-pmtiles'
         name = f'create-aggregated-region-pmtiles-{config.environment.value}'
 
@@ -591,13 +559,6 @@ def create_pmtiles(
         help='If set, schedule this command on the specified platform instead of running inline.',
         show_default=True,
     ),
-    debug: bool = typer.Option(
-        False,
-        '-d',
-        '--debug',
-        help='Enable Debugging Mode for the batch manager',
-        show_default=True,
-    ),
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
@@ -609,7 +570,7 @@ def create_pmtiles(
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
-        manager = _get_manager(platform, debug)
+        manager = _get_manager(platform, config.debug)
         command = 'ocr create-pmtiles'
         name = f'create-pmtiles-{config.environment.value}'
 
