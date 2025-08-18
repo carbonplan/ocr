@@ -39,7 +39,6 @@ def create_pmtiles(config: OCRConfig):
         COPY (
             SELECT
                 'Feature' AS type,
-                id AS id,
                 json_object(
                     'risk_2011', risk_2011,
                     'risk_2047', risk_2047,
@@ -68,6 +67,7 @@ def create_pmtiles(config: OCRConfig):
             '-q',
             '--extend-zooms-if-still-dropping',
             '-zg',
+            '--generate-ids',
         ]
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
