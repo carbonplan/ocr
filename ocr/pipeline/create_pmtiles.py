@@ -39,8 +39,8 @@ def create_pmtiles(config: OCRConfig):
         COPY (
             SELECT
                 'Feature' AS type,
+                id AS id,
                 json_object(
-                    'id', id,
                     'risk_2011', risk_2011,
                     'risk_2047', risk_2047,
                     'wind_risk_2011', wind_risk_2011,
