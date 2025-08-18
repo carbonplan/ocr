@@ -17,6 +17,7 @@ from rich.progress import (
 from rich.table import Table
 
 from ocr.console import console
+from ocr.types import Platform
 
 
 class AbstractBatchManager(pydantic.BaseModel):
@@ -324,3 +325,12 @@ class LocalBatchManager(AbstractBatchManager):
         if self._executor:
             self._executor.shutdown(wait=True)
             self._executor = None
+
+
+def _get_manager(platform: Platform, debug: bool):
+    if platform == Platform.COILED:
+        return CoiledBatchManager(debug=debug)
+    elif platform == Platform.LOCAL:
+        return LocalBatchManager(debug=debug)
+    else:
+        raise ValueError(f'Unknown platform: {platform}')
