@@ -6,8 +6,8 @@ from pathlib import Path
 import dotenv
 import typer
 
-from ocr.config import OCRConfig
-from ocr.deploy.managers import CoiledBatchManager, LocalBatchManager
+from ocr.config import OCRConfig, load_config
+from ocr.deploy.managers import _get_manager
 from ocr.types import Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
@@ -35,29 +35,8 @@ def _local_kwargs() -> dict[str, typing.Any]:
     return {'env': env, 'cwd': tmp_dir}
 
 
-def _get_manager(platform: Platform, debug: bool):
-    if platform == Platform.COILED:
-        return CoiledBatchManager(debug=debug)
-    elif platform == Platform.LOCAL:
-        return LocalBatchManager(debug=debug)
-    else:
-        raise ValueError(f'Unknown platform: {platform}')
-
-
 def _in_batch() -> bool:
     return os.environ.get('BATCH_ENV_FLAG') == '1'
-
-
-def load_config(file_path: Path | None) -> OCRConfig:
-    """
-    Load OCR configuration from a YAML file.
-    """
-
-    if file_path is None:
-        return OCRConfig()
-    else:
-        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        return OCRConfig()  # loads from environment variables
 
 
 @app.command()
@@ -167,15 +146,12 @@ def run(
         config.icechunk.wipe()
         config.vector.wipe()
 
-    icechunk_repo_and_session = config.icechunk.repo_and_session()
     if all_region_ids:
         provided_region_ids = set(config.chunking.valid_region_ids)
     else:
         provided_region_ids = set(region_id or [])
     valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
-    processed_region_ids = set(
-        config.icechunk.commit_messages_ancestry(icechunk_repo_and_session['repo'])
-    )
+    processed_region_ids = set(config.icechunk.processed_regions())
     unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
 
     if len(unprocessed_valid_region_ids) == 0:
