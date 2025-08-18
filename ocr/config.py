@@ -967,9 +967,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         console.log(f'Deleting icechunk repository at {self.uri}')
         if self.uri.protocol == 's3':
             if self.uri.exists():
-                for file in self.uri.glob('*'):
-                    if file.is_file():
-                        file.unlink()
                 self.uri.rmdir()
             else:
                 if self.debug:
