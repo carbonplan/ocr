@@ -67,6 +67,7 @@ def create_pmtiles(config: OCRConfig):
             '-q',
             '--extend-zooms-if-still-dropping',
             '-zg',
+            '--generate-ids',
         ]
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)

@@ -1,5 +1,7 @@
 import functools
+from pathlib import Path
 
+import dotenv
 import icechunk
 import numpy as np
 import pydantic
@@ -965,9 +967,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         console.log(f'Deleting icechunk repository at {self.uri}')
         if self.uri.protocol == 's3':
             if self.uri.exists():
-                for file in self.uri.glob('*'):
-                    if file.is_file():
-                        file.unlink()
                 self.uri.rmdir()
             else:
                 if self.debug:
@@ -1052,7 +1051,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         return False
 
-    def regions_already_processed(self, *, branch: str = 'main') -> list[str]:
+    def processed_regions(self, *, branch: str = 'main') -> list[str]:
         """Get a list of region IDs that have already been processed."""
         region_ids = set()
         for message in self.commit_messages_ancestry(branch=branch):
@@ -1148,3 +1147,15 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 'coiled',
                 CoiledConfig(),
             )
+
+
+def load_config(file_path: Path | None) -> OCRConfig:
+    """
+    Load OCR configuration from a YAML file.
+    """
+
+    if file_path is None:
+        return OCRConfig()
+    else:
+        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
+        return OCRConfig()  # loads from environment variables
