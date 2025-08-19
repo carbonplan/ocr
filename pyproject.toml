@@ -177,7 +177,6 @@
     gdal                  = ">=3.10.3,<4"
     geopandas             = ">=1.1.1,<2"
     icechunk              = ">=1.1.3,<2"
-    imath                 = "==3.1.12"
     jupyter-server-proxy  = ">=4.4.0,<5"
     libgdal-arrow-parquet = ">=3.10.3,<4"
     netcdf4               = ">=1.7.2,<2"
@@ -185,7 +184,6 @@
     obstore               = ">=0.8.0,<0.9"
     odc-geo               = ">=0.4.10,<0.5"
     opencv                = ">=4.12.0,<5"
-    openexr               = "==3.3.4"
     opt-einsum            = ">=3.4.0,<4"
     pyarrow               = ">=20.0.0,<21"
     pydantic              = ">=2.11.7,<3"
@@ -199,7 +197,7 @@
     s5cmd                 = ">=2.2.0,<3"
     typer                 = ">=0.16.1,<0.17"
     universal-pathlib     = ">=0.2.6,<0.3"
-    xarray                = ">=2025.8.0,<2026"
+    xarray                = ">=2025.8.0"
     zarr                  = ">=3.1.1,<4"
 
 [tool.pixi.tasks]
