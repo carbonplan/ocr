@@ -2,13 +2,12 @@ import geopandas as gpd
 import xarray as xr
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
 from ocr.datasets import catalog
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
-
-from ..config import OCRConfig
 
 
 def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
@@ -17,7 +16,7 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Query buildings within the region
     building_parquet = catalog.get_dataset('conus-overture-buildings')
     buildings_table = building_parquet.query_geoparquet(
-        """SELECT bbox, ST_AsText(geometry) as geometry
+        """SELECT id, bbox, ST_AsText(geometry) as geometry
         FROM read_parquet('{s3_path}')"""
         + f"""
         WHERE
@@ -35,8 +34,8 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
         buildings_gdf[var] = extract_points(buildings_gdf, ds[var])
 
     # Remove any buildings with NaN values (outside CONUS)
-    geom_cols = ['geometry']
-    buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
+    merge_cols = ['id', 'geometry']
+    buildings_gdf = buildings_gdf[data_var_list + merge_cols].dropna(subset=data_var_list)
 
     return buildings_gdf
 

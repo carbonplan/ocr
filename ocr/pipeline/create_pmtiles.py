@@ -39,11 +39,12 @@ def create_pmtiles(config: OCRConfig):
         COPY (
             SELECT
                 'Feature' AS type,
+                'id' as id,
                 json_object(
-                    'risk_2011', risk_2011,
-                    'risk_2047', risk_2047,
-                    'wind_risk_2011', wind_risk_2011,
-                    'wind_risk_2047', wind_risk_2047
+                    round('risk_2011', 2), risk_2011,
+                    round('risk_2047', 2), risk_2047,
+                    round('wind_risk_2011', 2), wind_risk_2011,
+                    round('wind_risk_2047', 2), wind_risk_2047
                      ) AS properties,
                 json(ST_AsGeoJson(geometry)) AS geometry
             FROM read_parquet('{input_path}')
@@ -67,7 +68,6 @@ def create_pmtiles(config: OCRConfig):
             '-q',
             '--extend-zooms-if-still-dropping',
             '-zg',
-            '--generate-ids',
         ]
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
