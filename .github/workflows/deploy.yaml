@@ -3,12 +3,20 @@ on:
   workflow_dispatch:
     inputs:
       region_id:
-        description: "region ID"
-        required: true
-      wipe:
-        description: "wipe existing data (icechunk and parquet files) before running"
-        default: "false"
+        description: "Region ID (ignored if all_region_ids is true)"
         required: false
+        default: ""
+        type: string
+      all_region_ids:
+        description: "Process all region IDs (passes --all-region-ids)"
+        required: false
+        type: boolean
+        default: false
+      wipe:
+        description: "Wipe existing data (icechunk and parquet files) before running"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,10 +57,29 @@ jobs:
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
+          # Build region args
+          REGION_ARGS=""
+          if [[ "${{ github.event.inputs.all_region_ids }}" == "true" ]]; then
+            REGION_ARGS="--all-region-ids"
+            if [[ -n "${{ github.event.inputs.region_id }}" ]]; then
+              echo "Note: all_region_ids=true, ignoring region_id='${{ github.event.inputs.region_id }}'."
+            fi
+          elif [[ -n "${{ github.event.inputs.region_id }}" ]]; then
+            REGION_ARGS="--region-id ${{ github.event.inputs.region_id }}"
+          else
+            echo "Error: Provide 'region_id' or set 'all_region_ids' to true." >&2
+            exit 1
+          fi
+
+          # Optional wipe flag
+          WIPE_ARG=""
+          if [[ "${{ github.event.inputs.wipe }}" == "true" ]]; then
+            WIPE_ARG="--wipe"
+          fi
+
           pixi run ocr run \
-            --region-id ${{ github.event.inputs.region_id }} \
-            ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }} \
-            --debug \
+            $REGION_ARGS \
             --summary-stats \
-            --env-file ocr-coiled-s3.env
+            --env-file ocr-coiled-s3.env \
+            $WIPE_ARG \
             --platform coiled
