@@ -1,3 +1,27 @@
-# Fire Risk
+# Fire risk methodology
 
-TODO: Methods description for the wind adjusted fire risk.
+This page explains the high-level method used to compute building-level fire risk scores. It is an explanation-oriented document (conceptual + references) rather than a step-by-step tutorial.
+
+## Summary
+
+- The model combines spatial datasets describing wildfire hazard, exposure (building footprints), and vulnerability (damageability) to compute a per-building risk score.
+- Risk is computed per-region (region IDs follow the y{tile}\_x{tile} tiling used across the codebase) and aggregated into geoparquet outputs.
+
+## Inputs
+
+- Raster hazard layers (USFS wildfire risk products, wind fields) stored in Zarr/Icechunk stores.
+- Building footprints (Overture) as vector geoparquet.
+
+## Processing steps (high level)
+
+## Outputs
+
+- Regional geoparquet files containing building-level risk metrics and metadata.
+- Aggregated county/tract statistics when `--summary-stats` is enabled.
+
+## References and further reading
+
+- USFS Wildfire Risk datasets (see [methods/input_datasets.md](methods/input_datasets.md) for access details)
+- Relevant academic literature on vulnerability functions and exposure modeling (bibliography to add as needed).
+
+If you need a runnable step-by-step tutorial for reproducing the calculations locally, see the [usage/data-pipeline.md](usage/data-pipeline.md) tutorial and run the `ocr process-region` command with `OCR_DEBUG=1` to inspect intermediate artifacts.
