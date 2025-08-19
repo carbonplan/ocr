@@ -38,18 +38,6 @@ ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled
 ocr run --all-region-ids --platform coiled --summary-stats
 ```
 
-### Configuration
-
-Create a `.env` file with your configuration:
-
-```bash
-
-# OCR Configuration
-OCR_ICECHUNK_STORE_URI=s3://your-bucket/icechunk-store
-OCR_VECTOR_OUTPUT_URI=s3://your-bucket/vector-output
-OCR_BRANCH=QA
-```
-
 ## Architecture
 
 The OCR pipeline consists of four main stages:
@@ -103,15 +91,29 @@ pixi run lint
 
 ### Local Development Workflow
 
+The project uses dotenv-style env files. Example files in the repo include [`ocr-local.env`](ocr-local.env) and [`ocr-coiled-s3.env`](ocr-coiled-s3.env) — copy one of these to `.env` and edit values as needed.
+
+Important environment variables:
+
+- `OCR_STORAGE_ROOT`: S3 path or local path where output is written (e.g. `s3://your-bucket/`).
+- `OCR_ENVIRONMENT`: name of the environment (e.g. `QA`, `PROD`).
+- `OCR_DEBUG`: set to `1` to enable more verbose logging for local troubleshooting.
+
+Start a dev shell with the project environment (we use `pixi`):
+
+```bash
+pixi shell
+```
+
 ```bash
 # 1. Test single region processing
-ocr process-region y10_x2 --risk-type fire --debug
+ocr process-region y10_x2 --risk-type fire --env-file .env
 
 # 2. Run minimal pipeline locally
-ocr run --region-id y10_x2 --platform local --debug
+ocr run --region-id y10_x2 --platform local --env-file .env
 
 # 3. Generate tiles from existing data
-ocr create-pmtiles
+ocr create-pmtiles --env-file .env
 ```
 
 ## Deployment
@@ -127,10 +129,10 @@ The repository includes automated workflows for:
 ### Manual Deployment
 
 ```bash
-# Production deployment on Coiled
+# Production deployment
 ocr run
   --all-region-ids
-  --platform coiled
+  --platform local
   --summary-stats
   --env-file production.env
 ```
