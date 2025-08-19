@@ -5,7 +5,7 @@
 [project]
     dynamic         = ["version"]
     name            = "ocr"
-    requires-python = "== 3.13"
+    requires-python = ">= 3.13"
     # All runtime dependencies are managed by Pixi via conda-forge.
     # for conda/pixi users this section is intentionally empty.
     dependencies = []
@@ -101,7 +101,7 @@
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "osx-64", "osx-arm64"]
+    platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 # Only keep local package as an editable PyPI dep (and rare stragglers).
 [tool.pixi.pypi-dependencies]
@@ -155,7 +155,6 @@
 
 # Docs feature dependencies (conda-forge)
 [tool.pixi.feature.docs.dependencies]
-
     mkdocs              = ">=1.6.1"
     mkdocs-click        = ">=0.9.0"
     mkdocs-material     = ">=9.6.14"
@@ -164,16 +163,13 @@
     ruff                = ">=0.12.7,<0.13"
 
 [tool.pixi.feature.docs.pypi-dependencies]
-        markdown-exec       = ">=1.10.3"
+    markdown-exec = ">=1.10.3"
 
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
-    bokeh                 = ">=3.7.3,<4"
     bottleneck            = ">=1.5.0,<2"
     cartopy               = ">=0.25.0,<0.26"
-    click                 = "*"
     coiled                = ">=1.118.2,<2"
-    distributed           = ">=2025.7.0,<2026"
     duckdb                = ">=1.3.2,<2"
     duckdb-cli            = ">=1.3.2,<2"
     flox                  = ">=0.10.5,<0.11"
@@ -191,21 +187,20 @@
     opencv                = ">=4.12.0,<5"
     openexr               = "==3.3.4"
     opt-einsum            = ">=3.4.0,<4"
-
+    pyarrow               = ">=20.0.0,<21"
     pydantic              = ">=2.11.7,<3"
     pydantic-settings     = ">=2.10.1,<3"
     pyproj                = ">=3.7.2,<4"
     python                = "3.13.*"
     rasterio              = ">=1.4.3,<2"
     rich                  = ">=14.1.0,<15"
-rioxarray = ">=0.19.0,<0.20"
+    rioxarray             = ">=0.19.0,<0.20"
     s3fs                  = ">=2025.7.0,<2026"
-    s5cmd                 = ">=2.3.0,<3"
+    s5cmd                 = ">=2.2.0,<3"
     typer                 = ">=0.16.1,<0.17"
     universal-pathlib     = ">=0.2.6,<0.3"
     xarray                = ">=2025.8.0,<2026"
     zarr                  = ">=3.1.1,<4"
-pyarrow = ">=20.0.0,<21"
 
 [tool.pixi.tasks]
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
