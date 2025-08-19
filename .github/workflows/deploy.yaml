@@ -52,7 +52,6 @@ jobs:
           pixi run ocr run \
             --region-id ${{ github.event.inputs.region_id }} \
             ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }} \
-            --debug \
             --summary-stats \
             --env-file ocr-coiled-s3.env
             --platform coiled
