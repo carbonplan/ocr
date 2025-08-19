@@ -45,9 +45,9 @@ Create a `.env` file with your configuration:
 ```bash
 
 # OCR Configuration
-OCR_ICECHUNK_STORE_URI=s3://your-bucket/icechunk-store
-OCR_VECTOR_OUTPUT_URI=s3://your-bucket/vector-output
-OCR_BRANCH=QA
+OCR_STORAGE_ROOT=s3://your-bucket/
+OCR_ENVIRONMENT=QA
+OCR_DEBUG='1'
 ```
 
 ## Architecture
@@ -105,10 +105,10 @@ pixi run lint
 
 ```bash
 # 1. Test single region processing
-ocr process-region y10_x2 --risk-type fire --debug
+ocr process-region y10_x2 --risk-type fire
 
 # 2. Run minimal pipeline locally
-ocr run --region-id y10_x2 --platform local --debug
+ocr run --region-id y10_x2 --platform local
 
 # 3. Generate tiles from existing data
 ocr create-pmtiles
