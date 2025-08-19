@@ -119,13 +119,11 @@ ocr create-pmtiles
 This short guide collects common developer tasks and tips for working on OCR.
 
 - Environment files
-
   - The project uses dotenv-style env files. Example files in the repo include `ocr-local.env` and `ocr-coiled-s3.env` — copy one of these to `.env` and edit values as needed.
   - Important environment variables:
     - `OCR_STORAGE_ROOT` — S3 path or local path where output is written (e.g. `s3://your-bucket/`).
     - `OCR_ENVIRONMENT` — name of the environment (e.g. `DEV`, `QA`, `PROD`).
     - `OCR_DEBUG` — set to `1` to enable more verbose logging for local troubleshooting.
-
 - Recommended developer workflow
 
   1. Start a dev shell with the project environment (we use `pixi`):
@@ -135,15 +133,11 @@ This short guide collects common developer tasks and tips for working on OCR.
   ```
 
 - Debugging & logging
-
   - To enable verbose logs set `OCR_DEBUG='1'` in your `.env` or export it before running commands.
   - For quick troubleshooting you can run a single region with `OCR_DEBUG=1 ocr process-region ...` from your shell.
-
 - Tests
-
   - Run the full test suite with `pixi run tests` or run a specific file with `pixi run pytest tests/test_datasets.py`.
   - When adding tests, aim for one happy-path unit test plus one edge-case test (null/empty input or invalid region id).
-
 - Continuous integration / pre-commit
   - The repository is configured to run tests and checks on CI. Use the pre-commit hooks locally to avoid CI failures: the CI status badges are shown at the top of this README.
 
