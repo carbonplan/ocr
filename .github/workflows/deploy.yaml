@@ -53,5 +53,4 @@ jobs:
             --region-id ${{ github.event.inputs.region_id }} \
             --summary-stats \
             --env-file ocr-coiled-s3.env \
-            --platform coiled${{ github.event.inputs.wipe == 'true' && ' \
-            --wipe' || '' }}
+            --platform coiled ${{ github.event.inputs.wipe == 'true' && '--wipe' || '' }}
