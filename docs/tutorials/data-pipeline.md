@@ -111,12 +111,9 @@ Create a `.env` file for your configuration:
 ```bash
 # .env file for OCR configuration
 # OCR Configuration
-OCR_ICECHUNK_STORE_URI=s3://your-bucket/icechunk-store
-OCR_VECTOR_OUTPUT_URI=s3://your-bucket/vector-output
-OCR_BRANCH=main
+OCR_STORAGE_ROOT=s3://your-bucket/
+OCR_ENVIRONMENT=QA
 
-# Optional: Coiled credentials (for cloud execution)
-COILED_API_TOKEN=your_coiled_token
 ```
 
 Use your configuration file:
