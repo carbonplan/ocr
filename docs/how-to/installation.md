@@ -12,24 +12,24 @@ This guide shows two quick ways to install OCR for development and for a simple 
 
 1. Install pixi (see [pixi](https://pixi.sh)):
 
-   ```bash
-   # macOS / Linux
-   curl -sSf https://sh.pixi.sh | sh
-   ```
+```bash
+# macOS / Linux
+curl -sSf https://sh.pixi.sh | sh
+```
 
-2. From the repo root, install dependencies and start a dev shell:
+1. From the repo root, install dependencies and start a dev shell:
 
-   ```bash
-   pixi install
-   pixi shell
-   ```
+```bash
+pixi install
+pixi shell
+```
 
-3. Inside the pixi shell, run tests or development commands:
+1. Inside the pixi shell, run tests or development commands:
 
-   ```bash
-   pixi run pytest
-   pixi run format
-   ```
+```bash
+pixi run pytest
+pixi run format
+```
 
 ## Option B — pip (quick install)
 

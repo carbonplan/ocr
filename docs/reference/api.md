@@ -11,13 +11,3 @@ Primary modules included here (examples):
 ::: ocr.utils
 
 ::: ocr.risks.fire
-
-Regenerating docs locally
-
-1. Ensure the package is importable (use `pixi shell` or `pip install -e .`).
-2. Run the docs build (mkdocs) locally to render the API reference:
-
-```bash
-pixi run docs-serve
-# or the project-specific command that starts mkdocs locally
-```

@@ -8,18 +8,17 @@ site_author: CarbonPlan
 docs_dir: docs
 
 nav:
-  - "index.md"
+  - Home: index.md
   - Getting Started:
-      - getting-started/installation.md
-  - Methods:
-      - methods/input_datasets.md
-      - methods/fire_risk.md
-  - Usage:
-      - usage/data-pipeline.md
-  - Project Structure:
-      - layout/project_structure.md
-  - API Reference:
-      - api.md
+      - How-to: how-to/installation.md
+  - Tutorials:
+      - Data Pipeline: tutorials/data-pipeline.md
+  - Reference:
+      - API: reference/api.md
+      - Project Structure: reference/project-structure.md
+  - Explanations:
+      - Input Datasets: explanations/input-datasets.md
+      - Fire Risk: explanations/fire-risk.md
 
 theme:
   language: en
