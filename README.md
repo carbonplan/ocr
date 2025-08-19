@@ -91,14 +91,15 @@ pixi run lint
 
 ### Local Development Workflow
 
-- The project uses dotenv-style env files. Example files in the repo include [`ocr-local.env`](ocr-local.env) and [`ocr-coiled-s3.env`](ocr-coiled-s3.env) — copy one of these to `.env` and edit values as needed.
-- Important environment variables:
+The project uses dotenv-style env files. Example files in the repo include [`ocr-local.env`](ocr-local.env) and [`ocr-coiled-s3.env`](ocr-coiled-s3.env) — copy one of these to `.env` and edit values as needed.
 
-  - `OCR_STORAGE_ROOT`: S3 path or local path where output is written (e.g. `s3://your-bucket/`).
-  - `OCR_ENVIRONMENT`: name of the environment (e.g. `QA`, `PROD`).
-  - `OCR_DEBUG`: set to `1` to enable more verbose logging for local troubleshooting.
+Important environment variables:
 
-- Start a dev shell with the project environment (we use `pixi`):
+- `OCR_STORAGE_ROOT`: S3 path or local path where output is written (e.g. `s3://your-bucket/`).
+- `OCR_ENVIRONMENT`: name of the environment (e.g. `QA`, `PROD`).
+- `OCR_DEBUG`: set to `1` to enable more verbose logging for local troubleshooting.
+
+Start a dev shell with the project environment (we use `pixi`):
 
 ```bash
 pixi shell
