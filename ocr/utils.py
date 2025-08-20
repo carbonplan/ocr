@@ -272,11 +272,21 @@ def copy_or_upload(
     - Falls back to streaming copy otherwise.
     - Creates destination parent directories when supported.
 
-    Args:
-        src: Source UPath
-        dest: Destination UPath (file path; if pointing to a directory-like path, src.name is appended)
-        overwrite: If False, raises if dest exists
-        chunk_size: Buffer size for streaming copies
+    Parameters
+    ----------
+
+    src: UPath
+        Source UPath
+    dest: UPath
+        Destination UPath (file path; if pointing to a directory-like path, src.name is appended)
+    overwrite: bool
+        If False, raises if dest exists
+    chunk_size: int
+        Buffer size for streaming copies
+
+    Returns
+    -------
+    None
     """
     # If dest looks like a directory (exists as dir or endswith a separator), append filename
     if (dest.exists() and dest.is_dir()) or str(dest).endswith(('/', '\\')):
