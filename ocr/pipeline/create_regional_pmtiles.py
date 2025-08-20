@@ -5,6 +5,7 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
+from ocr.utils import copy_or_upload
 
 
 def create_regional_pmtiles(
@@ -158,14 +159,6 @@ def create_regional_pmtiles(
 
         if config.debug:
             console.log('County PMTiles created successfully')
-
-        def copy_or_upload(src: UPath, dest: UPath):
-            import shutil
-
-            if dest.protocol == 's3':
-                subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
-            else:
-                shutil.copy(str(src), str(dest))
 
         if config.debug:
             console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
