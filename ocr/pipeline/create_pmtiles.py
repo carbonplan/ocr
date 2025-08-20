@@ -5,7 +5,15 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
-from ocr.utils import copy_or_upload
+
+
+def copy_or_upload(src: UPath, dest: UPath):
+    import shutil
+
+    if dest.protocol == 's3' or src.protocol == 's3':
+        subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
+    else:
+        shutil.copy(str(src), str(dest))
 
 
 def create_pmtiles(config: OCRConfig):
@@ -28,19 +36,20 @@ def create_pmtiles(config: OCRConfig):
         # Run duckdb to generate GeoJSON and pipe to tippecanoe
         duckdb_building_query = f"""
         install spatial; load spatial; install httpfs; load httpfs;
-        COPY (
-            SELECT
-                'Feature' AS type,
-                'id' as id,
-                json_object(
-                    round('risk_2011', 2), risk_2011,
-                    round('risk_2047', 2), risk_2047,
-                    round('wind_risk_2011', 2), wind_risk_2011,
-                    round('wind_risk_2047', 2), wind_risk_2047
-                     ) AS properties,
-                json(ST_AsGeoJson(geometry)) AS geometry
-            FROM read_parquet('{input_path}')
-        ) TO STDOUT (FORMAT json);
+COPY (
+    SELECT
+        'Feature' AS type,
+        id as id,
+        json_object(
+            'GERS', id,
+            'risk_2011', CAST(risk_2011 AS DECIMAL(10,2)),
+            'risk_2047', CAST(risk_2047 AS DECIMAL(10,2)),
+            'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
+            'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
+        ) AS properties,
+        json(ST_AsGeoJson(geometry)) AS geometry
+        FROM read_parquet('{input_path}')
+    ) TO STDOUT (FORMAT json);
         """
         duckdb_proc = subprocess.Popen(
             ['duckdb', '-c', duckdb_building_query], stdout=subprocess.PIPE
@@ -60,6 +69,7 @@ def create_pmtiles(config: OCRConfig):
             '-q',
             '--extend-zooms-if-still-dropping',
             '-zg',
+            '--generate-ids',
         ]
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
