@@ -1066,78 +1066,37 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def insert_region_uncooperative(
         self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
     ):
-        """Insert region into Icechunk store with backoff + session refresh to avoid race issues."""
+        """Insert region into Icechunk store"""
 
-        # Backoff parameters
-        max_attempts = 5
-        base_delay = 0.2  # seconds
-        max_delay = 10.0  # seconds
-
-        attempt = 0
+        if self.debug:
+            console.log(f'Inserting region: {region_id} into Icechunk store: ')
 
         while True:
-            # Always refresh session before attempting a new write/commit.
-            session = self.repo_and_session(readonly=False, branch=branch)['session']
-
-            if self.debug:
-                console.log(
-                    f'Attempt {attempt + 1}: Inserting region: {region_id} into Icechunk store'
-                )
-
             try:
+                session = self.repo_and_session(readonly=False, branch=branch)['session']
                 subset_ds.to_zarr(
                     session.store,
                     region='auto',
                     consolidated=False,
                 )
-
-                # Try to commit. rebase_with reduces logical conflicts but can still hit transient errors.
                 # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
                 # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
                 session.commit(
                     f'wrote region_id ({region_id})', rebase_with=icechunk.ConflictDetector()
                 )
-
                 if self.debug:
                     console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
-                return
+                break
 
             except icechunk.ConflictError:
-                # ConflictError usually means a timing conflict with another writer; retry quickly.
-                attempt += 1
+                delay = random.uniform(3.0, 10.0)
                 if self.debug:
                     console.log(
-                        f'Conflict for region_commit_history {region_id}, retrying (attempt {attempt})'
+                        f'conflict for region_commit_history {region_id}, retrying in {delay:.2f}s'
                     )
 
-                if attempt >= max_attempts:
-                    raise
-
-                # small exponential backoff with jitter
-                sleep = min(max_delay, base_delay * (2 ** (attempt - 1)))
-                sleep = sleep * (0.75 + random.random() * 0.5)  # jitter in [0.75, 1.25]
-                time.sleep(sleep)
-                # loop will refresh session and retry
-                continue
-
-            except icechunk.IcechunkError as e:
-                # These can be transient network / object-store errors (fetching ref.json etc.).
-                attempt += 1
-                if self.debug:
-                    console.log(
-                        f'IcechunkError on commit for {region_id}: {e!r} (attempt {attempt})'
-                    )
-
-                if attempt >= max_attempts:
-                    # Give up and raise the last error — caller can handle
-                    raise
-
-                # Exponential backoff with larger base for transient store errors
-                sleep = min(max_delay, (base_delay * 2) * (2 ** (attempt - 1)))
-                sleep = sleep * (0.5 + random.random())  # jitter in [0.5, 1.5]
-                time.sleep(sleep)
-                # Important: refresh session on retry (next loop iteration does that).
-                continue
+                time.sleep(delay)
+                pass
 
 
 class OCRConfig(pydantic_settings.BaseSettings):
