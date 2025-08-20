@@ -5,15 +5,7 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
-
-
-def copy_or_upload(src: UPath, dest: UPath):
-    import shutil
-
-    if dest.protocol == 's3' or src.protocol == 's3':
-        subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
-    else:
-        shutil.copy(str(src), str(dest))
+from ocr.utils import copy_or_upload
 
 
 def create_pmtiles(config: OCRConfig):
