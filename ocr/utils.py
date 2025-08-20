@@ -1,5 +1,8 @@
+import shutil
+
 import geopandas as gpd
 import xarray as xr
+from upath import UPath
 
 
 def apply_s3_creds(region: str = 'us-west-2') -> None:
@@ -258,3 +261,47 @@ def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str
     y_min = float(ds[y_name].min())
     y_max = float(ds[y_name].max())
     return (x_min, y_min, x_max, y_max)
+
+
+def copy_or_upload(
+    src: UPath, dest: UPath, overwrite: bool = True, chunk_size: int = 16 * 1024 * 1024
+):
+    """
+    Copy a single file from src to dest using UPath/fsspec.
+    - Uses server-side copy if available on the same filesystem (e.g., s3->s3).
+    - Falls back to streaming copy otherwise.
+    - Creates destination parent directories when supported.
+
+    Args:
+        src: Source UPath
+        dest: Destination UPath (file path; if pointing to a directory-like path, src.name is appended)
+        overwrite: If False, raises if dest exists
+        chunk_size: Buffer size for streaming copies
+    """
+    # If dest looks like a directory (exists as dir or endswith a separator), append filename
+    if (dest.exists() and dest.is_dir()) or str(dest).endswith(('/', '\\')):
+        dest = dest / src.name
+
+    # Try to ensure destination parent exists (no-op for object stores)
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    # If both paths are on the same filesystem and it supports copy, do a server-side copy
+    try:
+        same_fs = type(src.fs) is type(dest.fs)
+        if same_fs and hasattr(src.fs, 'copy'):
+            # Some fs implementations accept overwrite/recursive; keep it simple and let overwrite control existence
+            if not overwrite and dest.exists():
+                raise FileExistsError(f'Destination already exists: {dest}')
+            src.fs.copy(str(src), str(dest))
+            return
+    except Exception:
+        # Fall back to streaming if server-side copy fails for any reason
+        pass
+
+    # Streaming copy between filesystems (or when server-side copy isn't available)
+    mode = 'wb' if overwrite else 'xb'
+    with src.open('rb') as r, dest.open(mode) as w:
+        shutil.copyfileobj(r, w, length=chunk_size)
