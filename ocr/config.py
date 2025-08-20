@@ -896,7 +896,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         """Post-initialization to set up prefixes and URIs based on environment."""
         if self.prefix is None:
             self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
-        self.init_repo()
 
     def wipe(self):
         """Wipe the icechunk repository."""
@@ -947,7 +946,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         """Open an icechunk repository and return the session."""
         storage = self.storage
-        repo = icechunk.Repository.open_or_create(storage)
+        repo = icechunk.Repository.open(storage)
         if readonly:
             session = repo.readonly_session(branch=branch)
         else:
@@ -1155,7 +1154,9 @@ def load_config(file_path: Path | None) -> OCRConfig:
     """
 
     if file_path is None:
-        return OCRConfig()
+        config = OCRConfig()
     else:
         dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        return OCRConfig()  # loads from environment variables
+        config = OCRConfig()  # loads from environment variables
+
+    return config

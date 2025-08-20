@@ -142,6 +142,7 @@ def run(
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
+    config.icechunk.init_repo()  # Ensure the Icechunk repo is initialized
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
