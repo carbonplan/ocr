@@ -76,21 +76,20 @@ def generate_wind_directional_kernels(
 
         # Remove tiny negative interpolation artifacts, renormalize
         rotated = np.clip(rotated, 0.0, None)
-        s = rotated.sum()
-        if s > 0:
-            rotated /= s
-
         weights_dict[direction] = rotated
 
     circ = generate_weights(
         method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
     ).astype(np.float32)
     circ = np.clip(circ, 0, None)
+
     weights_dict['circular'] = circ
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
-        weights_dict[direction] = weights_dict[direction] / weights_dict[direction].sum()
+        s = weights_dict[direction].sum()
+        if s > 0:
+            weights_dict[direction] = weights_dict[direction] / s
     return weights_dict
 
 
@@ -392,6 +391,7 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         longitude=wind_informed_bp_float_corrected_2047.longitude,
     )
 
+    # TODO: improve the variable names for clarity
     risk_4326_combined = (
         climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
     ).to_dataset(name='risk_2011')
@@ -408,6 +408,11 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
     )
 
-    # clip results that are lower than 0 to 0 within a certain buffer (say -1e15).
+    # Add metadata/attrs to the variables in the dataset
+    # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
+    for var in risk_4326_combined.data_vars:
+        risk_4326_combined[var].attrs['units'] = 'dimensionless'
+        risk_4326_combined[var].attrs['long_name'] = f'{var} (wind-adjusted)'
+        risk_4326_combined[var].attrs['description'] = f'{var} adjusted for wind effects'
 
     return risk_4326_combined.drop_vars(['spatial_ref'])
