@@ -1088,12 +1088,11 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                     console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
                 break
 
-            except icechunk.ConflictError:
+            except Exception as exc:
                 delay = random.uniform(3.0, 10.0)
                 if self.debug:
-                    console.log(
-                        f'conflict for region_commit_history {region_id}, retrying in {delay:.2f}s'
-                    )
+                    console.log(f'Conflict detected while writing region {region_id}: {exc}')
+                    console.log(f'retrying to write region_id: {region_id} in {delay:.2f}s')
 
                 time.sleep(delay)
                 pass
