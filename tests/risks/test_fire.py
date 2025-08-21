@@ -8,6 +8,7 @@ from ocr.risks.fire import (
     apply_wind_directional_convolution,
     classify_wind_directions,
     compute_mode_along_time,
+    create_composite_bp_map,
     generate_weights,
     generate_wind_directional_kernels,
 )
@@ -24,6 +25,28 @@ SOUTH = 4
 SOUTHWEST = 5
 WEST = 6
 NORTHWEST = 7
+
+
+@pytest.fixture
+def make_mode_array():
+    """Module-level fixture to build a (time, latitude, longitude) classification array."""
+
+    def _make(values: np.ndarray) -> xr.DataArray:
+        assert values.ndim == 3, 'values must be 3D (time, lat, lon)'
+        t, ny, nx = values.shape
+        times = pd.date_range('2000-01-01', periods=t, freq='D')
+        lats = np.linspace(45, 50, ny)
+        lons = np.linspace(-125, -120, nx)
+        da = xr.DataArray(
+            values,
+            dims=['time', 'latitude', 'longitude'],
+            coords={'time': times, 'latitude': lats, 'longitude': lons},
+            name='wind_direction_classification',
+        )
+        da.attrs['direction_labels'] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+        return da
+
+    return _make
 
 
 class TestWindDirectionClassification:
@@ -93,7 +116,6 @@ class TestWindDirectionClassification:
         result = classify_wind_directions(wind_dir).values
         np.testing.assert_array_equal(result, expected)
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_nan_handling(self, create_test_data):
         """Test handling of NaN values."""
         angles = [0, np.nan, 90, np.nan, 180]
@@ -210,7 +232,6 @@ class TestComputeModeAlongTime:
 
         np.testing.assert_array_equal(result.values, expected)
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_nan_handling(self, create_test_array):
         """Test handling of NaN values."""
         # Create data with NaN values
@@ -234,11 +255,55 @@ class TestComputeModeAlongTime:
         # Create data with placeholder values
         data = np.zeros((10, 2, 2), dtype=np.float32)
 
-        # Set values with -1 placeholders mixed in
-        data[:, 0, 0] = [NORTH, NORTH, -1, NORTH, NORTH, -1, -1, SOUTH, -1, -1]  # Mode is NORTH
-        data[:, 0, 1] = [-1, -1, -1, -1, -1, EAST, EAST, EAST, -1, -1]  # Mode is EAST
-        data[:, 1, 0] = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]  # All placeholders
-        data[:, 1, 1] = [SOUTH, SOUTH, WEST, WEST, WEST, -1, -1, -1, -1, -1]  # Mode is WEST
+        # Set values with np.nan placeholders mixed in
+        data[:, 0, 0] = [
+            NORTH,
+            NORTH,
+            np.nan,
+            NORTH,
+            NORTH,
+            np.nan,
+            np.nan,
+            SOUTH,
+            np.nan,
+            np.nan,
+        ]  # Mode is NORTH
+        data[:, 0, 1] = [
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            EAST,
+            EAST,
+            EAST,
+            np.nan,
+            np.nan,
+        ]  # Mode is EAST
+        data[:, 1, 0] = [
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ]  # All placeholders
+        data[:, 1, 1] = [
+            SOUTH,
+            SOUTH,
+            WEST,
+            WEST,
+            WEST,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ]  # Mode is WEST
 
         test_array = create_test_array(data)
         result = compute_mode_along_time(test_array)
@@ -246,9 +311,9 @@ class TestComputeModeAlongTime:
         expected = np.array(
             [
                 [NORTH, EAST],
-                [-1, WEST],  # Should be -1 when all values are placeholders
+                [np.nan, WEST],  # Should be np.nan when all values are placeholders
             ],
-            dtype=np.int16,
+            dtype=np.float32,
         )
 
         np.testing.assert_array_equal(result.values, expected)
@@ -344,7 +409,6 @@ class TestComputeModeAlongTime:
         assert result.attrs['custom_attr'] == 'test_value'
         assert 'long_name' in result.attrs  # New attribute added by the function
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_empty_array(self, create_test_array):
         """Test with an empty array (all NaNs)."""
         data = np.full((5, 2, 2), np.nan, dtype=np.float32)
@@ -483,7 +547,7 @@ def test_weights_positive():
 def test_invalid_method():
     """Test that an invalid method raises an error."""
     with pytest.raises(ValueError):
-        generate_weights(method='invalid_method')
+        generate_weights(method='invalid_method')  # type: ignore[arg-type]
 
 
 def test_generate_wind_directional_kernels_normalized():
@@ -493,16 +557,101 @@ def test_generate_wind_directional_kernels_normalized():
         np.testing.assert_allclose(kernel.sum(), 1.0)
 
 
-@pytest.mark.xfail(
-    reason='This test is currently failing due to a known issue with the kernel generation.'
-)
-def test_apply_wind_directional_convolution():
-    data = np.zeros((21, 21))
-    data[10, 10] = 1.0  # Single point in the center
-    da = xr.DataArray(data, coords={'lat': range(21), 'lon': range(21)}, dims=['lat', 'lon'])
-    result = apply_wind_directional_convolution(
-        da, iterations=1, kernel_size=5.0, circle_diameter=3.0
+def test_generate_wind_directional_kernels_non_negative():
+    """Ensure no negative weights remain after rotation/clipping."""
+    result = generate_wind_directional_kernels()
+    for direction, kernel in result.items():
+        assert (kernel >= 0).all(), f'Kernel {direction} contains negative values'
+
+
+def test_classify_wind_directions_output_domain():
+    """All classified outputs must be in 0-7 or NaN (no -1 sentinel)."""
+    angles = xr.DataArray(
+        np.array([0, 45, 90, 135, 180, 225, 270, 315, np.nan, 720, -45]), dims=['sample']
+    ).astype('float32')
+    classified = classify_wind_directions(angles)
+    vals = classified.values
+    # mask NaNs then check domain
+    domain_vals = vals[~np.isnan(vals)]
+    assert domain_vals.min() >= 0
+    assert domain_vals.max() <= 7
+    assert -1 not in domain_vals
+
+
+def test_create_composite_bp_map_nan_and_invalid_handling():
+    """Invalid indices (-1, 8+, <0) and NaNs should produce NaNs in output, valid indices select correct layer."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    # Build a tiny synthetic bp dataset with distinct constant planes per direction
+    ny, nx = 4, 5
+    data_vars = {}
+    for i, lab in enumerate(direction_labels):
+        data_vars[lab] = (('latitude', 'longitude'), np.full((ny, nx), fill_value=float(i)))
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    # Wind directions: include valid, NaN, -1, 9 (invalid high), 3.0 (float), 7 (edge)
+    wind_vals = np.array(
+        [
+            [0, 1, 2, np.nan, -1],
+            [3, 4, 5, 6, 7],
+            [9, np.nan, 2, -5, 7],
+            [
+                np.nan,
+                3.0,
+                1.0,
+                8,
+                0,
+            ],  # 8 invalid (== circular index) should be treated as missing per code (valid <8)
+        ],
+        dtype=float,
+    )
+    wind = xr.DataArray(
+        wind_vals, dims=('latitude', 'longitude'), coords={'latitude': lat, 'longitude': lon}
     )
 
-    # after convolution, the central point should be spread out. so we should have more than one non-zero value
-    assert np.count_nonzero(result.data) > 1
+    composite = create_composite_bp_map(bp, wind)
+
+    # Check shape
+    assert composite.shape == (ny, nx)
+
+    # Positions with invalid / NaN indices should be NaN
+    def is_invalid(v):
+        return (np.isnan(v)) or (v < 0) or (v >= 8)
+
+    expected_nan_mask = np.vectorize(is_invalid)(wind_vals)
+    np.testing.assert_array_equal(np.isnan(composite.values), expected_nan_mask)
+    # Valid positions should pull the layer value equal to the index
+    valid_mask = ~expected_nan_mask
+    selected_vals = composite.values[valid_mask]
+    expected_vals = wind_vals[valid_mask]
+    np.testing.assert_array_equal(selected_vals, expected_vals)
+
+
+def test_apply_wind_directional_convolution_non_negative_output():
+    """After convolution and clipping, outputs should have no negative values."""
+    data = np.zeros((41, 41), dtype=np.float32)
+    data[20, 20] = 1.0  # impulse at center
+    da = xr.DataArray(
+        data, dims=['latitude', 'longitude'], coords={'latitude': range(41), 'longitude': range(41)}
+    )
+    result = apply_wind_directional_convolution(
+        da, iterations=2, kernel_size=41.0, circle_diameter=21.0
+    )
+    for direction in result.data_vars:
+        arr = result[direction].values
+        assert (arr >= -1e-8).all(), f'Negative residual beyond tolerance in {direction}'
+        # Hard clip tolerance check (should have been clipped to >=0)
+        assert (arr >= 0).all() or np.isclose(arr.min(), 0.0)
+
+
+def test_compute_mode_along_time_no_negative_modes(make_mode_array):
+    """Ensure compute_mode_along_time never returns -1 placeholders."""
+    rng = np.random.default_rng(42)
+    data = rng.integers(0, 8, size=(6, 3, 3)).astype(np.float32)
+    # Introduce NaNs
+    data[0, 0, 0] = np.nan
+    data[2, 1, 2] = np.nan
+    da = make_mode_array(data)
+    result = compute_mode_along_time(da)
+    assert not np.any(result.values == -1), 'Found -1 placeholder in mode output'

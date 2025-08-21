@@ -58,29 +58,44 @@ def generate_wind_directional_kernels(
     rotating_angles = np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'SW', 'S', 'SE', 'E', 'NE', 'N', 'NW']
     for angle, direction in zip(rotating_angles, wind_direction_labels):
-        weights_dict[direction] = rotate(
-            generate_weights(
-                method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
-            ),
+        base = generate_weights(
+            method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
+        ).astype(np.float32)
+        rotated = rotate(
+            base,
             angle=angle,
+            reshape=False,  # keep original shape
+            order=1,  # bilinear to reduce ringing
+            mode='nearest',
+            prefilter=False,
         )
+
         if angle in [45, 135, 225, 315]:
-            weights_dict[direction] = weights_dict[direction][
-                17:98, 17:98
-            ]  # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
-    weights_dict['circular'] = generate_weights(
+            # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
+            rotated = rotated[17:98, 17:98]
+
+        # Remove tiny negative interpolation artifacts, renormalize
+        rotated = np.clip(rotated, 0.0, None)
+        weights_dict[direction] = rotated
+
+    circ = generate_weights(
         method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
-    )
+    ).astype(np.float32)
+    circ = np.clip(circ, 0, None)
+
+    weights_dict['circular'] = circ
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
-        weights_dict[direction] = weights_dict[direction] / weights_dict[direction].sum()
+        s = weights_dict[direction].sum()
+        if s > 0:
+            weights_dict[direction] = weights_dict[direction] / s
     return weights_dict
 
 
 def apply_wind_directional_convolution(
     da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
-) -> xr.DataArray:
+) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
     Parameters
@@ -116,14 +131,12 @@ def apply_wind_directional_convolution(
         coords=da.coords,
     )
     for direction, weights in weights_dict.items():
-        # spread_results[direction] = xr.zeros_like(da)
-        for i in np.arange(
-            iterations
-        ):  # TODO, @orianac, is there a reason we are iterating over (iterations) without using the index. It appears that the output is the same regardless of the number of iterations.
-            spread_results[direction] = (
-                da.dims,
-                cv.filter2D(spread_results[direction].values, -1, weights),
-            )
+        arr = spread_results[direction].values
+        for _ in range(iterations):
+            arr = cv.filter2D(arr, ddepth=-1, kernel=weights)
+        # clip residual tiny negatives
+        arr = np.where(arr < 0, 0.0, arr)
+        spread_results[direction] = (da.dims, arr.astype(np.float32))
     return spread_results
 
 
@@ -131,6 +144,7 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     """
     Classify wind directions into 8 cardinal directions (0-7).
     The classification is:
+
     0: North (337.5-22.5)
     1: Northeast (22.5-67.5)
     2: East (67.5-112.5)
@@ -169,16 +183,16 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # explicitly set the North classification for values >= 337.5
         classification[north_mask] = 0
 
-        # TODO: preserve NaN values instead of replacing them
-        classification = np.where(np.isnan(block), -1, classification)
+        # preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), np.nan, classification)
 
-        return classification.astype(np.int16)
+        return classification.astype(np.float32)
 
     result = wind_direction_ds.copy()
 
     if hasattr(wind_direction_ds.data, 'map_blocks'):
         # Apply the function using map_blocks
-        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.int16)
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
     else:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
@@ -191,16 +205,6 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     result.attrs['direction_labels'] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
     return result
-
-
-def compute_mode(arr):
-    """Compute the mode of an array, ignoring placeholder values (-1)."""
-    arr = arr[arr != -1]  # Exclude placeholder values
-    if len(arr) == 0:  # If all values are NaN, return a default or NaN. TODO: remove this
-        # eventually because we want to know about nans
-        return -1
-    values, counts = np.unique(arr, return_counts=True)
-    return values[np.argmax(counts)]
 
 
 def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
@@ -219,19 +223,55 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
         DataArray with dimensions (latitude, longitude) containing the most common wind direction
     """
 
-    result = xr.apply_ufunc(
-        compute_mode,
-        direction_indices_ds,
-        input_core_dims=[['time']],  # Apply along the 'time' dimension
-        output_core_dims=[[]],  # Result is scalar per pixel
-        vectorize=True,
-        dask='parallelized',
-        output_dtypes=[np.int16],
-        dask_gufunc_kwargs={'allow_rechunk': True},
-        keep_attrs=True,
+    # Define the function to compute mode on each block
+    def _compute_mode_block(block):
+        # For each lat/lon point, compute mode along time dimension
+        result = np.zeros(block.shape[1:], dtype=np.float32)
+
+        # Iterate over each lat/lon point
+        # We could vectorize this, but explicit iteration makes the axis handling clearer
+        for i in np.ndindex(block.shape[1:]):
+            # Extract the time series for this lat/lon point
+            time_series = block[:, *i]
+
+            # Remove NaNs and placeholders
+            valid_values = time_series[~np.isnan(time_series)]
+
+            if len(valid_values) == 0:
+                result[i] = np.nan  # Return NaN if no valid values
+            else:
+                # Find the mode
+                values, counts = np.unique(valid_values, return_counts=True)
+                result[i] = values[np.argmax(counts)]
+
+        return result
+
+    if hasattr(direction_indices_ds.data, 'map_blocks'):
+        # Use map_blocks to apply our function
+        # The input array shape is (time, lat, lon)
+        # We want to drop the time dimension, so output will be (lat, lon)
+        result_data = direction_indices_ds.data.map_blocks(
+            _compute_mode_block,
+            dtype=np.float32,
+            drop_axis=0,  # Drop the time dimension (axis 0)
+            chunks=direction_indices_ds.data.chunks[1:],  # Output chunks match lat/lon chunks
+        )
+    else:
+        # Fall back for non-dask arrays
+        result_data = _compute_mode_block(direction_indices_ds.data)
+
+    result = xr.DataArray(
+        result_data,
+        dims=direction_indices_ds.dims[1:],  # Use lat/lon dimensions
+        coords={
+            dim: direction_indices_ds[dim] for dim in direction_indices_ds.dims[1:]
+        },  # Copy coordinates
+        name='modal_wind_direction',
     )
 
-    result = result.rename('modal_wind_direction')
+    # Copy attributes from the original DataArray
+    if hasattr(direction_indices_ds, 'attrs'):
+        result.attrs = direction_indices_ds.attrs.copy()
 
     result.attrs.update(
         {
@@ -243,21 +283,25 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
+def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr.DataArray:
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
     bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
     # select the entry that corresponds to the wind direction index
     # TODO: let's test this to confirm it's working as expected
-    return bp_da.isel(direction=wind_directions)
+    # Preserve NaNs: mask them out after selection
+    missing = wind_directions.isnull()
+    valid = (wind_directions >= 0) & (wind_directions < 8)
+    missing = missing | ~valid
+    safe_indexer = xr.where(missing, 8, wind_directions).astype(np.int16)
+    out = bp_da.isel(direction=safe_indexer).where(~missing)
+    return out
 
 
 def classify_wind(
     climate_run_subset: xr.Dataset, direction_modes_sfc: xr.DataArray, rps_30_subset: xr.Dataset
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
-
-    from ocr.risks.fire import apply_wind_directional_convolution, create_composite_bp_map
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
@@ -347,6 +391,7 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         longitude=wind_informed_bp_float_corrected_2047.longitude,
     )
 
+    # TODO: improve the variable names for clarity
     risk_4326_combined = (
         climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
     ).to_dataset(name='risk_2011')
@@ -362,5 +407,12 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
     risk_4326_combined['wind_risk_2047'] = (
         wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
     )
+
+    # Add metadata/attrs to the variables in the dataset
+    # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
+    for var in risk_4326_combined.data_vars:
+        risk_4326_combined[var].attrs['units'] = 'dimensionless'
+        risk_4326_combined[var].attrs['long_name'] = f'{var} (wind-adjusted)'
+        risk_4326_combined[var].attrs['description'] = f'{var} adjusted for wind effects'
 
     return risk_4326_combined.drop_vars(['spatial_ref'])
