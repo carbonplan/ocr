@@ -59,7 +59,7 @@ jobs:
 
       - name: process-region
         run: |
-          pixi run ocr process-region y2_x4 --platform local --env-file ocr-local.env
+          pixi run ocr process-region y2_x4 --platform local --env-file ocr-local.env --init-repo
       - name: aggregate geoparquet regions
         run: |
           pixi run ocr aggregate --platform local --env-file ocr-local.env

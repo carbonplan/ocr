@@ -1,4 +1,6 @@
 import functools
+import random
+import time
 from pathlib import Path
 
 import dotenv
@@ -896,7 +898,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         """Post-initialization to set up prefixes and URIs based on environment."""
         if self.prefix is None:
             self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
-        self.init_repo()
 
     def wipe(self):
         """Wipe the icechunk repository."""
@@ -947,7 +948,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         """Open an icechunk repository and return the session."""
         storage = self.storage
-        repo = icechunk.Repository.open_or_create(storage)
+        repo = icechunk.Repository.open(storage)
         if readonly:
             session = repo.readonly_session(branch=branch)
         else:
@@ -1066,15 +1067,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
     ):
         """Insert region into Icechunk store"""
-        import icechunk
-
-        session = self.repo_and_session(readonly=False, branch=branch)['session']
 
         if self.debug:
             console.log(f'Inserting region: {region_id} into Icechunk store: ')
 
         while True:
             try:
+                session = self.repo_and_session(readonly=False, branch=branch)['session']
                 subset_ds.to_zarr(
                     session.store,
                     region='auto',
@@ -1089,9 +1088,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                     console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
                 break
 
-            except icechunk.ConflictError:
+            except Exception as exc:
+                delay = random.uniform(3.0, 10.0)
                 if self.debug:
-                    console.log(f'conflict for region_commit_history {region_id}, retrying')
+                    console.log(f'Conflict detected while writing region {region_id}: {exc}')
+                    console.log(f'retrying to write region_id: {region_id} in {delay:.2f}s')
+
+                time.sleep(delay)
                 pass
 
 
@@ -1155,7 +1158,9 @@ def load_config(file_path: Path | None) -> OCRConfig:
     """
 
     if file_path is None:
-        return OCRConfig()
+        config = OCRConfig()
     else:
         dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        return OCRConfig()  # loads from environment variables
+        config = OCRConfig()  # loads from environment variables
+
+    return config

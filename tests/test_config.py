@@ -474,69 +474,50 @@ class TestIcechunkConfig:
 
     def test_default_initialization(self, temp_dir):
         """Test IcechunkConfig initialization with default values."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir)
 
-            assert config.environment == Environment.QA
-            assert config.storage_root == temp_dir
-            assert config.prefix == 'intermediate/fire-risk/tensor/QA/template.icechunk'
-        except Exception as e:
-            # If icechunk operations fail, we can still test the basic initialization
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config = IcechunkConfig(storage_root=temp_dir)
+
+        assert config.environment == Environment.QA
+        assert config.storage_root == temp_dir
+        assert config.prefix == 'output/fire-risk/tensor/QA/template.icechunk'
 
     def test_custom_initialization(self, temp_dir):
         """Test IcechunkConfig initialization with custom values."""
-        try:
-            config = IcechunkConfig(
-                environment=Environment.PROD,
-                storage_root=temp_dir,
-                prefix='custom/path/template.icechunk',
-            )
 
-            assert config.environment == Environment.PROD
-            assert config.storage_root == temp_dir
-            assert config.prefix == 'custom/path/template.icechunk'
-        except Exception as e:
-            # If icechunk operations fail, we can still test the basic initialization
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config = IcechunkConfig(
+            environment=Environment.PROD,
+            storage_root=temp_dir,
+            prefix='custom/path/template.icechunk',
+        )
+
+        assert config.environment == Environment.PROD
+        assert config.storage_root == temp_dir
+        assert config.prefix == 'custom/path/template.icechunk'
 
     def test_uri_property(self, temp_dir):
         """Test the uri cached property."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
 
-            expected_uri = f'{temp_dir}/test/path'
-            assert str(config.uri) == expected_uri
-        except Exception as e:
-            # If icechunk operations fail, we can still test the basic property
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
+
+        expected_uri = f'{temp_dir}/test/path'
+        assert str(config.uri) == expected_uri
 
     def test_storage_property_local(self, temp_dir):
         """Test the storage cached property for local filesystem."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
-            storage = config.storage
 
-            # Test that storage is created and not None
-            assert storage is not None
-        except Exception as e:
-            # If icechunk operations fail, we can at least verify the method exists
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
+        storage = config.storage
+
+        # Test that storage is created and not None
+        assert storage is not None
 
     def test_storage_property_unsupported_protocol(self):
         """Test storage property with unsupported protocol."""
-        try:
-            config = IcechunkConfig(storage_root='ftp://unsupported', prefix='test/path')
 
-            with pytest.raises(ValueError, match='Unsupported protocol: ftp'):
-                _ = config.storage
-        except Exception as e:
-            # If icechunk operations fail during init, that's also acceptable for this test
-            if 'ftp' in str(e).lower() or 'unsupported' in str(e).lower():
-                # Test passed - the unsupported protocol was caught
-                pass
-            else:
-                pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config = IcechunkConfig(storage_root='ftp://unsupported', prefix='test/path')
+
+        with pytest.raises(ValueError, match='Unsupported protocol: ftp'):
+            _ = config.storage
 
     def test_init_repo(self, temp_dir):
         """Test the init_repo method using real implementation."""
@@ -546,124 +527,105 @@ class TestIcechunkConfig:
 
         # The init_repo should work with local filesystem without issues
         # It will create or open a repository in the temp directory
-        try:
-            config.init_repo()
-            # If we get here, the repository was successfully initialized
-            assert config.uri.exists() or config.uri.parent.exists()
-        except Exception as e:
-            # If there are issues with the icechunk setup, we can at least verify
-            # that the method doesn't crash catastrophically
-            assert 'icechunk' in str(e).lower() or 'storage' in str(e).lower()
+
+        config.init_repo()
+        # If we get here, the repository was successfully initialized
+        assert config.uri.exists() or config.uri.parent.exists()
 
     def test_repo_and_session_readonly(self, temp_dir):
         """Test repo_and_session method in readonly mode."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
 
-            # Try to get a readonly session
-            result = config.repo_and_session(readonly=True, branch='test-branch')
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test/path')
+        config.init_repo()  # Ensure repo is initialized
 
-            # Should return a dict with 'repo' and 'session' keys
-            assert isinstance(result, dict)
-            assert 'repo' in result
-            assert 'session' in result
-        except Exception as e:
-            # If icechunk operations fail, that's acceptable for this test
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        # Try to get a readonly session
+        result = config.repo_and_session(readonly=True, branch='main')
+
+        # Should return a dict with 'repo' and 'session' keys
+        assert isinstance(result, dict)
+        assert 'repo' in result
+        assert 'session' in result
 
     def test_wipe_method(self, temp_dir):
         """Test the wipe method using real implementation."""
         # Create config with temp directory - this will call init_repo in model_post_init
         # but that's okay since we're testing the real functionality
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test-wipe-repo')
 
-            # Create some test files in the icechunk directory to verify deletion
-            icechunk_path = config.uri
-            icechunk_path.mkdir(parents=True, exist_ok=True)
-            test_file = icechunk_path / 'test_file.txt'
-            test_file.write_text('test content')
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test-wipe-repo')
+        config.init_repo()
 
-            # Ensure the test file exists before wipe
-            assert test_file.exists()
+        # Create some test files in the icechunk directory to verify deletion
+        icechunk_path = config.uri
+        icechunk_path.mkdir(parents=True, exist_ok=True)
+        test_file = icechunk_path / 'test_file.txt'
+        test_file.write_text('test content')
 
-            # Call wipe - this should delete and recreate the repo
-            config.wipe()
+        # Ensure the test file exists before wipe
+        assert test_file.exists()
 
-            # The directory might be recreated by init_repo, but our test file should be gone
-            if icechunk_path.exists():
-                assert not test_file.exists()
+        # Call wipe - this should delete and recreate the repo
+        config.wipe()
 
-        except Exception as e:
-            # If icechunk operations fail, at least verify the method doesn't crash completely
-            assert 'icechunk' in str(e).lower() or 'storage' in str(e).lower()
+        # The directory might be recreated by init_repo, but our test file should be gone
+        if icechunk_path.exists():
+            assert not test_file.exists()
 
     def test_delete_local_filesystem(self, temp_dir):
         """Test delete method for local filesystem."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test/delete/path')
 
-            # Create the icechunk directory
-            icechunk_dir = config.uri
-            icechunk_dir.mkdir(parents=True, exist_ok=True)
-            test_file = icechunk_dir / 'test_file'
-            test_file.write_text('test data')
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test/delete/path')
 
-            # Verify file exists before deletion
-            assert test_file.exists()
+        # Create the icechunk directory
+        icechunk_dir = config.uri
+        icechunk_dir.mkdir(parents=True, exist_ok=True)
+        test_file = icechunk_dir / 'test_file'
+        test_file.write_text('test data')
 
-            config.delete()
+        # Verify file exists before deletion
+        assert test_file.exists()
 
-            # Directory should be deleted
-            assert not icechunk_dir.exists()
-        except Exception as e:
-            # If icechunk operations fail, that's acceptable for this test
-            pytest.skip(f'Skipping due to icechunk dependency issues: {e}')
+        config.delete()
+
+        # Directory should be deleted
+        assert not icechunk_dir.exists()
 
     def test_create_template(self, temp_dir):
         """Test the create_template method using real implementation."""
-        try:
-            config = IcechunkConfig(storage_root=temp_dir, prefix='test-template-repo')
 
-            # The create_template method is complex and depends on many things
-            # but we can at least verify it doesn't crash when called
-            config.create_template()
+        config = IcechunkConfig(storage_root=temp_dir, prefix='test-template-repo')
 
-            # If we get here, the method executed without crashing
-            assert True
+        config.init_repo()  # this calls .create_template() under the hood
 
-        except Exception as e:
-            # If there are issues with icechunk/xarray dependencies,
-            # we can at least verify the method handles errors gracefully
-            error_msg = str(e).lower()
-            expected_errors = ['icechunk', 'storage', 'xarray', 'zarr', 'dask']
-            assert any(err in error_msg for err in expected_errors)
+        # If we get here, the method executed without crashing
+        assert True
 
     def test_commit_messages_ancestry(self, temp_dir):
         """Test commit messages ancestry."""
-        with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir)
 
-            commit_message = 'Repository initialized'
+        config = IcechunkConfig(storage_root=temp_dir)
+        config.init_repo()  # Ensure repo is initialized
 
-            # Check the commit messages ancestry
-            ancestry = config.icechunk.commit_messages_ancestry()
-            assert ancestry == [commit_message]
+        commit_message = 'Repository initialized'
+
+        # Check the commit messages ancestry
+        ancestry = config.commit_messages_ancestry()
+        assert commit_message in ancestry
 
     def test_region_id_exists(self, temp_dir):
         """Test region_id_exists method."""
-        with patch.object(IcechunkConfig, 'init_repo'):
-            config = IcechunkConfig(storage_root=temp_dir)
 
-            # Create a mock region ID
-            region_id = 'test_region'
+        config = IcechunkConfig(storage_root=temp_dir)
+        config.init_repo()
 
-            # Check if the region ID exists
-            exists = config.region_id_exists(region_id)
-            assert not exists
+        # Create a mock region ID
+        region_id = 'test_region'
 
-            exists = config.region_id_exists('Repository initialized')
-            assert exists
+        # Check if the region ID exists
+        exists = config.region_id_exists(region_id)
+        assert not exists
+
+        exists = config.region_id_exists('Repository initialized')
+        assert exists
 
 
 # ============= OCRConfig Tests =============
@@ -674,37 +636,37 @@ class TestOCRConfig:
 
     def test_default_initialization(self, temp_dir):
         """Test OCRConfig initialization with default values."""
-        with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir)
 
-            assert config.environment == Environment.QA
-            assert config.storage_root == temp_dir
-            assert isinstance(config.vector, VectorConfig)
-            assert isinstance(config.icechunk, IcechunkConfig)
-            assert isinstance(config.chunking, ChunkingConfig)
-            assert isinstance(config.coiled, CoiledConfig)
+        config = OCRConfig(storage_root=temp_dir)
+
+        assert config.environment == Environment.QA
+        assert config.storage_root == temp_dir
+        assert isinstance(config.vector, VectorConfig)
+        assert isinstance(config.icechunk, IcechunkConfig)
+        assert isinstance(config.chunking, ChunkingConfig)
+        assert isinstance(config.coiled, CoiledConfig)
 
     def test_custom_sub_configs(self, temp_dir):
         """Test OCRConfig with custom sub-configurations."""
-        with patch.object(IcechunkConfig, 'init_repo'):
-            custom_vector = VectorConfig(storage_root=temp_dir)
-            custom_coiled = CoiledConfig()
 
-            config = OCRConfig(storage_root=temp_dir, vector=custom_vector, coiled=custom_coiled)
+        custom_vector = VectorConfig(storage_root=temp_dir)
+        custom_coiled = CoiledConfig()
 
-            assert config.vector == custom_vector
-            assert config.coiled == custom_coiled
-            assert config.coiled.ntasks == 1
+        config = OCRConfig(storage_root=temp_dir, vector=custom_vector, coiled=custom_coiled)
+
+        assert config.vector == custom_vector
+        assert config.coiled == custom_coiled
+        assert config.coiled.ntasks == 1
 
     def test_model_post_init_creates_sub_configs(self, temp_dir):
         """Test that model_post_init creates sub-configs when None."""
-        with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
 
-            assert config.vector.storage_root == temp_dir
-            assert config.vector.environment == Environment.PROD
-            assert config.icechunk.storage_root == temp_dir
-            assert config.icechunk.environment == Environment.PROD
+        config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
+
+        assert config.vector.storage_root == temp_dir
+        assert config.vector.environment == Environment.PROD
+        assert config.icechunk.storage_root == temp_dir
+        assert config.icechunk.environment == Environment.PROD
 
     def test_environment_variable_override(self, temp_dir):
         """Test that environment variables work with OCRConfig."""
