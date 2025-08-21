@@ -110,7 +110,6 @@
 [tool.pixi.environments]
     # Map environments to features
     all-deps      = ["coiled-deploy", "data-mgmt", "dev", "docs"]
-    coiled-deploy = ["coiled-deploy", "data-mgmt", "dev"]
     default       = ["coiled-deploy", "data-mgmt", "dev"]
     dev           = ["data-mgmt", "dev"]
     docs          = ["docs"]
