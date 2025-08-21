@@ -58,19 +58,35 @@ def generate_wind_directional_kernels(
     rotating_angles = np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'SW', 'S', 'SE', 'E', 'NE', 'N', 'NW']
     for angle, direction in zip(rotating_angles, wind_direction_labels):
-        weights_dict[direction] = rotate(
-            generate_weights(
-                method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
-            ),
+        base = generate_weights(
+            method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
+        ).astype(np.float32)
+        rotated = rotate(
+            base,
             angle=angle,
+            reshape=False,  # keep original shape
+            order=1,  # bilinear to reduce ringing
+            mode='nearest',
+            prefilter=False,
         )
+
         if angle in [45, 135, 225, 315]:
-            weights_dict[direction] = weights_dict[direction][
-                17:98, 17:98
-            ]  # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
-    weights_dict['circular'] = generate_weights(
+            # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
+            rotated = rotated[17:98, 17:98]
+
+        # Remove tiny negative interpolation artifacts, renormalize
+        rotated = np.clip(rotated, 0.0, None)
+        s = rotated.sum()
+        if s > 0:
+            rotated /= s
+
+        weights_dict[direction] = rotated
+
+    circ = generate_weights(
         method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
-    )
+    ).astype(np.float32)
+    circ = np.clip(circ, 0, None)
+    weights_dict['circular'] = circ
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
@@ -80,7 +96,7 @@ def generate_wind_directional_kernels(
 
 def apply_wind_directional_convolution(
     da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
-) -> xr.DataArray:
+) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
     Parameters
@@ -131,6 +147,7 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     """
     Classify wind directions into 8 cardinal directions (0-7).
     The classification is:
+
     0: North (337.5-22.5)
     1: Northeast (22.5-67.5)
     2: East (67.5-112.5)
@@ -269,21 +286,25 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def create_composite_bp_map(bp: xr.DataArray, wind_directions: xr.DataArray) -> xr.DataArray:
+def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr.DataArray:
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
     bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
     # select the entry that corresponds to the wind direction index
     # TODO: let's test this to confirm it's working as expected
-    return bp_da.isel(direction=wind_directions)
+    # Preserve NaNs: mask them out after selection
+    missing = wind_directions.isnull()
+    valid = (wind_directions >= 0) & (wind_directions < 8)
+    missing = missing | ~valid
+    safe_indexer = xr.where(missing, 8, wind_directions).astype(np.int16)
+    out = bp_da.isel(direction=safe_indexer).where(~missing)
+    return out
 
 
 def classify_wind(
     climate_run_subset: xr.Dataset, direction_modes_sfc: xr.DataArray, rps_30_subset: xr.Dataset
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
-
-    from ocr.risks.fire import apply_wind_directional_convolution, create_composite_bp_map
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
