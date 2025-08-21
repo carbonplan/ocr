@@ -1,15 +1,19 @@
 import functools
+import random
+import time
+from pathlib import Path
 
+import dotenv
 import icechunk
 import numpy as np
 import pydantic
 import pydantic_settings
+import xarray as xr
 from upath import UPath
 
 from ocr import catalog
 from ocr.console import console
-from ocr.types import Branch
-from ocr.utils import get_commit_messages_ancestry
+from ocr.types import Environment
 
 
 class CoiledConfig(pydantic_settings.BaseSettings):
@@ -21,9 +25,9 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     ntasks: pydantic.PositiveInt = pydantic.Field(
         1, description='Number of tasks to run in parallel'
     )
-    vm_type: str = pydantic.Field('m8g.large', description='VM type to use for the worker nodes')
+    vm_type: str = pydantic.Field('m8g.xlarge', description='VM type to use for the worker nodes')
     scheduler_vm_type: str = pydantic.Field(
-        'm8g.large', description='VM type to use for the scheduler node'
+        'm8g.xlarge', description='VM type to use for the scheduler node'
     )
 
     model_config = {
@@ -34,6 +38,7 @@ class CoiledConfig(pydantic_settings.BaseSettings):
 
 class ChunkingConfig(pydantic_settings.BaseSettings):
     chunks: dict | None = pydantic.Field(None, description='Chunk sizes for longitude and latitude')
+    debug: bool = pydantic.Field(False, description='Enable debugging mode')
 
     model_config = {
         'env_prefix': 'ocr_chunking_',
@@ -558,7 +563,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         slice(np.int64(85500), np.int64(90000), None))"""
         return self.chunk_id_to_slice(self.region_id_chunk_lookup(region_id))
 
-    def chunk_id_to_slice(self, chunk_id):
+    def chunk_id_to_slice(self, chunk_id: tuple) -> tuple:
         """
         Convert a chunk ID (iy, ix) to corresponding array slices
 
@@ -601,13 +606,13 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
         return (y_slice, x_slice)
 
-    def region_id_to_latlon_slices(self, region_id):
+    def region_id_to_latlon_slices(self, region_id: str) -> tuple:
         """
         Get latitude and longitude slices from region_id
 
         Parameters
         ----------
-        region_id : tuple
+        region_id : str
             The region_id for chunk_id lookup.
 
         Returns
@@ -629,7 +634,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
         return (y_slice, x_slice)
 
-    def get_chunk_mapping(self):
+    def get_chunk_mapping(self) -> dict[str, tuple[int, int]]:
         """Returns a dict of region_ids and their corresponding chunk_indexes."""
         chunk_info = self.chunk_info
         y_starts = chunk_info['y_starts']
@@ -642,7 +647,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
         return chunk_mapping
 
-    def plot_all_chunks(self, color_by_size=False):
+    def plot_all_chunks(self, color_by_size: bool = False) -> None:
         """
         Plot all data chunks across the entire CONUS with their indices as labels
 
@@ -758,7 +763,9 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 class VectorConfig(pydantic_settings.BaseSettings):
     """Configuration for vector data processing."""
 
-    branch: Branch = pydantic.Field(default=Branch.QA, description='Branch for vector processing')
+    environment: Environment = pydantic.Field(
+        default=Environment.QA, description='Environment for vector processing'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for vector data, can be a bucket name or local path'
     )
@@ -766,24 +773,62 @@ class VectorConfig(pydantic_settings.BaseSettings):
     output_prefix: str | None = pydantic.Field(
         None, description='Sub-path within the storage root for pipeline output products'
     )
+    debug: bool = pydantic.Field(default=False, description='Enable debugging mode')
 
     model_config = {'env_prefix': 'ocr_vector_', 'case_sensitive': False}
 
     def model_post_init(self, __context):
-        """Post-initialization to set up prefixes and URIs based on branch."""
+        """Post-initialization to set up prefixes and URIs based on environment."""
         if self.prefix is None:
-            self.prefix = f'intermediate/fire-risk/vector/{self.branch.value}'
+            self.prefix = f'intermediate/fire-risk/vector/{self.environment.value}'
         if self.output_prefix is None:
-            self.output_prefix = f'output/fire-risk/vector/{self.branch.value}'
+            self.output_prefix = f'output/fire-risk/vector/{self.environment.value}'
 
     def wipe(self):
         """Wipe the vector data storage."""
-        console.log(f'Wiping vector data storage at {self.storage_root}/{self.prefix}')
+        if self.debug:
+            console.log(
+                f'Wiping intermediate vector data storage at {self.storage_root}/{self.prefix}'
+            )
         self.delete_region_gpqs()
+
+    # ----------------------------
+    # output pmtiles
+    # ----------------------------
+
+    @functools.cached_property
+    def pmtiles_prefix(self) -> str:
+        return f'{self.output_prefix}/pmtiles'
+
+    @functools.cached_property
+    def buildings_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/buildings.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def tracts_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def counties_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/counties.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    # ----------------------------
+    # geoparquet
+    # ----------------------------
 
     @functools.cached_property
     def region_geoparquet_prefix(self) -> str:
-        return f'{self.prefix}/geoparquet-regions/'
+        return f'{self.prefix}/geoparquet-regions'
+
+    @functools.cached_property
+    def geoparquet_prefix(self) -> str:
+        return f'{self.output_prefix}/geoparquet'
 
     @functools.cached_property
     def region_geoparquet_uri(self) -> UPath:
@@ -792,53 +837,39 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
-    def consolidated_geoparquet_prefix(self) -> str:
-        return f'{self.output_prefix}/consolidated-geoparquet.parquet'
-
-    @functools.cached_property
-    def consolidated_geoparquet_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.consolidated_geoparquet_prefix}')
+    def building_geoparquet_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
-    def pmtiles_prefix(self) -> str:
-        return f'{self.output_prefix}/consolidated.pmtiles'
-
-    @functools.cached_property
-    def pmtiles_prefix_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}')
-        path.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def aggregated_regions_prefix(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}/aggregated-regions/')
-        path.mkdir(parents=True, exist_ok=True)
+    def region_summary_stats_prefix(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
     def tracts_summary_stats_uri(self) -> UPath:
         """URI for the tracts summary statistics file."""
         geo_table_name = 'tracts'
-        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     @functools.cached_property
     def counties_summary_stats_uri(self) -> UPath:
         """URI for the counties summary statistics file."""
         geo_table_name = 'counties'
-        return self.aggregated_regions_prefix / f'{geo_table_name}_summary_stats.parquet'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
-        console.log(f'Deleting region geoparquet files from {self.region_geoparquet_uri}')
+        if self.debug:
+            console.log(f'Deleting region geoparquet files from {self.region_geoparquet_uri}')
         if self.region_geoparquet_prefix is None:
             raise ValueError('Region geoparquet prefix must be set before deletion.')
         if 'geoparquet-regions' not in self.region_geoparquet_prefix:
             raise ValueError(
                 'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
             )
-
         # Use UPath to handle deletion in a cloud-agnostic way
         # First, get a list of all files in the region geoparquet prefix
         region_path = UPath(self.region_geoparquet_uri)
@@ -847,27 +878,31 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 if file.is_file():
                     file.unlink()
         else:
-            console.log('No files found to delete.')
+            if self.debug:
+                console.log('No files found to delete.')
 
 
 class IcechunkConfig(pydantic_settings.BaseSettings):
     """Configuration for icechunk processing."""
 
-    branch: Branch = pydantic.Field(default=Branch.QA, description='Branch for icechunk processing')
+    environment: Environment = pydantic.Field(
+        default=Environment.QA, description='Environment for icechunk processing'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for icechunk data, can be a bucket name or local path'
     )
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
+    debug: bool = pydantic.Field(default=False, description='Enable debugging mode')
 
     def model_post_init(self, __context):
-        """Post-initialization to set up prefixes and URIs based on branch."""
+        """Post-initialization to set up prefixes and URIs based on environment."""
         if self.prefix is None:
-            self.prefix = f'intermediate/fire-risk/tensor/{self.branch.value}/template.icechunk'
-        self.init_repo()
+            self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
 
     def wipe(self):
         """Wipe the icechunk repository."""
-        console.log(f'Wiping icechunk repository at {self.uri}')
+        if self.debug:
+            console.log(f'Wiping icechunk repository at {self.uri}')
         self.delete()
         self.init_repo()
 
@@ -902,24 +937,27 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         """Creates an icechunk repo or opens if does not exist"""
 
         icechunk.Repository.open_or_create(self.storage)
-        console.log('Initialized/Opened icechunk repository')
-        commits = get_commit_messages_ancestry(self.repo_and_session()['repo'])
+        if self.debug:
+            console.log('Initialized/Opened icechunk repository')
+        commits = self.commit_messages_ancestry()
         if 'initialize store with template' not in commits:
-            console.log('No template found in icechunk store. Creating a new template dataset.')
+            if self.debug:
+                console.log('No template found in icechunk store. Creating a new template dataset.')
             self.create_template()
 
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         """Open an icechunk repository and return the session."""
         storage = self.storage
-        repo = icechunk.Repository.open_or_create(storage)
+        repo = icechunk.Repository.open(storage)
         if readonly:
             session = repo.readonly_session(branch=branch)
         else:
             session = repo.writable_session(branch=branch)
 
-        console.log(
-            f'Opened icechunk repository at {self.uri} with branch {branch} in {"readonly" if readonly else "writable"} mode.'
-        )
+        if self.debug:
+            console.log(
+                f'Opened icechunk repository at {self.uri} with branch {branch} in {"readonly" if readonly else "writable"} mode.'
+            )
         return {'repo': repo, 'session': session}
 
     def delete(self):
@@ -930,12 +968,10 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         console.log(f'Deleting icechunk repository at {self.uri}')
         if self.uri.protocol == 's3':
             if self.uri.exists():
-                for file in self.uri.glob('*'):
-                    if file.is_file():
-                        file.unlink()
                 self.uri.rmdir()
             else:
-                console.log('No files found to delete.')
+                if self.debug:
+                    console.log('No files found to delete.')
 
         elif self.uri.protocol in {'file', 'local'} or self.uri.protocol == '':
             path = self.uri.path
@@ -944,9 +980,11 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             if UPath(path).exists():
                 shutil.rmtree(path)
             else:
-                console.log('No files found to delete.')
+                if self.debug:
+                    console.log('No files found to delete.')
 
-        console.log('Deleted icechunk repository')
+        if self.debug:
+            console.log('Deleted icechunk repository')
 
     def create_template(self):
         """Create a template dataset for icechunk store"""
@@ -988,13 +1026,84 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             consolidated=False,
         )
         repo_and_session['session'].commit('initialize store with template')
-        console.log('Created icechunk template')
+        if self.debug:
+            console.log('Created icechunk template')
+
+    def commit_messages_ancestry(self, branch: str = 'main') -> list[str]:
+        """Get the commit messages ancestry for the icechunk repository."""
+        repo_and_session = self.repo_and_session(readonly=True)
+        repo = repo_and_session['repo']
+
+        commit_messages = [commit.message for commit in list(repo.ancestry(branch=branch))]
+        # separate commits by ',' and handle case of single length ancestry commit history
+
+        split_commits = [
+            msg
+            for message in commit_messages
+            for msg in (message.split(',') if ',' in message else [message])
+        ]
+        return split_commits
+
+    def region_id_exists(self, region_id: str, *, branch: str = 'main') -> bool:
+        region_ids_in_ancestry = self.commit_messages_ancestry(branch=branch)
+
+        if region_id in region_ids_in_ancestry:
+            return True
+
+        return False
+
+    def processed_regions(self, *, branch: str = 'main') -> list[str]:
+        """Get a list of region IDs that have already been processed."""
+        region_ids = set()
+        for message in self.commit_messages_ancestry(branch=branch):
+            if message.startswith('wrote region_id'):
+                region_ids.add(message.split('(')[1].split(')')[0])
+        result = sorted(region_ids)
+        if self.debug:
+            console.log(f'Found processed {len(result)} region IDs: {result}')
+        return result
+
+    def insert_region_uncooperative(
+        self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
+    ):
+        """Insert region into Icechunk store"""
+
+        if self.debug:
+            console.log(f'Inserting region: {region_id} into Icechunk store: ')
+
+        while True:
+            try:
+                session = self.repo_and_session(readonly=False, branch=branch)['session']
+                subset_ds.to_zarr(
+                    session.store,
+                    region='auto',
+                    consolidated=False,
+                )
+                # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
+                # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
+                session.commit(
+                    f'wrote region_id ({region_id})', rebase_with=icechunk.ConflictDetector()
+                )
+                if self.debug:
+                    console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
+                break
+
+            except Exception as exc:
+                delay = random.uniform(3.0, 10.0)
+                if self.debug:
+                    console.log(f'Conflict detected while writing region {region_id}: {exc}')
+                    console.log(f'retrying to write region_id: {region_id} in {delay:.2f}s')
+
+                time.sleep(delay)
+                pass
 
 
 class OCRConfig(pydantic_settings.BaseSettings):
     """Configuration settings for OCR processing."""
 
-    branch: Branch = pydantic.Field(default=Branch.QA, description='Branch for OCR processing')
+    environment: Environment = pydantic.Field(
+        default=Environment.QA, description='Environment for OCR processing'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for OCR data, can be a bucket name or local path'
     )
@@ -1004,16 +1113,19 @@ class OCRConfig(pydantic_settings.BaseSettings):
         None, description='Chunking configuration for OCR processing'
     )
     coiled: CoiledConfig | None = pydantic.Field(None, description='Coiled configuration')
+    debug: bool = pydantic.Field(False, description='Enable debugging mode')
 
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
     def model_post_init(self, __context):
-        # Pass branch and wipe to VectorConfig if not already set
+        # Pass environment and wipe to VectorConfig if not already set
         if self.vector is None:
             object.__setattr__(
                 self,
                 'vector',
-                VectorConfig(storage_root=self.storage_root, branch=self.branch),
+                VectorConfig(
+                    storage_root=self.storage_root, environment=self.environment, debug=self.debug
+                ),
             )
         if self.icechunk is None:
             object.__setattr__(
@@ -1021,14 +1133,15 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 'icechunk',
                 IcechunkConfig(
                     storage_root=self.storage_root,
-                    branch=self.branch,
+                    environment=self.environment,
+                    debug=self.debug,
                 ),
             )
         if self.chunking is None:
             object.__setattr__(
                 self,
                 'chunking',
-                ChunkingConfig(),
+                ChunkingConfig(debug=self.debug),
             )
 
         if self.coiled is None:
@@ -1037,3 +1150,17 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 'coiled',
                 CoiledConfig(),
             )
+
+
+def load_config(file_path: Path | None) -> OCRConfig:
+    """
+    Load OCR configuration from a YAML file.
+    """
+
+    if file_path is None:
+        config = OCRConfig()
+    else:
+        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
+        config = OCRConfig()  # loads from environment variables
+
+    return config

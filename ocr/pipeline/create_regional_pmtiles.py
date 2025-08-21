@@ -3,15 +3,13 @@ import tempfile
 
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
+from ocr.utils import copy_or_upload
 
 
 def create_regional_pmtiles(
-    *,
-    tracts_summary_stats_path: UPath,
-    counties_summary_stats_path: UPath,
-    tract_pmtiles_output: UPath,
-    county_pmtiles_output: UPath,
+    config: OCRConfig,
 ):
     """
     Create PMTiles for tract and county regional risk statistics.
@@ -20,12 +18,18 @@ def create_regional_pmtiles(
     and uploads the results to S3.
     """
 
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
+    counties_summary_stats_path = config.vector.counties_summary_stats_uri
+    tract_pmtiles_output = config.vector.tracts_pmtiles_uri
+    county_pmtiles_output = config.vector.counties_pmtiles_uri
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = UPath(tmpdir)
         tract_pmtiles = tmp_path / 'tract.pmtiles'
         county_pmtiles = tmp_path / 'counties.pmtiles'
 
-        console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
+        if config.debug:
+            console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
         duckdb_tract_query = f"""
         install spatial; load spatial; install httpfs; load httpfs;
 
@@ -87,12 +91,13 @@ def create_regional_pmtiles(
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
-        console.log('Tract PMTiles created successfully')
+        if config.debug:
+            console.log('Tract PMTiles created successfully')
 
-        console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
+        if config.debug:
+            console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
         duckdb_county_query = f"""
         install spatial; load spatial; install httpfs; load httpfs;
-
         COPY (
             SELECT
                 'Feature' AS type,
@@ -110,7 +115,7 @@ def create_regional_pmtiles(
                     'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
                     'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
                     'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                    'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
+                    'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
                     'risk_2011_horizon_1', risk_2011_horizon_1,
                     'risk_2011_horizon_15', risk_2011_horizon_15,
                     'risk_2011_horizon_30', risk_2011_horizon_30,
@@ -152,20 +157,16 @@ def create_regional_pmtiles(
 
         _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
 
-        console.log('County PMTiles created successfully')
+        if config.debug:
+            console.log('County PMTiles created successfully')
 
-        def copy_or_upload(src: UPath, dest: UPath):
-            import shutil
-
-            if dest.protocol == 's3':
-                subprocess.run(['s5cmd', 'cp', '--sp', str(src), str(dest)], check=True)
-            else:
-                shutil.copy(str(src), str(dest))
-
-        console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
+        if config.debug:
+            console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
         copy_or_upload(tract_pmtiles, tract_pmtiles_output)
 
-        console.log(f'Uploading county PMTiles to {county_pmtiles_output}')
+        if config.debug:
+            console.log(f'Uploading county PMTiles to {county_pmtiles_output}')
         copy_or_upload(county_pmtiles, county_pmtiles_output)
 
-        console.log('PMTiles uploads completed successfully')
+        if config.debug:
+            console.log('PMTiles uploads completed successfully')

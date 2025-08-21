@@ -17,9 +17,48 @@ The pipeline transforms raw climate data into risk assessments through four main
 
 ### Prerequisites
 
-- Python environment with OCR package installed (see [installation guide](../getting-started/installation.md))
+- Python environment with OCR package installed (see [installation guide](../how-to/installation.md))
 - AWS credentials (for data access)
 - Coiled account (for cloud execution, optional)
+
+### Tutorial: quick end-to-end (local)
+
+This tutorial walks you through a short, practical run that processes one region locally and inspects the output.
+
+1. Ensure your environment is configured and the package is installed (see [installation guide](../how-to/installation.md)).
+1. Copy an example env and set a local storage path for quick testing:
+
+```bash
+cp ocr-local.env .env
+# For local testing you can set OCR_STORAGE_ROOT to a local path, e.g. ./output/
+```
+
+1. Run a single-region processing job locally:
+
+```bash
+ocr process-region y10_x2 --risk-type fire --platform local
+```
+
+1. Inspect outputs in the storage root (geoparquet files and logs):
+
+```bash
+ls -la $OCR_STORAGE_ROOT/
+```
+
+1. If you set `OCR_DEBUG=1` you will see detailed logs printed to stdout.
+
+### Tutorial: quick end-to-end (Coiled)
+
+Use Coiled for parallel, large-scale processing.
+
+1. Ensure Coiled credentials are set by logging into your account via the Coiled CLI.
+2. Run an example multi-region job on Coiled:
+
+```bash
+ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --env-file .env
+```
+
+1. Monitor the job on Coiled's web UI and check outputs in your `OCR_STORAGE_ROOT` bucket.
 
 ### Basic Usage
 
@@ -72,12 +111,9 @@ Create a `.env` file for your configuration:
 ```bash
 # .env file for OCR configuration
 # OCR Configuration
-OCR_ICECHUNK_STORE_URI=s3://your-bucket/icechunk-store
-OCR_VECTOR_OUTPUT_URI=s3://your-bucket/vector-output
-OCR_BRANCH=main
+OCR_STORAGE_ROOT=s3://your-bucket/
+OCR_ENVIRONMENT=QA
 
-# Optional: Coiled credentials (for cloud execution)
-COILED_API_TOKEN=your_coiled_token
 ```
 
 Use your configuration file:
@@ -90,7 +126,7 @@ ocr run --env-file .env --region-id y10_x2
 
 - **Icechunk Store** - Version-controlled data storage backend
 - **Vector Output** - Location for processed geoparquet and PMTiles files
-- **Branch** - Data version/environment (prod, QA, etc.)
+- **Environment** - Data version/environment (prod, QA, etc.)
 - **Chunking** - Defines valid region boundaries and IDs
 
 ## CLI Commands
@@ -115,13 +151,12 @@ The main command that orchestrates the complete processing pipeline.
 - `--platform` - Choose `local` or `coiled` execution
 - `--risk-type` - Calculate `fire` or `wind` risk (default: fire)
 - `--summary-stats` - Include regional statistical summaries
-- `--debug` - Enable detailed logging
 
 **Examples:**
 
 ```bash
 # Development workflow
-ocr run --region-id y10_x2 --platform local --debug
+ocr run --region-id y10_x2 --platform local
 
 # Production processing with statistics
 ocr run --all-region-ids --platform coiled --summary-stats --env-file prod.env
@@ -180,9 +215,9 @@ ocr create-pmtiles --env-file .env
 
 ### Common Issues
 
-**Environment Configuration Issues**
+### Environment configuration issues
 
-```
+```text
 Error: Missing required environment variables
 ```
 
@@ -192,15 +227,15 @@ Error: Missing required environment variables
 - Check all required AWS credentials are set
 - Ensure Coiled credentials are configured (for cloud platform)
 
-**Resource and Access Issues**
+### Resource and access issues
 
-_Local Platform:_
+#### Local Platform
 
 - **Disk space:** Check available space in temp directory
 - **Memory:** Reduce dataset size or increase system RAM
 - **Permissions:** Verify file/directory access rights
 
-_Coiled Platform:_
+#### Coiled Platform
 
 - **Job failures:** Check Coiled credentials and account quotas
 - **AWS access:** Verify IAM permissions and credentials

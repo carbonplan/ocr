@@ -1,54 +1,8 @@
-from __future__ import annotations
-
-import typing
+import shutil
 
 import geopandas as gpd
-import icechunk
 import xarray as xr
-
-from ocr.console import console
-
-if typing.TYPE_CHECKING:
-    import xarray as xr
-
-
-def get_commit_messages_ancestry(repo: icechunk.Repository, *, branch: str = 'main') -> list:
-    commit_messages = [commit.message for commit in list(repo.ancestry(branch=branch))]
-    # separate commits by ',' and handle case of single length ancestry commit history
-    split_commits = [
-        msg
-        for message in commit_messages
-        for msg in (message.split(',') if ',' in message else [message])
-    ]
-    return split_commits
-
-
-def insert_region_uncoop(
-    session: icechunk.Session,
-    *,
-    subset_ds: xr.Dataset,
-    region_id: str,
-):
-    import icechunk
-
-    console.log(f'Inserting region: {region_id} into Icechunk store: ')
-
-    while True:
-        try:
-            subset_ds.to_zarr(
-                session.store,
-                region='auto',
-                consolidated=False,
-            )
-            # Trying out the rebase strategy described here: https://github.com/earth-mover/icechunk/discussions/802#discussioncomment-13064039
-            # We should be in the same position, where we don't have real conflicts, just write timing conflicts.
-            session.commit(f'{region_id}', rebase_with=icechunk.ConflictDetector())
-            console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
-            break
-
-        except icechunk.ConflictError:
-            console.log(f'conflict for region_commit_history {region_id}, retrying')
-            pass
+from upath import UPath
 
 
 def apply_s3_creds(region: str = 'us-west-2') -> None:
@@ -182,3 +136,57 @@ def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str
     y_min = float(ds[y_name].min())
     y_max = float(ds[y_name].max())
     return (x_min, y_min, x_max, y_max)
+
+
+def copy_or_upload(
+    src: UPath, dest: UPath, overwrite: bool = True, chunk_size: int = 16 * 1024 * 1024
+):
+    """
+    Copy a single file from src to dest using UPath/fsspec.
+    - Uses server-side copy if available on the same filesystem (e.g., s3->s3).
+    - Falls back to streaming copy otherwise.
+    - Creates destination parent directories when supported.
+
+    Parameters
+    ----------
+
+    src: UPath
+        Source UPath
+    dest: UPath
+        Destination UPath (file path; if pointing to a directory-like path, src.name is appended)
+    overwrite: bool
+        If False, raises if dest exists
+    chunk_size: int
+        Buffer size for streaming copies
+
+    Returns
+    -------
+    None
+    """
+    # If dest looks like a directory (exists as dir or endswith a separator), append filename
+    if (dest.exists() and dest.is_dir()) or str(dest).endswith(('/', '\\')):
+        dest = dest / src.name
+
+    # Try to ensure destination parent exists (no-op for object stores)
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    # If both paths are on the same filesystem and it supports copy, do a server-side copy
+    try:
+        same_fs = type(src.fs) is type(dest.fs)
+        if same_fs and hasattr(src.fs, 'copy'):
+            # Some fs implementations accept overwrite/recursive; keep it simple and let overwrite control existence
+            if not overwrite and dest.exists():
+                raise FileExistsError(f'Destination already exists: {dest}')
+            src.fs.copy(str(src), str(dest))
+            return
+    except Exception:
+        # Fall back to streaming if server-side copy fails for any reason
+        pass
+
+    # Streaming copy between filesystems (or when server-side copy isn't available)
+    mode = 'wb' if overwrite else 'xb'
+    with src.open('rb') as r, dest.open(mode) as w:
+        shutil.copyfileobj(r, w, length=chunk_size)
