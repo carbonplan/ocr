@@ -94,7 +94,9 @@ class CoiledBatchManager(AbstractBatchManager):
                             failed.add(job_id)
                             current_states['failed'] += 1
                             if exit_on_failure:
-                                raise Exception(f'{job_id} failed, and exit_on_failure == True. ')
+                                raise Exception(
+                                    f'{job_id} failed because {job["n_tasks_failed"]}/{job["n_tasks"]} tasks failed and exit_on_failure == True.\nJob details: {job}'
+                                )
 
                         elif state == 'queued':
                             current_states['queued'] += 1

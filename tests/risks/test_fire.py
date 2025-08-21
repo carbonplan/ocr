@@ -8,7 +8,6 @@ from ocr.risks.fire import (
     apply_wind_directional_convolution,
     classify_wind_directions,
     compute_mode_along_time,
-    generate_angles,
     generate_weights,
     generate_wind_directional_kernels,
 )
@@ -359,65 +358,6 @@ class TestComputeModeAlongTime:
             result.values,
             expected,
         )
-
-
-def test_generate_angles_returns_dict():
-    """Test that generate_angles returns a dictionary."""
-    result = generate_angles()
-    assert isinstance(result, dict)
-
-
-def test_generate_angles_has_correct_keys():
-    """Test that generate_angles returns a dictionary with the expected direction keys."""
-    result = generate_angles()
-    expected_keys = {'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE', 'E'}
-    assert set(result.keys()) == expected_keys
-
-
-def test_generate_angles_has_correct_values():
-    """Test that generate_angles returns the correct angle values."""
-    result = generate_angles()
-    # Check that all values are in the expected range
-    for angle in result.values():
-        assert 0 <= angle < 360
-        assert isinstance(angle, np.float32)
-
-
-def test_generate_angles_correct_mappings():
-    """Test that directions map to the correct angles."""
-    result = generate_angles()
-
-    # Expected mappings based on the implementation
-    expected_mappings = {
-        'NE': 22.5,
-        'N': 67.5,
-        'NW': 112.5,
-        'W': 157.5,
-        'SW': 202.5,
-        'S': 247.5,
-        'SE': 292.5,
-        'E': 337.5,
-    }
-
-    for direction, expected_angle in expected_mappings.items():
-        assert np.isclose(result[direction], expected_angle)
-
-
-def test_generate_angles_45_degree_intervals():
-    """Test that angles are spaced at 45 degree intervals."""
-    result = generate_angles()
-    angles = sorted(result.values())
-
-    # Check that differences between consecutive sorted angles are 45 degrees
-    for i in range(len(angles) - 1):
-        assert np.isclose(angles[i + 1] - angles[i], 45.0)
-
-
-def test_generate_angles_float32_type():
-    """Test that angles are of numpy.float32 type."""
-    result = generate_angles()
-    for angle in result.values():
-        assert angle.dtype == np.float32
 
 
 def test_generate_weights_defaults():

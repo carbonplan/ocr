@@ -109,10 +109,10 @@
 
 [tool.pixi.environments]
     # Map environments to features
-    all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
-    default  = ["coiled-deploy", "data-mgmt", "dev"]
-    dev      = ["data-mgmt", "dev"]
-    docs     = ["docs"]
+    all-deps      = ["coiled-deploy", "data-mgmt", "dev", "docs"]
+    default       = ["coiled-deploy", "data-mgmt", "dev"]
+    dev           = ["data-mgmt", "dev"]
+    docs          = ["docs"]
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]

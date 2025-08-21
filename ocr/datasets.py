@@ -224,7 +224,7 @@ class Dataset(pydantic.BaseModel):
                 modified_query = query
                 # Check if the query has a SELECT clause we can modify
                 if 'SELECT' in query.upper() and 'FROM' in query.upper():
-                    select_part, from_part = query.upper().split('FROM', 1)
+                    select_part, _ = query.upper().split('FROM', 1)
 
                     # case 1: SELECT * query
                     if 'SELECT *' in query.upper():
@@ -589,5 +589,6 @@ datasets = [
         data_format='geoparquet',
     ),
 ]
+
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))

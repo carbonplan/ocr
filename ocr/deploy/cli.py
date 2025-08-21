@@ -142,6 +142,7 @@ def run(
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
+    config.icechunk.init_repo()  # Ensure the Icechunk repo is initialized
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
@@ -325,6 +326,9 @@ def process_region(
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
+    init_repo: bool = typer.Option(
+        False, '--init-repo', help='Initialize Icechunk repository (if not already initialized).'
+    ),
 ):
     """
     Calculate and write risk for a given region to Icechunk CONUS template.
@@ -335,6 +339,8 @@ def process_region(
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
         command = f'ocr process-region {region_id} --risk-type {risk_type.value}'
+        if init_repo:
+            command += ' --init-repo'
         name = f'process-region-{region_id}-{config.environment.value}'
 
         if platform == Platform.COILED:
@@ -351,6 +357,8 @@ def process_region(
     from ocr.pipeline.process_region import calculate_risk
 
     config = load_config(env_file)
+    if init_repo:
+        config.icechunk.init_repo()
 
     calculate_risk(
         config=config,

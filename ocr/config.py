@@ -1,4 +1,6 @@
 import functools
+import random
+import time
 from pathlib import Path
 
 import dotenv
@@ -516,31 +518,31 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
             'y15_x34',
         ]
 
-    def generate_valid_region_ids(self) -> list:
-        # could be refactored - gets all the region_ids and their lat_lon slices
-        # This was used once to generate the stored list in `valid_region_ids()`
-        from tqdm import tqdm
+    # def generate_valid_region_ids(self) -> list:
+    #     # could be refactored - gets all the region_ids and their lat_lon slices
+    #     # This was used once to generate the stored list in `valid_region_ids()`
+    #     from tqdm import tqdm
 
-        region_id_chunk_slices = {}
-        chunk_info = self.chunk_info
-        y_starts = chunk_info['y_starts']
-        x_starts = chunk_info['x_starts']
-        for iy, _ in enumerate(y_starts):
-            for ix, _ in enumerate(x_starts):
-                region_id = f'y{iy}_x{ix}'
-                y_slice, x_slice = self.region_id_to_latlon_slices(region_id=region_id)
-                region_id_chunk_slices[region_id] = (y_slice, x_slice)
+    #     region_id_chunk_slices = {}
+    #     chunk_info = self.chunk_info
+    #     y_starts = chunk_info['y_starts']
+    #     x_starts = chunk_info['x_starts']
+    #     for iy, _ in enumerate(y_starts):
+    #         for ix, _ in enumerate(x_starts):
+    #             region_id = f'y{iy}_x{ix}'
+    #             y_slice, x_slice = self.region_id_to_latlon_slices(region_id=region_id)
+    #             region_id_chunk_slices[region_id] = (y_slice, x_slice)
 
-        # For a given region_id, this will check if the data array is empty.
-        empty_region_ids = []
-        valid_region_ids = []
-        for region_id, region_slice in tqdm(region_id_chunk_slices.items()):
-            subds = self.ds.sel(latitude=region_slice[0], longitude=region_slice[1])
-            all_null = bool(subds.CRPS.isnull().all().values)
-            if not all_null:
-                valid_region_ids.append(region_id)
-            else:
-                empty_region_ids.append(region_id)
+    #     # For a given region_id, this will check if the data array is empty.
+    #     empty_region_ids = []
+    #     valid_region_ids = []
+    #     for region_id, region_slice in tqdm(region_id_chunk_slices.items()):
+    #         subds = self.ds.sel(latitude=region_slice[0], longitude=region_slice[1])
+    #         all_null = bool(subds.CRPS.isnull().all().values)
+    #         if not all_null:
+    #             valid_region_ids.append(region_id)
+    #         else:
+    #             empty_region_ids.append(region_id)
 
     def index_to_coords(self, x_idx, y_idx):
         """Convert array indices to EPSG:4326 coordinates"""
@@ -896,7 +898,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         """Post-initialization to set up prefixes and URIs based on environment."""
         if self.prefix is None:
             self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
-        self.init_repo()
 
     def wipe(self):
         """Wipe the icechunk repository."""
@@ -947,7 +948,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
         """Open an icechunk repository and return the session."""
         storage = self.storage
-        repo = icechunk.Repository.open_or_create(storage)
+        repo = icechunk.Repository.open(storage)
         if readonly:
             session = repo.readonly_session(branch=branch)
         else:
@@ -1066,15 +1067,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
     ):
         """Insert region into Icechunk store"""
-        import icechunk
-
-        session = self.repo_and_session(readonly=False, branch=branch)['session']
 
         if self.debug:
             console.log(f'Inserting region: {region_id} into Icechunk store: ')
 
         while True:
             try:
+                session = self.repo_and_session(readonly=False, branch=branch)['session']
                 subset_ds.to_zarr(
                     session.store,
                     region='auto',
@@ -1089,9 +1088,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                     console.log(f'Wrote dataset: {subset_ds} to region: {region_id}')
                 break
 
-            except icechunk.ConflictError:
+            except Exception as exc:
+                delay = random.uniform(3.0, 10.0)
                 if self.debug:
-                    console.log(f'conflict for region_commit_history {region_id}, retrying')
+                    console.log(f'Conflict detected while writing region {region_id}: {exc}')
+                    console.log(f'retrying to write region_id: {region_id} in {delay:.2f}s')
+
+                time.sleep(delay)
                 pass
 
 
@@ -1155,7 +1158,9 @@ def load_config(file_path: Path | None) -> OCRConfig:
     """
 
     if file_path is None:
-        return OCRConfig()
+        config = OCRConfig()
     else:
         dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        return OCRConfig()  # loads from environment variables
+        config = OCRConfig()  # loads from environment variables
+
+    return config
