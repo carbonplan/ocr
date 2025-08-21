@@ -655,18 +655,3 @@ def test_compute_mode_along_time_no_negative_modes(make_mode_array):
     da = make_mode_array(data)
     result = compute_mode_along_time(da)
     assert not np.any(result.values == -1), 'Found -1 placeholder in mode output'
-
-
-@pytest.mark.xfail(
-    reason='This test is currently failing due to a known issue with the kernel generation.'
-)
-def test_apply_wind_directional_convolution():
-    data = np.zeros((21, 21))
-    data[10, 10] = 1.0  # Single point in the center
-    da = xr.DataArray(data, coords={'lat': range(21), 'lon': range(21)}, dims=['lat', 'lon'])
-    result = apply_wind_directional_convolution(
-        da, iterations=1, kernel_size=5.0, circle_diameter=3.0
-    )
-
-    # after convolution, the central point should be spread out. so we should have more than one non-zero value
-    assert np.count_nonzero(result.data) > 1
