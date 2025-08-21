@@ -4,23 +4,6 @@ import numpy as np
 import xarray as xr
 
 
-# Depreciate? - potentially unused
-def generate_angles() -> dict[str, float]:
-    """Generate a dictionary mapping cardinal/ordinal directions to their starting angles in degrees.
-
-    Returns
-    -------
-    dict[str, float]
-        A dictionary mapping cardinal/ordinal directions to their starting angles in degrees.
-    """
-    angles_dict = {}
-    angles = np.arange(22.5, 360, 45).astype('float32')
-    wind_direction_labels = ['NE', 'N', 'NW', 'W', 'SW', 'S', 'SE', 'E']
-    for direction, angle in zip(wind_direction_labels, angles):
-        angles_dict[direction] = angle
-    return angles_dict
-
-
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
     kernel_size: float = 81.0,
@@ -258,30 +241,6 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     )
 
     return result
-
-
-# Depreciate? - potentially unused
-def create_finescale_wind_direction(bp: xr.Dataset, wind_direction: xr.Dataset) -> xr.Dataset:
-    from rasterio.warp import Resampling
-
-    wind_direction = wind_direction.rio.write_crs('EPSG:4326')
-    # bp = bp.rio.write_crs('EPSG:5070')
-    # doing nearest neighbor resampling here introduces strong artifacts along gridcell boundaries.
-    # TODO: consider ways of creating a smooth transition between gridcells, options include:
-    # - instead of using the mode direction, do a weighted average of the different winds and then
-    # interpolate between those to create a smooth surface of weights
-    # - do a smoothing step afterwards (not preferred)
-    # - leave as-is with explanation (not preferred)
-    # - something else?
-    # also: reevaluate preformance for CONUS404 dataset
-    wind_direction_reprojected = wind_direction.rio.reproject_match(
-        bp, resampling=Resampling.nearest
-    )
-    # if negative (likely b/c it's nan) then cast it to -1 for now- TODO: we actually want to raise an error!
-    wind_direction_reprojected = wind_direction_reprojected.where(
-        wind_direction_reprojected >= 0, -1
-    )
-    return wind_direction_reprojected
 
 
 def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
