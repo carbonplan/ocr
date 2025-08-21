@@ -93,7 +93,6 @@ class TestWindDirectionClassification:
         result = classify_wind_directions(wind_dir).values
         np.testing.assert_array_equal(result, expected)
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_nan_handling(self, create_test_data):
         """Test handling of NaN values."""
         angles = [0, np.nan, 90, np.nan, 180]
@@ -210,7 +209,6 @@ class TestComputeModeAlongTime:
 
         np.testing.assert_array_equal(result.values, expected)
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_nan_handling(self, create_test_array):
         """Test handling of NaN values."""
         # Create data with NaN values
@@ -234,11 +232,55 @@ class TestComputeModeAlongTime:
         # Create data with placeholder values
         data = np.zeros((10, 2, 2), dtype=np.float32)
 
-        # Set values with -1 placeholders mixed in
-        data[:, 0, 0] = [NORTH, NORTH, -1, NORTH, NORTH, -1, -1, SOUTH, -1, -1]  # Mode is NORTH
-        data[:, 0, 1] = [-1, -1, -1, -1, -1, EAST, EAST, EAST, -1, -1]  # Mode is EAST
-        data[:, 1, 0] = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]  # All placeholders
-        data[:, 1, 1] = [SOUTH, SOUTH, WEST, WEST, WEST, -1, -1, -1, -1, -1]  # Mode is WEST
+        # Set values with np.nan placeholders mixed in
+        data[:, 0, 0] = [
+            NORTH,
+            NORTH,
+            np.nan,
+            NORTH,
+            NORTH,
+            np.nan,
+            np.nan,
+            SOUTH,
+            np.nan,
+            np.nan,
+        ]  # Mode is NORTH
+        data[:, 0, 1] = [
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            EAST,
+            EAST,
+            EAST,
+            np.nan,
+            np.nan,
+        ]  # Mode is EAST
+        data[:, 1, 0] = [
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ]  # All placeholders
+        data[:, 1, 1] = [
+            SOUTH,
+            SOUTH,
+            WEST,
+            WEST,
+            WEST,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ]  # Mode is WEST
 
         test_array = create_test_array(data)
         result = compute_mode_along_time(test_array)
@@ -246,9 +288,9 @@ class TestComputeModeAlongTime:
         expected = np.array(
             [
                 [NORTH, EAST],
-                [-1, WEST],  # Should be -1 when all values are placeholders
+                [np.nan, WEST],  # Should be np.nan when all values are placeholders
             ],
-            dtype=np.int16,
+            dtype=np.float32,
         )
 
         np.testing.assert_array_equal(result.values, expected)
@@ -344,7 +386,6 @@ class TestComputeModeAlongTime:
         assert result.attrs['custom_attr'] == 'test_value'
         assert 'long_name' in result.attrs  # New attribute added by the function
 
-    @pytest.mark.xfail(reason='NaN handling not yet implemented')
     def test_empty_array(self, create_test_array):
         """Test with an empty array (all NaNs)."""
         data = np.full((5, 2, 2), np.nan, dtype=np.float32)

@@ -169,16 +169,16 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
         # explicitly set the North classification for values >= 337.5
         classification[north_mask] = 0
 
-        # TODO: preserve NaN values instead of replacing them
-        classification = np.where(np.isnan(block), -1, classification)
+        # preserve NaN values instead of replacing them
+        classification = np.where(np.isnan(block), np.nan, classification)
 
-        return classification.astype(np.int16)
+        return classification.astype(np.float32)
 
     result = wind_direction_ds.copy()
 
     if hasattr(wind_direction_ds.data, 'map_blocks'):
         # Apply the function using map_blocks
-        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.int16)
+        result.data = wind_direction_ds.data.map_blocks(classify_block, dtype=np.float32)
     else:
         # Fall back for non-dask arrays
         result.data = classify_block(wind_direction_ds.data)
@@ -191,16 +191,6 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     result.attrs['direction_labels'] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
     return result
-
-
-def compute_mode(arr):
-    """Compute the mode of an array, ignoring placeholder values (-1)."""
-    arr = arr[arr != -1]  # Exclude placeholder values
-    if len(arr) == 0:  # If all values are NaN, return a default or NaN. TODO: remove this
-        # eventually because we want to know about nans
-        return -1
-    values, counts = np.unique(arr, return_counts=True)
-    return values[np.argmax(counts)]
 
 
 def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
@@ -219,19 +209,55 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
         DataArray with dimensions (latitude, longitude) containing the most common wind direction
     """
 
-    result = xr.apply_ufunc(
-        compute_mode,
-        direction_indices_ds,
-        input_core_dims=[['time']],  # Apply along the 'time' dimension
-        output_core_dims=[[]],  # Result is scalar per pixel
-        vectorize=True,
-        dask='parallelized',
-        output_dtypes=[np.int16],
-        dask_gufunc_kwargs={'allow_rechunk': True},
-        keep_attrs=True,
+    # Define the function to compute mode on each block
+    def _compute_mode_block(block):
+        # For each lat/lon point, compute mode along time dimension
+        result = np.zeros(block.shape[1:], dtype=np.float32)
+
+        # Iterate over each lat/lon point
+        # We could vectorize this, but explicit iteration makes the axis handling clearer
+        for i in np.ndindex(block.shape[1:]):
+            # Extract the time series for this lat/lon point
+            time_series = block[:, *i]
+
+            # Remove NaNs and placeholders
+            valid_values = time_series[~np.isnan(time_series)]
+
+            if len(valid_values) == 0:
+                result[i] = np.nan  # Return NaN if no valid values
+            else:
+                # Find the mode
+                values, counts = np.unique(valid_values, return_counts=True)
+                result[i] = values[np.argmax(counts)]
+
+        return result
+
+    if hasattr(direction_indices_ds.data, 'map_blocks'):
+        # Use map_blocks to apply our function
+        # The input array shape is (time, lat, lon)
+        # We want to drop the time dimension, so output will be (lat, lon)
+        result_data = direction_indices_ds.data.map_blocks(
+            _compute_mode_block,
+            dtype=np.float32,
+            drop_axis=0,  # Drop the time dimension (axis 0)
+            chunks=direction_indices_ds.data.chunks[1:],  # Output chunks match lat/lon chunks
+        )
+    else:
+        # Fall back for non-dask arrays
+        result_data = _compute_mode_block(direction_indices_ds.data)
+
+    result = xr.DataArray(
+        result_data,
+        dims=direction_indices_ds.dims[1:],  # Use lat/lon dimensions
+        coords={
+            dim: direction_indices_ds[dim] for dim in direction_indices_ds.dims[1:]
+        },  # Copy coordinates
+        name='modal_wind_direction',
     )
 
-    result = result.rename('modal_wind_direction')
+    # Copy attributes from the original DataArray
+    if hasattr(direction_indices_ds, 'attrs'):
+        result.attrs = direction_indices_ds.attrs.copy()
 
     result.attrs.update(
         {
@@ -243,7 +269,7 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def create_composite_bp_map(bp: xr.Dataset, wind_directions) -> xr.Dataset:
+def create_composite_bp_map(bp: xr.DataArray, wind_directions: xr.DataArray) -> xr.DataArray:
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
     bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
@@ -362,5 +388,7 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
     risk_4326_combined['wind_risk_2047'] = (
         wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
     )
+
+    # clip results that are lower than 0 to 0 within a certain buffer (say -1e15).
 
     return risk_4326_combined.drop_vars(['spatial_ref'])
