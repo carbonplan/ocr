@@ -132,14 +132,12 @@ def apply_wind_directional_convolution(
         coords=da.coords,
     )
     for direction, weights in weights_dict.items():
-        # spread_results[direction] = xr.zeros_like(da)
-        for i in np.arange(
-            iterations
-        ):  # TODO, @orianac, is there a reason we are iterating over (iterations) without using the index. It appears that the output is the same regardless of the number of iterations.
-            spread_results[direction] = (
-                da.dims,
-                cv.filter2D(spread_results[direction].values, -1, weights),
-            )
+        arr = spread_results[direction].values
+        for _ in range(iterations):
+            arr = cv.filter2D(arr, ddepth=-1, kernel=weights)
+        # clip residual tiny negatives
+        arr = np.where(arr < 0, 0.0, arr)
+        spread_results[direction] = (da.dims, arr.astype(np.float32))
     return spread_results
 
 
