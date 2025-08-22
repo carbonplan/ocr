@@ -19,21 +19,23 @@ def create_summary_stat_tmp_tables(
         SELECT geometry,
 
 
-        round(risk_2011, 2) as risk_2011_horizon_1,
-        round((1.0 - POWER((1 - risk_2011), 15)) , 2) as risk_2011_horizon_15,
-        round((1.0 - POWER((1 - risk_2011), 30)) , 2) as risk_2011_horizon_30,
+    -- Single-year risks are stored as percentages (0-100)
+    round(risk_2011, 2) as risk_2011_horizon_1,
+    -- Convert percentage to probability (divide by 100) for multi-year aggregation, then back to percentage (multiply by 100)
+    round((1.0 - POWER((1 - (risk_2011 / 100.0)), 15)) * 100 , 2) as risk_2011_horizon_15,
+    round((1.0 - POWER((1 - (risk_2011 / 100.0)), 30)) * 100 , 2) as risk_2011_horizon_30,
 
-        round(risk_2047, 2) as risk_2047_horizon_1,
-        round((1.0 - POWER((1 - risk_2047), 15)) , 2) as risk_2047_horizon_15,
-        round((1.0 - POWER((1 - risk_2047), 30)) , 2) as risk_2047_horizon_30,
+    round(risk_2047, 2) as risk_2047_horizon_1,
+    round((1.0 - POWER((1 - (risk_2047 / 100.0)), 15)) * 100 , 2) as risk_2047_horizon_15,
+    round((1.0 - POWER((1 - (risk_2047 / 100.0)), 30)) * 100 , 2) as risk_2047_horizon_30,
 
-        round(wind_risk_2011, 2) as wind_risk_2011_horizon_1,
-        round((1.0 - POWER((1 - wind_risk_2011), 15)) , 2) as wind_risk_2011_horizon_15,
-        round((1.0 - POWER((1 - wind_risk_2011), 30)) , 2) as wind_risk_2011_horizon_30,
+    round(wind_risk_2011, 2) as wind_risk_2011_horizon_1,
+    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 15)) * 100 , 2) as wind_risk_2011_horizon_15,
+    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 30)) * 100 , 2) as wind_risk_2011_horizon_30,
 
-        round(wind_risk_2047, 2) as wind_risk_2047_horizon_1,
-        round((1.0 - POWER((1 - wind_risk_2047), 15)) , 2) as wind_risk_2047_horizon_15,
-        round((1.0 - POWER((1 - wind_risk_2047), 30)) , 2) as wind_risk_2047_horizon_30,
+    round(wind_risk_2047, 2) as wind_risk_2047_horizon_1,
+    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 15)) * 100 , 2) as wind_risk_2047_horizon_15,
+    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 30)) * 100 , 2) as wind_risk_2047_horizon_30,
 
 
         FROM read_parquet('{consolidated_buildings_path}')
