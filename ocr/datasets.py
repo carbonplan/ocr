@@ -592,3 +592,53 @@ datasets = [
 
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
+
+
+def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
+    """
+    Load the CONUS 404 dataset.
+
+    Parameters
+    ----------
+    add_spatial_constants : bool, optional
+        If True, adds spatial constant variables (SINALPHA, COSALPHA) to the dataset.
+
+    Returns
+    -------
+    xr.Dataset
+        The CONUS 404 dataset.
+    """
+
+    variables = ['PSFC', 'Q2', 'T2', 'TD2', 'U10', 'V10']
+    dsets = []
+    for variable in variables:
+        dset = (
+            catalog.get_dataset(f'conus404-hourly-{variable}').to_xarray().drop_vars(['lat', 'lon'])
+        )
+        dsets.append(dset)
+    ds = xr.merge(dsets)
+
+    if add_spatial_constants:
+        INPUT_ZARR_STORE_CONFIG = {
+            'url': 's3://hytest/conus404/conus404_hourly.zarr',
+            'storage_options': {
+                'anon': True,
+                'client_kwargs': {'endpoint_url': 'https://usgs.osn.mghpcc.org/'},
+            },
+        }
+
+        variables = ['SINALPHA', 'COSALPHA', 'crs']
+        spatial_constant_ds = xr.open_dataset(
+            INPUT_ZARR_STORE_CONFIG['url'],
+            storage_options=INPUT_ZARR_STORE_CONFIG['storage_options'],
+            engine='zarr',
+            chunks={},
+        )[variables]
+
+        ds = xr.merge([ds, spatial_constant_ds])
+
+    # add lat, lon back in
+    dset = catalog.get_dataset('conus404-hourly-T2').to_xarray()
+    ds = ds.assign_coords(lat=dset['lat'], lon=dset['lon'])
+    ds = ds.set_coords(['crs'])
+    return ds
