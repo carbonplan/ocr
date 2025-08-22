@@ -3,6 +3,7 @@ from enum import Enum
 
 class Environment(str, Enum):
     QA = 'QA'
+    STAGING = 'staging'
     PROD = 'prod'
 
 
