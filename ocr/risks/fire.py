@@ -373,23 +373,12 @@ def calculate_wind_adjusted_risk(
 
     # Add in non-wind-adjusted 2011 and 2047 BP*CRPS score for QA comparison
 
-    climate_run_2011_subset_float_corrected = climate_run_2011_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2011.latitude,
-        longitude=wind_informed_bp_float_corrected_2011.longitude,
-    )
-    climate_run_2047_subset_float_corrected = climate_run_2047_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2047.latitude,
-        longitude=wind_informed_bp_float_corrected_2047.longitude,
-    )
-
     # TODO: improve the variable names for clarity
-    risk_4326_combined = (
-        climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    ).to_dataset(name='risk_2011')
 
-    risk_4326_combined['risk_2047'] = (
-        climate_run_2047_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    )
+    # overwrite risk_2011 and risk_2047 with RPS
+    # FIXME
+    risk_4326_combined = (rps_30_subset['RPS']).to_dataset(name='risk_2011')
+    risk_4326_combined['risk_2047'] = rps_30_subset['RPS']
 
     # Adjust USFS 30m CRPS with wind informed burn probability
     risk_4326_combined['wind_risk_2011'] = (
