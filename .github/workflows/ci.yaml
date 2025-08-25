@@ -44,3 +44,20 @@ jobs:
       - name: Run tests
         run: |
           pixi run tests
+
+      - name: Set Codecov env vars
+        run: |
+          echo "OS=${{ runner.os }}" >> $GITHUB_ENV
+          echo "PYTHON=3.13" >> $GITHUB_ENV
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v5.4.3
+        with:
+          # For public repos the token is not required; uncomment if private:
+          # token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unit
+          env_vars: OS,PYTHON
+          name: codecov-unit
+          fail_ci_if_error: true
+          verbose: true

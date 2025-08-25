@@ -60,3 +60,21 @@ jobs:
       - name: Running Integration Tests
         run: |
           pixi run tests-integration
+
+      - name: Set Codecov env vars
+        if: success() # only attempt upload if tests ran
+        run: |
+          echo "OS=${{ runner.os }}" >> $GITHUB_ENV
+          echo "PYTHON=3.13" >> $GITHUB_ENV
+
+      - name: Upload code coverage to Codecov (integration)
+        uses: codecov/codecov-action@v5.4.3
+        if: success()
+        with:
+          # token: ${{ secrets.CODECOV_TOKEN }}  # uncomment if repository is private
+          files: ./coverage.xml
+          flags: integration
+          env_vars: OS,PYTHON
+          name: codecov-integration
+          fail_ci_if_error: false # don't fail whole job on coverage upload issues for integration
+          verbose: true
