@@ -59,4 +59,4 @@ jobs:
 
       - name: Running Integration Tests
         run: |
-          pixi run pytest -m 'integration'
+          pixi run tests-integration

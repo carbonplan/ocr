@@ -120,10 +120,11 @@
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
-    format         = { cmd = "ruff format" }
-    lint           = { cmd = "pre-commit run --all-files" }
-    run-ruff-check = { cmd = "ruff check" }
-    tests          = { cmd = "pytest -m 'not integration'" }
+    format            = { cmd = "ruff format" }
+    lint              = { cmd = "pre-commit run --all-files" }
+    run-ruff-check    = { cmd = "ruff check" }
+    tests             = { cmd = "pytest -m 'not integration'" }
+    tests-integration = { cmd = "pytest -m 'integration'" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
