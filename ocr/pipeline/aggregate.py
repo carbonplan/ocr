@@ -11,11 +11,13 @@ def aggregated_gpq(config: OCRConfig):
     from ocr.utils import apply_s3_creds, install_load_extensions
 
     install_load_extensions()
-    apply_s3_creds()
 
     input_path = config.vector.region_geoparquet_uri
     output_path = config.vector.building_geoparquet_uri
     path = input_path / '*.parquet'
+
+    if input_path.fs.protocol == 's3' or output_path.fs.protocol == 's3':
+        apply_s3_creds()
 
     if config.debug:
         console.log(f'Aggregating geoparquet regions from: {path}')
