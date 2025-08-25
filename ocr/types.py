@@ -2,9 +2,9 @@ from enum import Enum
 
 
 class Environment(str, Enum):
-    QA = 'QA'
+    QA = 'qa'
     STAGING = 'staging'
-    PROD = 'prod'
+    PRODUCTION = 'production'
 
 
 class Platform(str, Enum):

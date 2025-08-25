@@ -51,7 +51,7 @@ cp ocr-local.env .env
 Key variables to set in `.env`:
 
 - `OCR_STORAGE_ROOT` — S3 path or local path where outputs are written (e.g. `s3://your-bucket/`).
-- `OCR_ENVIRONMENT` — name of the environment (e.g. `QA`,  `STAGING`, `PROD`).
+- `OCR_ENVIRONMENT` — name of the environment (e.g. `QA`, `STAGING`, `PROD`).
 - `OCR_DEBUG` — `1` to enable verbose logging.
 
 ## Verification

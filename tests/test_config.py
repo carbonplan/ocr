@@ -351,29 +351,29 @@ class TestVectorConfig:
 
         assert config.environment == Environment.QA
         assert config.storage_root == temp_dir
-        assert config.prefix == 'intermediate/fire-risk/vector/QA'
-        assert config.output_prefix == 'output/fire-risk/vector/QA'
+        assert config.prefix == 'intermediate/fire-risk/vector/qa'
+        assert config.output_prefix == 'output/fire-risk/vector/qa'
 
     def test_custom_initialization(self, temp_dir):
         """Test VectorConfig initialization with custom values."""
         config = VectorConfig(
-            environment=Environment.PROD,
+            environment=Environment.PRODUCTION,
             storage_root=temp_dir,
             prefix='custom-prefix',
             output_prefix='custom-output',
         )
 
-        assert config.environment == Environment.PROD
+        assert config.environment == Environment.PRODUCTION
         assert config.storage_root == temp_dir
         assert config.prefix == 'custom-prefix'
         assert config.output_prefix == 'custom-output'
 
     def test_model_post_init_prefixes(self, temp_dir):
         """Test model_post_init sets prefixes based on Environment."""
-        config = VectorConfig(storage_root=temp_dir, environment=Environment.PROD)
+        config = VectorConfig(storage_root=temp_dir, environment=Environment.PRODUCTION)
 
-        assert config.prefix == 'intermediate/fire-risk/vector/prod'
-        assert config.output_prefix == 'output/fire-risk/vector/prod'
+        assert config.prefix == 'intermediate/fire-risk/vector/production'
+        assert config.output_prefix == 'output/fire-risk/vector/production'
 
     def test_cached_properties(self, temp_dir):
         """Test cached properties of VectorConfig."""
@@ -381,23 +381,23 @@ class TestVectorConfig:
 
         # Test region_geoparquet_prefix
         assert (
-            config.region_geoparquet_prefix == 'intermediate/fire-risk/vector/QA/geoparquet-regions'
+            config.region_geoparquet_prefix == 'intermediate/fire-risk/vector/qa/geoparquet-regions'
         )
 
         # Test region_geoparquet_uri
-        expected_uri = f'{temp_dir}/intermediate/fire-risk/vector/QA/geoparquet-regions'
+        expected_uri = f'{temp_dir}/intermediate/fire-risk/vector/qa/geoparquet-regions'
         assert str(config.region_geoparquet_uri) == expected_uri
 
         # Test building_geoparquet_uri
         assert (
             str(config.building_geoparquet_uri)
-            == f'{temp_dir}/output/fire-risk/vector/QA/geoparquet/buildings.parquet'
+            == f'{temp_dir}/output/fire-risk/vector/qa/geoparquet/buildings.parquet'
         )
 
         # Test pmtiles_prefix
         assert (
             str(config.buildings_pmtiles_uri)
-            == f'{temp_dir}/output/fire-risk/vector/QA/pmtiles/buildings.pmtiles'
+            == f'{temp_dir}/output/fire-risk/vector/qa/pmtiles/buildings.pmtiles'
         )
 
     def test_summary_stats_uris(self, temp_dir):
@@ -416,7 +416,7 @@ class TestVectorConfig:
         config = VectorConfig(storage_root=temp_dir, debug=True)
 
         # Create directory structure
-        region_dir = Path(temp_dir) / 'intermediate/fire-risk/vector/QA/geoparquet-regions'
+        region_dir = Path(temp_dir) / 'intermediate/fire-risk/vector/qa/geoparquet-regions'
         region_dir.mkdir(parents=True, exist_ok=True)
 
         test_file = region_dir / 'test.parquet'
@@ -434,7 +434,7 @@ class TestVectorConfig:
         config = VectorConfig(storage_root=temp_dir)
 
         # Create the directory structure and some test files
-        region_dir = Path(temp_dir) / 'intermediate/fire-risk/vector/QA/geoparquet-regions'
+        region_dir = Path(temp_dir) / 'intermediate/fire-risk/vector/qa/geoparquet-regions'
         region_dir.mkdir(parents=True, exist_ok=True)
 
         test_file1 = region_dir / 'region1.parquet'
@@ -480,18 +480,18 @@ class TestIcechunkConfig:
 
         assert config.environment == Environment.QA
         assert config.storage_root == temp_dir
-        assert config.prefix == 'output/fire-risk/tensor/QA/template.icechunk'
+        assert config.prefix == 'output/fire-risk/tensor/qa/template.icechunk'
 
     def test_custom_initialization(self, temp_dir):
         """Test IcechunkConfig initialization with custom values."""
 
         config = IcechunkConfig(
-            environment=Environment.PROD,
+            environment=Environment.PRODUCTION,
             storage_root=temp_dir,
             prefix='custom/path/template.icechunk',
         )
 
-        assert config.environment == Environment.PROD
+        assert config.environment == Environment.PRODUCTION
         assert config.storage_root == temp_dir
         assert config.prefix == 'custom/path/template.icechunk'
 
@@ -662,20 +662,20 @@ class TestOCRConfig:
     def test_model_post_init_creates_sub_configs(self, temp_dir):
         """Test that model_post_init creates sub-configs when None."""
 
-        config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
+        config = OCRConfig(storage_root=temp_dir, environment=Environment.PRODUCTION)
 
         assert config.vector.storage_root == temp_dir
-        assert config.vector.environment == Environment.PROD
+        assert config.vector.environment == Environment.PRODUCTION
         assert config.icechunk.storage_root == temp_dir
-        assert config.icechunk.environment == Environment.PROD
+        assert config.icechunk.environment == Environment.PRODUCTION
 
     def test_environment_variable_override(self, temp_dir):
         """Test that environment variables work with OCRConfig."""
-        with patch.dict(os.environ, {'OCR_ENVIRONMENT': 'prod'}):
+        with patch.dict(os.environ, {'OCR_ENVIRONMENT': 'production'}):
             with patch.object(IcechunkConfig, 'init_repo'):
                 config = OCRConfig(storage_root=temp_dir)
 
-                assert config.environment == Environment.PROD
+                assert config.environment == Environment.PRODUCTION
                 assert config.storage_root == temp_dir
 
 
@@ -709,11 +709,11 @@ class TestConfigIntegration:
     def test_branch_consistency_across_configs(self, temp_dir):
         """Test that branch is consistently applied across sub-configurations."""
         with patch.object(IcechunkConfig, 'init_repo'):
-            config = OCRConfig(storage_root=temp_dir, environment=Environment.PROD)
+            config = OCRConfig(storage_root=temp_dir, environment=Environment.PRODUCTION)
 
-            assert config.environment == Environment.PROD
-            assert config.vector.environment == Environment.PROD
-            assert config.icechunk.environment == Environment.PROD
+            assert config.environment == Environment.PRODUCTION
+            assert config.vector.environment == Environment.PRODUCTION
+            assert config.icechunk.environment == Environment.PRODUCTION
 
     @patch.dict(os.environ, {'OCR_COILED_NTASKS': '16', 'OCR_VECTOR_PREFIX': 'custom/vector/path'})
     def test_environment_variables_sub_configs(self, temp_dir):
