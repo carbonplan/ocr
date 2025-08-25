@@ -94,6 +94,10 @@
         "--verbose",
     ]
     console_output_style = "count"
+    markers = [
+        "integration: marks tests that require external resources or complex setups",
+        "unit: marks tests that are fast and isolated from external systems",
+    ]
 
 [tool.uv.sources]
     ocr = { workspace = true }
@@ -109,17 +113,17 @@
 
 [tool.pixi.environments]
     # Map environments to features
-    all-deps      = ["coiled-deploy", "data-mgmt", "dev", "docs"]
-    default       = ["coiled-deploy", "data-mgmt", "dev"]
-    dev           = ["data-mgmt", "dev"]
-    docs          = ["docs"]
+    all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
+    default  = ["coiled-deploy", "data-mgmt", "dev"]
+    dev      = ["data-mgmt", "dev"]
+    docs     = ["docs"]
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
     format         = { cmd = "ruff format" }
     lint           = { cmd = "pre-commit run --all-files" }
     run-ruff-check = { cmd = "ruff check" }
-    tests          = { cmd = "pytest" }
+    tests          = { cmd = "pytest -m 'not integration'" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
