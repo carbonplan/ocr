@@ -112,7 +112,7 @@
     all-deps      = ["coiled-deploy", "data-mgmt", "dev", "docs"]
     default       = ["coiled-deploy", "data-mgmt", "dev"]
     dev           = ["data-mgmt", "dev"]
-    docs          = ["docs"]
+    docs          = ["docs", "coiled-deploy"]
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
@@ -154,7 +154,6 @@
     mkdocstrings        = ">=0.30.0,<0.31"
     mkdocstrings-python = ">=1.17.0,<2"
     ruff                = ">=0.12.9,<0.13"
-coiled = ">=1.118.3,<2"
 
 [tool.pixi.feature.docs.pypi-dependencies]
     markdown-exec = ">=1.11.0, <2"
@@ -195,7 +194,6 @@ coiled = ">=1.118.3,<2"
     universal-pathlib     = ">=0.2.6,<0.3"
     xarray                = ">=2025.8.0,<2026"
     zarr                  = ">=3.1.1,<4"
-coiled = ">=1.118.3,<2"
 
 [tool.pixi.tasks]
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
