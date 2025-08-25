@@ -57,19 +57,6 @@ jobs:
         run: |
           pixi list -e dev
 
-      - name: process-region
+      - name: Running Integration Tests
         run: |
-          pixi run ocr process-region y2_x4 --platform local --env-file ocr-local.env --init-repo
-      - name: aggregate geoparquet regions
-        run: |
-          pixi run ocr aggregate --platform local --env-file ocr-local.env
-      - name: aggregate region risk summary stats
-        run: |
-          pixi run ocr aggregate-region-risk-summary-stats --platform local --env-file ocr-local.env
-      - name: create regional pmtiles
-        run: |
-          pixi run ocr create-regional-pmtiles --platform local --env-file ocr-local.env
-
-      - name: create pmtiles
-        run: |
-          pixi run ocr create-pmtiles --platform local --env-file ocr-local.env
+          pixi run pytest -m 'integration'
