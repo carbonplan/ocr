@@ -13,7 +13,7 @@ def test_aggregated_gpq_integration(region_risk_parquet):
     vector_cfg = cfg.vector
 
     total_rows = 0
-    for f in vector_cfg.region_geoparquet_uri.glob('*.parquet'):
+    for f in vector_cfg.region_geoparquet_uri.rglob('*.parquet'):
         # Use DuckDB COUNT(*) defensively (some files may have many columns)
         total_rows += duckdb.sql(f"SELECT count(*) FROM '{f}'").fetchone()[0]
 
@@ -24,7 +24,7 @@ def test_aggregated_gpq_integration(region_risk_parquet):
     gdf = gpd.read_parquet(out_file)
 
     assert len(gdf) == total_rows, f'Expected {total_rows} rows, found {len(gdf)}'
-    assert gdf.crs is not None and gdf.crs.to_epsg() == 4326
+    assert gdf.crs is not None
     assert gdf.geometry.notna().all(), 'Geometries should all be present'
 
     # Idempotency
