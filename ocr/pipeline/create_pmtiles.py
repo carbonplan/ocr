@@ -32,9 +32,9 @@ def create_pmtiles(config: OCRConfig):
             SELECT
                 'Feature' AS type,
                 json_object(
-                    'USFS_RPS', USFS_RPS,
-                    'wind_risk_2011', wind_risk_2011,
-                    'wind_risk_2047', wind_risk_2047
+                    'USFS_RPS', AST(USFS_RPS AS DECIMAL(10,2)),
+                    'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
+                    'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
                      ) AS properties,
                 json(ST_AsGeoJson(geometry)) AS geometry
             FROM read_parquet('{input_path}')
