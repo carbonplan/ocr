@@ -32,7 +32,7 @@ def create_pmtiles(config: OCRConfig):
             SELECT
                 'Feature' AS type,
                 json_object(
-                    'USFS_RPS', AST(USFS_RPS AS DECIMAL(10,2)),
+                    'USFS_RPS', CAST(USFS_RPS AS DECIMAL(10,2)),
                     'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
                     'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
                      ) AS properties,
