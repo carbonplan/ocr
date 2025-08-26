@@ -73,7 +73,7 @@ def custom_histogram_query(
     then add them on to a histogram that excludes values of 0.
     """
 
-    # First temp table: zero counts by county
+    # First temp table: zero counts by county.
     zero_counts_query = f"""
     CREATE TEMP TABLE temp_zero_counts_{geo_table_name} AS
     SELECT
