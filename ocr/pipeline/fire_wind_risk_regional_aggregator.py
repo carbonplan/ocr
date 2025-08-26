@@ -67,13 +67,11 @@ def custom_histogram_query(
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
     summary_stats_path: UPath,
-    hist_bins: list[int] | None = None,
+    hist_bins: list[int] | None = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
     then add them on to a histogram that excludes values of 0.
     """
-
-    hist_bins = hist_bins or [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
     # First temp table: zero counts by county
     zero_counts_query = f"""
