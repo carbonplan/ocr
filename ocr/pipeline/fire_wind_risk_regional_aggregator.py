@@ -205,7 +205,7 @@ def compute_regional_fire_wind_risk_statistics(
     con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
-    hist_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    hist_bins = [5, 10, 15, 20, 25, 100]
 
     if config.debug:
         console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
