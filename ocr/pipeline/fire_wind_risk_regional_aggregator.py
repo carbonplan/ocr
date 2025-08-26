@@ -20,14 +20,11 @@ def create_summary_stat_tmp_tables(
 
 
     -- Single-year risks are stored as percentages (0-100)
-    round(risk_2011, 2) as risk_2011_horizon_1,
+    round(USFS_RPS, 2) as USFS_RPS_horizon_1,
     -- Convert percentage to probability (divide by 100) for multi-year aggregation, then back to percentage (multiply by 100)
-    round((1.0 - POWER((1 - (risk_2011 / 100.0)), 15)) * 100 , 2) as risk_2011_horizon_15,
-    round((1.0 - POWER((1 - (risk_2011 / 100.0)), 30)) * 100 , 2) as risk_2011_horizon_30,
+    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 15)) * 100 , 2) as USFS_RPS_horizon_15,
+    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 30)) * 100 , 2) as USFS_RPS_horizon_30,
 
-    round(risk_2047, 2) as risk_2047_horizon_1,
-    round((1.0 - POWER((1 - (risk_2047 / 100.0)), 15)) * 100 , 2) as risk_2047_horizon_15,
-    round((1.0 - POWER((1 - (risk_2047 / 100.0)), 30)) * 100 , 2) as risk_2047_horizon_30,
 
     round(wind_risk_2011, 2) as wind_risk_2011_horizon_1,
     round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 15)) * 100 , 2) as wind_risk_2011_horizon_15,
@@ -80,12 +77,9 @@ def custom_histogram_query(
     CREATE TEMP TABLE temp_zero_counts_{geo_table_name} AS
     SELECT
         b.NAME as NAME,
-        count(CASE WHEN a.risk_2011_horizon_1 = 0 THEN 1 END) as zero_count_risk_2011_horizon_1,
-        count(CASE WHEN a.risk_2011_horizon_15 = 0 THEN 1 END) as zero_count_risk_2011_horizon_15,
-        count(CASE WHEN a.risk_2011_horizon_30 = 0 THEN 1 END) as zero_count_risk_2011_horizon_30,
-        count(CASE WHEN a.risk_2047_horizon_1 = 0 THEN 1 END) as zero_count_risk_2047_horizon_1,
-        count(CASE WHEN a.risk_2047_horizon_15 = 0 THEN 1 END) as zero_count_risk_2047_horizon_15,
-        count(CASE WHEN a.risk_2047_horizon_30 = 0 THEN 1 END) as zero_count_risk_2047_horizon_30,
+        count(CASE WHEN a.USFS_RPS_horizon_1 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_1,
+        count(CASE WHEN a.USFS_RPS_horizon_15 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_15,
+        count(CASE WHEN a.USFS_RPS_horizon_30 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_30,
         count(CASE WHEN a.wind_risk_2011_horizon_1 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_1,
         count(CASE WHEN a.wind_risk_2011_horizon_15 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_15,
         count(CASE WHEN a.wind_risk_2011_horizon_30 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_30,
@@ -104,13 +98,11 @@ def custom_histogram_query(
     CREATE TEMP TABLE temp_nonzero_histograms_{geo_table_name} AS
     SELECT
         b.NAME as NAME,
-        count(a.risk_2011_horizon_1) as building_count,
-        round(avg(a.risk_2011_horizon_1), 2) as avg_risk_2011_horizon_1,
-        round(avg(a.risk_2011_horizon_15), 2) as avg_risk_2011_horizon_15,
-        round(avg(a.risk_2011_horizon_30), 2) as avg_risk_2011_horizon_30,
-        round(avg(a.risk_2047_horizon_1), 2) as avg_risk_2047_horizon_1,
-        round(avg(a.risk_2047_horizon_15), 2) as avg_risk_2047_horizon_15,
-        round(avg(a.risk_2047_horizon_30), 2) as avg_risk_2047_horizon_30,
+        count(a.USFS_RPS_horizon_1) as building_count,
+        round(avg(a.USFS_RPS_horizon_1), 2) as avg_USFS_RPS_horizon_1,
+        round(avg(a.USFS_RPS_horizon_15), 2) as avg_USFS_RPS_horizon_15,
+        round(avg(a.USFS_RPS_horizon_30), 2) as avg_USFS_RPS_horizon_30,
+
         round(avg(a.wind_risk_2011_horizon_1), 2) as avg_wind_risk_2011_horizon_1,
         round(avg(a.wind_risk_2011_horizon_15), 2) as avg_wind_risk_2011_horizon_15,
         round(avg(a.wind_risk_2011_horizon_30), 2) as avg_wind_risk_2011_horizon_30,
@@ -118,13 +110,10 @@ def custom_histogram_query(
         round(avg(a.wind_risk_2047_horizon_15), 2) as avg_wind_risk_2047_horizon_15,
         round(avg(a.wind_risk_2047_horizon_30), 2) as avg_wind_risk_2047_horizon_30,
 
-        map_values(histogram(CASE WHEN a.risk_2011_horizon_1 <> 0 AND a.risk_2011_horizon_1 <= 100 THEN a.risk_2011_horizon_1 END, {hist_bins})) as nonzero_hist_risk_2011_horizon_1,
-        map_values(histogram(CASE WHEN a.risk_2011_horizon_15 <> 0 AND a.risk_2011_horizon_15 <= 100 THEN a.risk_2011_horizon_15 END, {hist_bins})) as nonzero_hist_risk_2011_horizon_15,
-        map_values(histogram(CASE WHEN a.risk_2011_horizon_30 <> 0 AND a.risk_2011_horizon_30 <= 100 THEN a.risk_2011_horizon_30 END, {hist_bins})) as nonzero_hist_risk_2011_horizon_30,
+        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_1 <> 0 AND a.USFS_RPS_horizon_1 <= 100 THEN a.USFS_RPS_horizon_1 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_1,
+        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_15 <> 0 AND a.USFS_RPS_horizon_15 <= 100 THEN a.USFS_RPS_horizon_15 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_15,
+        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_30 <> 0 AND a.USFS_RPS_horizon_30 <= 100 THEN a.USFS_RPS_horizon_30 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_30,
 
-        map_values(histogram(CASE WHEN a.risk_2047_horizon_1 <> 0 AND a.risk_2047_horizon_1 <= 100 THEN a.risk_2047_horizon_1 END, {hist_bins})) as nonzero_hist_risk_2047_horizon_1,
-        map_values(histogram(CASE WHEN a.risk_2047_horizon_15 <> 0 AND a.risk_2047_horizon_15 <= 100 THEN a.risk_2047_horizon_15 END, {hist_bins})) as nonzero_hist_risk_2047_horizon_15,
-        map_values(histogram(CASE WHEN a.risk_2047_horizon_30 <> 0 AND a.risk_2047_horizon_30 <= 100 THEN a.risk_2047_horizon_30 END, {hist_bins})) as nonzero_hist_risk_2047_horizon_30,
 
         map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_1 <> 0 AND a.wind_risk_2011_horizon_1 <= 100 THEN a.wind_risk_2011_horizon_1 END, {hist_bins})) as nonzero_hist_wind_risk_2011_horizon_1,
         map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_15 <> 0 AND a.wind_risk_2011_horizon_15 <= 100 THEN a.wind_risk_2011_horizon_15 END, {hist_bins})) as nonzero_hist_wind_risk_2011_horizon_15,
@@ -153,24 +142,21 @@ def custom_histogram_query(
     SELECT
         h.NAME,
         h.building_count,
-        h.avg_risk_2011_horizon_1,
-        h.avg_risk_2011_horizon_15,
-        h.avg_risk_2011_horizon_30,
-        h.avg_risk_2047_horizon_1,
-        h.avg_risk_2047_horizon_15,
-        h.avg_risk_2047_horizon_30,
+        h.avg_USFS_RPS_horizon_1,
+        h.avg_USFS_RPS_horizon_15,
+        h.avg_USFS_RPS_horizon_30,
+
         h.avg_wind_risk_2011_horizon_1,
         h.avg_wind_risk_2011_horizon_15,
         h.avg_wind_risk_2011_horizon_30,
         h.avg_wind_risk_2047_horizon_1,
         h.avg_wind_risk_2047_horizon_15,
         h.avg_wind_risk_2047_horizon_30,
-        list_concat([z.zero_count_risk_2011_horizon_1], h.nonzero_hist_risk_2011_horizon_1) as risk_2011_horizon_1,
-        list_concat([z.zero_count_risk_2011_horizon_15], h.nonzero_hist_risk_2011_horizon_15) as risk_2011_horizon_15,
-        list_concat([z.zero_count_risk_2011_horizon_30], h.nonzero_hist_risk_2011_horizon_30) as risk_2011_horizon_30,
-        list_concat([z.zero_count_risk_2047_horizon_1], h.nonzero_hist_risk_2047_horizon_1) as risk_2047_horizon_1,
-        list_concat([z.zero_count_risk_2047_horizon_15], h.nonzero_hist_risk_2047_horizon_15) as risk_2047_horizon_15,
-        list_concat([z.zero_count_risk_2047_horizon_30], h.nonzero_hist_risk_2047_horizon_30) as risk_2047_horizon_30,
+
+        list_concat([z.zero_count_USFS_RPS_horizon_1], h.nonzero_hist_USFS_RPS_horizon_1) as USFS_RPS_horizon_1,
+        list_concat([z.zero_count_USFS_RPS_horizon_15], h.nonzero_hist_USFS_RPS_horizon_15) as USFS_RPS_horizon_15,
+        list_concat([z.zero_count_USFS_RPS_horizon_30], h.nonzero_hist_USFS_RPS_horizon_30) as USFS_RPS_horizon_30,
+
         list_concat([z.zero_count_wind_risk_2011_horizon_1], h.nonzero_hist_wind_risk_2011_horizon_1) as wind_risk_2011_horizon_1,
         list_concat([z.zero_count_wind_risk_2011_horizon_15], h.nonzero_hist_wind_risk_2011_horizon_15) as wind_risk_2011_horizon_15,
         list_concat([z.zero_count_wind_risk_2011_horizon_30], h.nonzero_hist_wind_risk_2011_horizon_30) as wind_risk_2011_horizon_30,
