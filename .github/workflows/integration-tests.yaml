@@ -59,7 +59,7 @@ jobs:
 
       - name: Running Integration Tests
         run: |
-          pixi run tests-integration
+          pixi run tests-integration -s
 
       - name: Set Codecov env vars
         if: success() # only attempt upload if tests ran
