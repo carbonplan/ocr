@@ -64,15 +64,13 @@ def custom_histogram_query(
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
     summary_stats_path: UPath,
-    hist_bins: list[int] | None = None,
+    hist_bins: list[int] | None = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
 ):
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
     then add them on to a histogram that excludes values of 0.
     """
 
-    hist_bins = hist_bins or [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-    # First temp table: zero counts by county
+    # First temp table: zero counts by county.
     zero_counts_query = f"""
     CREATE TEMP TABLE temp_zero_counts_{geo_table_name} AS
     SELECT
@@ -191,7 +189,7 @@ def compute_regional_fire_wind_risk_statistics(
     con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
-    hist_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    hist_bins = [5, 10, 15, 20, 25, 100]
 
     if config.debug:
         console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
