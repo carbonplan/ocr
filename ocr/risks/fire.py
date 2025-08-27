@@ -380,39 +380,16 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         rps_30_subset=rps_30_subset,
     )
 
-    # Add in non-wind-adjusted 2011 and 2047 BP*CRPS score for QA comparison
+    fire_risk = (rps_30_subset['RPS']).to_dataset(name='USFS_RPS')
 
-    climate_run_2011_subset_float_corrected = climate_run_2011_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2011.latitude,
-        longitude=wind_informed_bp_float_corrected_2011.longitude,
-    )
-    climate_run_2047_subset_float_corrected = climate_run_2047_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2047.latitude,
-        longitude=wind_informed_bp_float_corrected_2047.longitude,
-    )
-
-    # TODO: improve the variable names for clarity
-    risk_4326_combined = (
-        climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    ).to_dataset(name='risk_2011')
-
-    risk_4326_combined['risk_2047'] = (
-        climate_run_2047_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    )
-
-    # Adjust USFS 30m CRPS with wind informed burn probability
-    risk_4326_combined['wind_risk_2011'] = (
-        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
-    )
-    risk_4326_combined['wind_risk_2047'] = (
-        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
-    )
+    fire_risk['wind_risk_2011'] = wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
 
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
-    for var in risk_4326_combined.data_vars:
-        risk_4326_combined[var].attrs['units'] = 'dimensionless'
-        risk_4326_combined[var].attrs['long_name'] = f'{var} (wind-adjusted)'
-        risk_4326_combined[var].attrs['description'] = f'{var} adjusted for wind effects'
+    for var in fire_risk.data_vars:
+        fire_risk[var].attrs['units'] = 'dimensionless'
+        fire_risk[var].attrs['long_name'] = f'{var} (wind-adjusted)'
+        fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
-    return risk_4326_combined.drop_vars(['spatial_ref'])
+    return fire_risk.drop_vars(['spatial_ref'])
