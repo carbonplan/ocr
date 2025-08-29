@@ -10,7 +10,7 @@ def generate_weights(
     circle_diameter: float = 35.0,
 ) -> np.ndarray:
     """Generate a 2D array of weights for a circular kernel."""
-    if method == 'skewed':
+    if method == 'circular_focal_mean':
         x, y = np.meshgrid(
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
@@ -19,7 +19,7 @@ def generate_weights(
         inside = distances <= circle_diameter // 2 + 1
         weights = inside / inside.sum()
 
-    elif method == 'circular_focal_mean':
+    elif method == 'skewed':
         x, y = np.meshgrid(
             np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
             np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
