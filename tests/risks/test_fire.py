@@ -454,6 +454,12 @@ def test_generate_weights_skewed():
     assert len(unique_values) == 2
     assert 0 in unique_values
 
+    # Skewed kernel should be asymmetric due to roll/distortion
+    center_y, center_x = weights.shape[0] // 2, weights.shape[1] // 2
+    sub = weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10]
+    # At least one directional flip should differ
+    assert not np.allclose(sub, np.flipud(sub)) or not np.allclose(sub, np.fliplr(sub))
+
 
 def test_generate_weights_circular_focal_mean():
     """Test generate_weights with 'circular_focal_mean' method."""
@@ -470,13 +476,13 @@ def test_generate_weights_circular_focal_mean():
     assert len(unique_values) == 2
     assert 0 in unique_values
 
-    # Check that weights are rolled (should be asymmetric)
+    # Check that weights are radially symmetric (no directional roll applied)
     center_y, center_x = weights.shape[0] // 2, weights.shape[1] // 2
-    # Check if the roll was applied by verifying asymmetry
-    assert not np.allclose(
-        weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10],
-        np.flip(weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10]),
-    )
+    sub = weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10]
+    # Symmetry checks (horizontal/vertical & both axis flips)
+    assert np.allclose(sub, np.flipud(sub))
+    assert np.allclose(sub, np.fliplr(sub))
+    assert np.allclose(sub, np.flip(sub))
 
 
 def test_generate_weights_odd_kernel_size():
