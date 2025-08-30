@@ -79,7 +79,6 @@ jobs:
 
           pixi run ocr run \
             $REGION_ARGS \
-            --summary-stats \
             --env-file ocr-coiled-s3.env \
             $WIPE_ARG \
             --platform coiled

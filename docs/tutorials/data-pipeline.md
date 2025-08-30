@@ -150,7 +150,6 @@ The main command that orchestrates the complete processing pipeline.
 - `--all-region-ids` - Process all available regions
 - `--platform` - Choose `local` or `coiled` execution
 - `--risk-type` - Calculate `fire` or `wind` risk (default: fire)
-- `--summary-stats` - Include regional statistical summaries
 
 **Examples:**
 
@@ -159,7 +158,7 @@ The main command that orchestrates the complete processing pipeline.
 ocr run --region-id y10_x2 --platform local
 
 # Production processing with statistics
-ocr run --all-region-ids --platform coiled --summary-stats --env-file prod.env
+ocr run --all-region-ids --platform coiled --env-file prod.env
 
 # Multi-region wind risk analysis
 ocr run --region-id y10_x2 --region-id y11_x3 --risk-type wind --platform coiled
