@@ -839,7 +839,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def aggregated_region_analysis_prefix(self) -> str:
-        return f'{self.output_prefix}/region_analysis'
+        return f'{self.output_prefix}/region-analysis'
 
     @functools.cached_property
     def aggregated_region_analysis_uri(self) -> UPath:
@@ -902,7 +902,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
             )
         region_path = UPath(self.region_geoparquet_uri)
-        self.upath_delete(self, region_path)
+        self.upath_delete(region_path)
 
 
 class IcechunkConfig(pydantic_settings.BaseSettings):
