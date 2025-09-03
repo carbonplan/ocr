@@ -34,8 +34,11 @@ ocr run --region-id y10_x2 --platform local --risk-type fire
 # Process multiple regions on Coiled cloud infrastructure
 ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled
 
-# Process all available regions with summary statistics
-ocr run --all-region-ids --platform coiled --summary-stats
+# Process and write regional geospatial files
+ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --write-region-files
+
+# Process all available regions
+ocr run --all-region-ids --platform coiled
 ```
 
 ## Architecture
@@ -133,7 +136,6 @@ The repository includes automated workflows for:
 ocr run
   --all-region-ids
   --platform local
-  --summary-stats
   --env-file production.env
 ```
 

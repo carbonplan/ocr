@@ -63,11 +63,11 @@ def run(
     risk_type: RiskType = typer.Option(
         RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
-    summary_stats: bool = typer.Option(
+    write_region_files: bool = typer.Option(
         False,
-        '-s',
-        '--summary-stats',
-        help='Adds in spatial summary aggregations.',
+        '-w',
+        '--write-region-files',
+        help='Writes region aggregated geospatial analysis files (geoparquet, geojson, csv etc.)',
         show_default=True,
     ),
     platform: Platform = typer.Option(
@@ -108,8 +108,8 @@ def run(
             parts += ['--all-region-ids']
         parts += ['--risk-type', risk_type.value]
         parts += ['--platform', platform.value]
-        if summary_stats:
-            parts += ['--summary-stats']
+        if write_region_files:
+            parts += ['--write-region-files']
         if wipe:
             parts += ['--wipe']
 
@@ -204,7 +204,7 @@ def run(
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
 
-        if summary_stats:
+        if write_region_files:
             batch_manager_write_aggregated_region_analysis_files_01 = _get_manager(
                 Platform.COILED, config.debug
             )
@@ -218,27 +218,27 @@ def run(
                 },
             )
 
-            batch_manager_county_aggregation_01 = _get_manager(Platform.COILED, config.debug)
-            batch_manager_county_aggregation_01.submit_job(
-                command='ocr aggregate-region-risk-summary-stats',
-                name=f'create-aggregated-region-summary-stats-{config.environment.value}',
-                kwargs={
-                    **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
-                },
-            )
-            batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
+        batch_manager_county_aggregation_01 = _get_manager(Platform.COILED, config.debug)
+        batch_manager_county_aggregation_01.submit_job(
+            command='ocr aggregate-region-risk-summary-stats',
+            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
+            kwargs={
+                **_coiled_kwargs(config, env_file),
+                'vm_type': 'm8g.2xlarge',
+            },
+        )
+        batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
 
-            # create summary stats PMTiles layer
-            batch_manager_county_tiles_02 = _get_manager(Platform.COILED, config.debug)
-            batch_manager_county_tiles_02.submit_job(
-                command='ocr create-regional-pmtiles',
-                name=f'create-aggregated-region-pmtiles-{config.environment.value}',
-                kwargs={
-                    **_coiled_kwargs(config, env_file),
-                    'vm_type': 'c8g.2xlarge',
-                },
-            )
+        # create summary stats PMTiles layer
+        batch_manager_county_tiles_02 = _get_manager(Platform.COILED, config.debug)
+        batch_manager_county_tiles_02.submit_job(
+            command='ocr create-regional-pmtiles',
+            name=f'create-aggregated-region-pmtiles-{config.environment.value}',
+            kwargs={
+                **_coiled_kwargs(config, env_file),
+                'vm_type': 'c8g.2xlarge',
+            },
+        )
 
         # ------------- 03  Tiles ---------------
 
@@ -278,28 +278,27 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if summary_stats:
-            manager = _get_manager(Platform.LOCAL, config.debug)
-            # Aggregate regional fire and wind risk statistics
-            manager.submit_job(
-                command='ocr aggregate-region-risk-summary-stats',
-                name=f'create-aggregated-region-summary-stats-{config.environment.value}',
-                kwargs={
-                    **_local_kwargs(),
-                },
-            )
-            manager.wait_for_completion(exit_on_failure=True)
+        manager = _get_manager(Platform.LOCAL, config.debug)
+        # Aggregate regional fire and wind risk statistics
+        manager.submit_job(
+            command='ocr aggregate-region-risk-summary-stats',
+            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
+            kwargs={
+                **_local_kwargs(),
+            },
+        )
+        manager.wait_for_completion(exit_on_failure=True)
 
-            # Create summary stats PMTiles layer
-            manager = _get_manager(Platform.LOCAL, config.debug)
-            manager.submit_job(
-                command='ocr create-regional-pmtiles',
-                name=f'create-aggregated-region-pmtiles-{config.environment.value}',
-                kwargs={
-                    **_local_kwargs(),
-                },
-            )
-            manager.wait_for_completion(exit_on_failure=True)
+        # Create summary stats PMTiles layer
+        manager = _get_manager(Platform.LOCAL, config.debug)
+        manager.submit_job(
+            command='ocr create-regional-pmtiles',
+            name=f'create-aggregated-region-pmtiles-{config.environment.value}',
+            kwargs={
+                **_local_kwargs(),
+            },
+        )
+        manager.wait_for_completion(exit_on_failure=True)
 
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
