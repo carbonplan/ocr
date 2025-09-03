@@ -511,14 +511,6 @@ datasets = [
         data_format='geoparquet',
     ),
     Dataset(
-        name='era5-fire-weather-days',
-        description='ERA5 Fire Weather Days',
-        bucket='carbonplan-risks',
-        prefix='era5/fire_weather_days_v2.zarr',
-        data_format='zarr',
-        version='v2',
-    ),
-    Dataset(
         name='USFS-wildfire-risk-communities',
         description='Wildfire Risk to Communities - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
