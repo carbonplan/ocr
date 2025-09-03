@@ -112,7 +112,7 @@
     all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
     default  = ["coiled-deploy", "data-mgmt", "dev"]
     dev      = ["data-mgmt", "dev"]
-    docs     = ["docs"]
+    docs     = ["coiled-deploy", "docs"]
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
