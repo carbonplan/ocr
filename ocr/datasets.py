@@ -511,14 +511,6 @@ datasets = [
         data_format='geoparquet',
     ),
     Dataset(
-        name='era5-fire-weather-days',
-        description='ERA5 Fire Weather Days',
-        bucket='carbonplan-risks',
-        prefix='era5/fire_weather_days_v2.zarr',
-        data_format='zarr',
-        version='v2',
-    ),
-    Dataset(
         name='USFS-wildfire-risk-communities',
         description='Wildfire Risk to Communities - RDS-2020-0016-2',
         bucket='carbonplan-ocr',
@@ -575,6 +567,20 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) on native CONUS404 grid',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35-reprojected',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35-reprojected.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
         name='us-census-tracts',
         description='US Census Tracts',
         bucket='carbonplan-ocr',
@@ -592,3 +598,53 @@ datasets = [
 
 
 catalog = Catalog(datasets=sorted(datasets, key=lambda x: x.name))
+
+
+def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
+    """
+    Load the CONUS 404 dataset.
+
+    Parameters
+    ----------
+    add_spatial_constants : bool, optional
+        If True, adds spatial constant variables (SINALPHA, COSALPHA) to the dataset.
+
+    Returns
+    -------
+    xr.Dataset
+        The CONUS 404 dataset.
+    """
+
+    variables = ['PSFC', 'Q2', 'T2', 'TD2', 'U10', 'V10']
+    dsets = []
+    for variable in variables:
+        dset = (
+            catalog.get_dataset(f'conus404-hourly-{variable}').to_xarray().drop_vars(['lat', 'lon'])
+        )
+        dsets.append(dset)
+    ds = xr.merge(dsets)
+
+    if add_spatial_constants:
+        INPUT_ZARR_STORE_CONFIG = {
+            'url': 's3://hytest/conus404/conus404_hourly.zarr',
+            'storage_options': {
+                'anon': True,
+                'client_kwargs': {'endpoint_url': 'https://usgs.osn.mghpcc.org/'},
+            },
+        }
+
+        variables = ['SINALPHA', 'COSALPHA', 'crs']
+        spatial_constant_ds = xr.open_dataset(
+            INPUT_ZARR_STORE_CONFIG['url'],
+            storage_options=INPUT_ZARR_STORE_CONFIG['storage_options'],
+            engine='zarr',
+            chunks={},
+        )[variables]
+
+        ds = xr.merge([ds, spatial_constant_ds])
+
+    # add lat, lon back in
+    dset = catalog.get_dataset('conus404-hourly-T2').to_xarray()
+    ds = ds.assign_coords(lat=dset['lat'], lon=dset['lon'])
+    ds = ds.set_coords(['crs'])
+    return ds
