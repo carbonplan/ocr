@@ -356,7 +356,7 @@ def calculate_wind_adjusted_risk(
     direction_modes_sfc = (
         catalog.get_dataset('conus404-fire-weather-wind-mode-hurs15-wind35-reprojected')
         .to_xarray()
-        .wind_direction_histogram.sel(latitude=y_slice, longitude=x_slice)
+        .wind_direction_mode.sel(latitude=y_slice, longitude=x_slice)
         .load()
     )
 
