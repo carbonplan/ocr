@@ -110,7 +110,11 @@ def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
     """Rotate grid-relative 10 m winds (U10,V10) to earth-relative components.
 
     Uses SINALPHA / COSALPHA convention from WRF (same as notebook).
+
     """
+    # rotate the grid-relative winds to earth-relative winds: https://forum.mmm.ucar.edu/threads/rotating-wrf-u-and-v-winds-before-and-after-reprojection.11788/
+    # earth_u = u*cosa(ix,iy)-v*sina(ix,iy)
+    # earth_v = v*cosa(ix,iy)+u*sina(ix,iy)
     with xr.set_options(keep_attrs=True):
         earth_u = ds.U10 * ds.COSALPHA - ds.V10 * ds.SINALPHA
         earth_v = ds.V10 * ds.COSALPHA + ds.U10 * ds.SINALPHA
