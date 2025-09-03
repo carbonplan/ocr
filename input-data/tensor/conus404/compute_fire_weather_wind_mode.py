@@ -65,7 +65,6 @@ def setup_cluster(
     max_workers: int = 50,
     worker_vm_types: str = 'm8g.xlarge',
     scheduler_vm_types: str = 'm8g.large',
-    allow_fallback: bool = True,
 ) -> coiled.Cluster | None:
     """Create and return a Coiled cluster (or None if min_workers == 0).
 
@@ -83,7 +82,6 @@ def setup_cluster(
         'tags': {'Project': 'OCR'},
         'worker_vm_types': worker_vm_types,
         'scheduler_vm_types': scheduler_vm_types,
-        'allow_fallback': allow_fallback,
     }
     console.log(f'Creating Coiled cluster with args: {args}')
     cluster = coiled.Cluster(**args)
@@ -155,7 +153,7 @@ def build_fire_weather_mask(
 def compute_modal_wind_direction(
     direction: xr.DataArray,
     fire_weather_mask: xr.DataArray,
-) -> xr.DataArray:
+) -> xr.Dataset:
     """Compute modal wind direction (0-7) for hours satisfying fire weather.
 
     Direction codes follow: 0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW
@@ -170,7 +168,7 @@ def compute_modal_wind_direction(
     # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
     any_fire_weather = fraction.sum(dim='wind_direction') > 0
 
-    mode = fraction.argmax(dim='wind_direction').where(any_fire_weather)  # type: ignore[attr-defined]
+    mode = fraction.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
     # Optimize graph early
     mode = optimize(mode)[0]
     mode.name = 'wind_direction_mode'
@@ -182,23 +180,23 @@ def compute_modal_wind_direction(
             'fire_weather_definition': 'RH < hurs_threshold (%), gust_like_wind > wind_threshold (mph)',
         }
     )
-    return mode
+    return mode.to_dataset()
 
 
 def save_zarr(data: xr.DataArray | xr.Dataset, path: str, overwrite: bool = True) -> None:
     mode = 'w' if overwrite else 'w-'
     console.log(f'Writing Zarr to {path} (mode={mode})')
-    data.to_zarr(path, zarr_format=2, consolidated=True, mode=mode)
+    data.to_zarr(path, zarr_format=3, mode=mode)
 
 
 def reproject_mode(
-    mode: xr.DataArray,
+    mode: xr.Dataset,
     src_crs_wkt: str,
     target_dataset_name: str,
     *,
     chunk_lat: int = 6000,
     chunk_lon: int = 4500,
-) -> xr.DataArray:
+) -> xr.Dataset:
     """Reproject the modal wind direction to the geobox of a target dataset."""
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
     tgt = assign_crs(tgt, crs='EPSG:4326')
@@ -229,7 +227,7 @@ def main(
         1.4, help='Multiplier applied to sustained wind speed to approximate gusts'
     ),
     output_base: str = typer.Option(
-        's3://carbonplan-ocr/input-data/conus404-wind-direction-modes', help='Base output path'
+        's3://carbonplan-ocr/input/conus404-wind-direction-modes', help='Base output path'
     ),
     target_dataset_name: str = typer.Option(
         'USFS-wildfire-risk-communities-4326', help='Catalog dataset name whose geobox is used'

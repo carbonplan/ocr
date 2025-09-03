@@ -575,6 +575,20 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) on native CONUS404 grid',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35-reprojected',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35-reprojected.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
         name='us-census-tracts',
         description='US Census Tracts',
         bucket='carbonplan-ocr',

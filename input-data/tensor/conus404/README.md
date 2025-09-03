@@ -177,7 +177,7 @@ pixi run python input-data/tensor/conus404/compute_fire_weather_wind_mode.py --l
 Given thresholds H=15 (RH) and W=35 (wind), two Zarr stores are written by default:
 
 ```
-s3://carbonplan-ocr/input-data/conus404-wind-direction-modes/
+s3://carbonplan-ocr/input/conus404-wind-direction-modes/
     fire_weather_wind_mode-hurs15_wind35.zarr
     fire_weather_wind_mode-hurs15_wind35-reprojected.zarr
 ```
@@ -189,7 +189,7 @@ The reprojected store matches the grid of the wildfire risk communities dataset.
 ```python
 import xarray as xr
 
-path = 's3://carbonplan-ocr/input-data/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr'
+path = 's3://carbonplan-ocr/input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr'
 mode = xr.open_zarr(path)
 mode.wind_direction_mode
 ```
