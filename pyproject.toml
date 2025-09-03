@@ -193,6 +193,7 @@
     typer                 = ">=0.16.1,<0.17"
     universal-pathlib     = ">=0.2.6,<0.3"
     xarray                = ">=2025.8.0,<2026"
+    xclim                 = ">=0.57.0,<0.58"
     zarr                  = ">=3.1.1,<4"
 
 [tool.pixi.tasks]

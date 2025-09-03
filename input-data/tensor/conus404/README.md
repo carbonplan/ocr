@@ -26,7 +26,6 @@ pixi run python input-data/tensor/conus404/subset_conus404_from_osn.py --help   
 │ --show-completion                    Show completion for the current shell, to copy it or customize the installation.                                                                 │
 │ --help                               Show this message and exit.                                                                                                                      │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
 ```
 
 You can run it on coiled with the following command to process a specific variable, for example `U10`:
@@ -98,3 +97,109 @@ Attributes: (12/148)
     history:                         Tue Mar 29 16:35:22 2022: ncrcat -A -vW ...
 
 ```
+
+## Fire-weather modal wind direction
+
+The script `compute_fire_weather_wind_mode.py` computes, for every CONUS404 grid cell, the **most common (modal) wind direction during hours that meet fire weather criteria**. It reproduces and productionizes the notebook logic from `notebooks/fire-weather-wind-mode-reprojected.ipynb`.
+
+### What it does
+
+1. Starts (optionally) a Coiled cluster.
+2. Loads required CONUS404 hourly variables (Icechunk-backed) via `load_conus404`.
+3. Computes relative humidity from temperature & dewpoint.
+4. Rotates grid-relative winds (U10, V10) into earth-relative components using `SINALPHA` / `COSALPHA`.
+5. Derives wind speed and direction with `xclim`.
+6. Applies a gust factor (default 1.4×) before thresholding wind speed (mph) and relative humidity to build a fire weather mask.
+7. Classifies wind direction into 8 cardinal bins (N, NE, E, SE, S, SW, W, NW) for fire-weather hours only.
+8. Builds a per-pixel direction histogram and selects the argmax (modal direction) where at least one fire-weather hour exists.
+9. Writes a native-grid Zarr.
+10. Optionally reprojects to the geobox of the catalog dataset `USFS-wildfire-risk-communities-4326` and writes a second Zarr.
+
+### Cardinal direction encoding
+
+The resulting variable `wind_direction_mode` stores integers 0–7 mapping to:
+
+| Code | Direction |
+| ---- | --------- |
+| 0    | N         |
+| 1    | NE        |
+| 2    | E         |
+| 3    | SE        |
+| 4    | S         |
+| 5    | SW        |
+| 6    | W         |
+| 7    | NW        |
+
+Cells with no hours meeting fire weather criteria are `NaN`.
+
+### CLI help
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fire_weather_wind_mode.py --help
+```
+
+Expected options (summarized):
+
+| Option                         | Description                                           | Default                                                        |
+| ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------- |
+| `--hurs-threshold`             | Relative humidity threshold (%)                       | 15                                                             |
+| `--wind-threshold`             | Gust-like wind threshold (mph)                        | 35                                                             |
+| `--wind-gust-factor`           | Multiplier applied to sustained speed                 | 1.4                                                            |
+| `--output-base`                | Base S3 (or local) path for outputs                   | `s3://carbonplan-ocr/input-data/conus404-wind-direction-modes` |
+| `--target-dataset-name`        | Catalog dataset whose geobox is used for reprojection | `USFS-wildfire-risk-communities-4326`                          |
+| `--reproject / --no-reproject` | Toggle reprojection                                   | `True`                                                         |
+| `--cluster-name`               | Coiled cluster name                                   | `fire-weather-distribution`                                    |
+| `--min-workers`                | Min workers (Coiled autoscaling)                      | 4                                                              |
+| `--max-workers`                | Max workers                                           | 50                                                             |
+| `--worker-vm-types`            | Worker VM type                                        | `m8g.xlarge`                                                   |
+| `--scheduler-vm-types`         | Scheduler VM type                                     | `m8g.large`                                                    |
+| `--local`                      | Run locally (no Coiled cluster)                       | `False`                                                        |
+
+### Example: run on Coiled (default thresholds)
+
+```bash
+pixi run coiled batch run input-data/tensor/conus404/compute_fire_weather_wind_mode.py \
+    --hurs-threshold 15 \
+    --wind-threshold 35 \
+    --wind-gust-factor 1.4
+```
+
+### Example: local dry run (small subset)
+
+If you only want to test logic locally (no cluster) you can optionally slice after loading (modify script or use a forked copy):
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fire_weather_wind_mode.py --local --reproject False
+```
+
+### Outputs
+
+Given thresholds H=15 (RH) and W=35 (wind), two Zarr stores are written by default:
+
+```
+s3://carbonplan-ocr/input/conus404-wind-direction-modes/
+    fire_weather_wind_mode-hurs15_wind35.zarr
+    fire_weather_wind_mode-hurs15_wind35-reprojected.zarr
+```
+
+The reprojected store matches the grid of the wildfire risk communities dataset. Disable via `--no-reproject`.
+
+### Reading the output
+
+```python
+import xarray as xr
+
+path = 's3://carbonplan-ocr/input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr'
+mode = xr.open_zarr(path)
+mode.wind_direction_mode
+```
+
+### Adjusting thresholds
+
+Simply change `--hurs-threshold`, `--wind-threshold`, and (optionally) `--wind-gust-factor`. The output filenames embed these values so multiple experimental runs can co-exist in the same prefix.
+
+### Notes / Future Enhancements
+
+- Add optional temperature threshold when/if needed (currently disabled like the notebook).
+- Option to emit the full directional histogram, not just the mode.
+- Potential integration tests on a spatial subset.
