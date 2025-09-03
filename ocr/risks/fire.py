@@ -3,6 +3,8 @@ import typing
 import numpy as np
 import xarray as xr
 
+from ocr import catalog
+
 
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
@@ -10,7 +12,7 @@ def generate_weights(
     circle_diameter: float = 35.0,
 ) -> np.ndarray:
     """Generate a 2D array of weights for a circular kernel."""
-    if method == 'skewed':
+    if method == 'circular_focal_mean':
         x, y = np.meshgrid(
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
@@ -19,7 +21,7 @@ def generate_weights(
         inside = distances <= circle_diameter // 2 + 1
         weights = inside / inside.sum()
 
-    elif method == 'circular_focal_mean':
+    elif method == 'skewed':
         x, y = np.meshgrid(
             np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
             np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
@@ -330,12 +332,11 @@ def classify_wind(
     return wind_informed_bp_float_corrected
 
 
-def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Dataset:
-    from odc.geo.xr import assign_crs
-
-    from ocr import catalog
-    from ocr.utils import lon_to_180
-
+def calculate_wind_adjusted_risk(
+    *,
+    x_slice: slice,
+    y_slice: slice,
+) -> xr.Dataset:
     # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
@@ -343,9 +344,6 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
         ['BP', 'CRPS', 'RPS']
     ]
-    important_days = catalog.get_dataset('era5-fire-weather-days').to_xarray()[['sfcWindfromdir']]
-    # TODO: Input datasets should already be pre-processed, so this transform should be done upstream.
-    important_days = lon_to_180(important_days)
 
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice).chunk(
@@ -355,19 +353,12 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         {'latitude': 6000, 'longitude': 4500}
     )
 
-    # Since important_days / wind is a lower resolution (.25 degrees?), we add in spatial buffer to match the resolution.
-    wind_res = 0.25
-    buffer = wind_res * 2  # add in a 2x buffer of the resolution
-    buffered_y_slice = slice(y_slice.start + buffer, y_slice.stop - buffer, y_slice.step)
-    buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
-
-    wind_directions = important_days.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
-    direction_indices = classify_wind_directions(wind_directions['sfcWindfromdir']).chunk(
-        dict(time=-1)
+    direction_modes_sfc = (
+        catalog.get_dataset('conus404-fire-weather-wind-mode-hurs15-wind35-reprojected')
+        .to_xarray()
+        .wind_direction_mode.sel(latitude=y_slice, longitude=x_slice)
+        .load()
     )
-    direction_modes = compute_mode_along_time(direction_indices).compute()
-
-    direction_modes_sfc = assign_crs(direction_modes, crs='EPSG:4326')
 
     wind_informed_bp_float_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
@@ -380,39 +371,100 @@ def calculate_wind_adjusted_risk(*, x_slice: slice, y_slice: slice) -> xr.Datase
         rps_30_subset=rps_30_subset,
     )
 
-    # Add in non-wind-adjusted 2011 and 2047 BP*CRPS score for QA comparison
+    fire_risk = (rps_30_subset['RPS']).to_dataset(name='USFS_RPS')
 
-    climate_run_2011_subset_float_corrected = climate_run_2011_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2011.latitude,
-        longitude=wind_informed_bp_float_corrected_2011.longitude,
-    )
-    climate_run_2047_subset_float_corrected = climate_run_2047_subset.assign_coords(
-        latitude=wind_informed_bp_float_corrected_2047.latitude,
-        longitude=wind_informed_bp_float_corrected_2047.longitude,
-    )
-
-    # TODO: improve the variable names for clarity
-    risk_4326_combined = (
-        climate_run_2011_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    ).to_dataset(name='risk_2011')
-
-    risk_4326_combined['risk_2047'] = (
-        climate_run_2047_subset_float_corrected['BP'] * rps_30_subset['CRPS']
-    )
-
-    # Adjust USFS 30m CRPS with wind informed burn probability
-    risk_4326_combined['wind_risk_2011'] = (
-        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
-    )
-    risk_4326_combined['wind_risk_2047'] = (
-        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
-    )
+    fire_risk['wind_risk_2011'] = wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
 
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
-    for var in risk_4326_combined.data_vars:
-        risk_4326_combined[var].attrs['units'] = 'dimensionless'
-        risk_4326_combined[var].attrs['long_name'] = f'{var} (wind-adjusted)'
-        risk_4326_combined[var].attrs['description'] = f'{var} adjusted for wind effects'
+    for var in fire_risk.data_vars:
+        fire_risk[var].attrs['units'] = 'dimensionless'
+        fire_risk[var].attrs['long_name'] = f'{var} (wind-adjusted)'
+        fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
-    return risk_4326_combined.drop_vars(['spatial_ref'])
+    return fire_risk.drop_vars(['spatial_ref', 'crs'], errors='ignore')
+
+
+def nws_fire_weather(
+    hurs: xr.DataArray,
+    hurs_threshold: float,
+    sfcWind: xr.DataArray,
+    wind_threshold: float,
+    tas: xr.DataArray | None = None,
+    tas_threshold: float | None = None,
+) -> xr.DataArray:
+    """
+    calculation of whether or not a day counts as fire weather
+    based upon relative humidity, windspeed, temperature and thresholds associated
+    with each
+    """
+    # TODO: use pint-xarray?
+    # relative_humidity < 25%
+    mask_hurs = hurs < hurs_threshold
+    # windspeed > 15 mph
+    mps_to_mph_conversion = (
+        1000 * 3600 / (25.4 * 12 * 5280)
+    )  # convert m/s to mph and then double to account for sustained winds
+    mask_sfcWind = (sfcWind * mps_to_mph_conversion) > wind_threshold
+    # temperature > 75 deg F
+    mask_tas = None  # Initialize with default value
+    if tas is not None and tas_threshold is not None:
+        mask_tas = ((tas - 273.15) * 9 / 5 + 32) > tas_threshold  # convert K to deg F
+    fire_weather_mask = mask_hurs & mask_sfcWind
+    if tas is not None and mask_tas is not None:
+        fire_weather_mask = fire_weather_mask & mask_tas
+    return fire_weather_mask
+
+
+def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
+    """
+    Compute direction histogram on xarray DataArray with dask chunks.
+
+    Parameters
+    -----------
+    data_array : xarray.DataArray
+        Input data array containing direction indices (expected to be integers 0-7)
+
+    Returns
+    -------
+    xarray.DataArray
+        Normalized histogram counts as a probability distribution
+    """
+
+    def _compute_bin_count(arr):
+        # Filter out negative values
+        valid_arr = arr[arr >= 0]
+
+        # Return immediately if no valid data
+        if len(valid_arr) == 0:
+            return np.zeros(8, dtype=np.float32)
+
+        int_arr = valid_arr.astype(np.int64)
+        counts = np.bincount(int_arr, minlength=8)
+
+        total = counts.sum()
+
+        # Avoid division if possible
+        return counts / total
+
+    fraction = xr.apply_ufunc(
+        _compute_bin_count,
+        data_array,
+        input_core_dims=[['time']],
+        output_core_dims=[['wind_direction']],
+        vectorize=True,
+        dask='parallelized',
+        output_dtypes=[np.float32],
+        kwargs={},
+        dask_gufunc_kwargs={
+            'output_sizes': {'wind_direction': 8},
+        },
+        keep_attrs=False,
+    )
+    fraction = fraction.rename('wind_direction_histogram')
+    fraction.attrs = {
+        'long_name': 'Wind Direction Histogram',
+        'units': 'probability',
+    }
+    return fraction
