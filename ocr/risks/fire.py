@@ -3,6 +3,8 @@ import typing
 import numpy as np
 import xarray as xr
 
+from ocr import catalog
+
 
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
@@ -334,10 +336,7 @@ def calculate_wind_adjusted_risk(
     *,
     x_slice: slice,
     y_slice: slice,
-    wind_direction_path: str = 's3://carbonplan-ocr/intermediate/met-data/conus404/fire_weather_wind_mode-hurs15_wind35-reprojected.zarr',
 ) -> xr.Dataset:
-    from ocr import catalog
-
     # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
@@ -355,7 +354,8 @@ def calculate_wind_adjusted_risk(
     )
 
     direction_modes_sfc = (
-        xr.open_zarr(wind_direction_path)
+        catalog.get_dataset('conus404-fire-weather-wind-mode-hurs15-wind35-reprojected')
+        .to_xarray()
         .wind_direction_histogram.sel(latitude=y_slice, longitude=x_slice)
         .load()
     )
