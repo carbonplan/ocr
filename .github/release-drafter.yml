@@ -18,7 +18,6 @@ categories:
     labels:
       - "performance"
       - "scaling"
-      - "speed"
   - title: "🐛 Bug Fixes"
     labels:
       - "bug"
@@ -27,7 +26,6 @@ categories:
     labels:
       - "test"
       - "testing"
-      - "e2e"
       - "QA/QC"
   - title: "🔁 CI / Automation"
     labels:
