@@ -17,6 +17,14 @@ on:
         required: false
         type: boolean
         default: false
+      environment:
+        description: "Target environment for manual deploy (qa or staging). Ignored if production_tag is set."
+        required: true
+        type: choice
+        options:
+          - qa
+          - staging
+        default: qa
       production_tag:
         description: "SemVer tag to redeploy to production (e.g. v1.2.3 or 1.2.3). If set, triggers a production redeploy."
         required: false
@@ -62,10 +70,27 @@ jobs:
         run: |
           pixi list -e dev
 
+      - name: Set OCR_ENVIRONMENT
+        run: |
+          ENV_INPUT="${{ github.event.inputs.environment }}"
+          # (Defensive) validate even though choices enforce it
+          if [[ "$ENV_INPUT" != "qa" && "$ENV_INPUT" != "staging" ]]; then
+            echo "Invalid environment: $ENV_INPUT (expected qa or staging)" >&2
+            exit 1
+          fi
+          echo "Setting OCR_ENVIRONMENT=$ENV_INPUT"
+          echo "OCR_ENVIRONMENT=$ENV_INPUT" >> "$GITHUB_ENV"
+
+      - name: Show environment
+        run: |
+          echo "OCR_ENVIRONMENT is $OCR_ENVIRONMENT"
+
       - name: Deploy (manual)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
+          echo "Starting manual deploy to environment: $OCR_ENVIRONMENT"
           REGION_ARGS=""
           if [[ "${{ github.event.inputs.all_region_ids }}" == "true" ]]; then
             REGION_ARGS="--all-region-ids"
@@ -84,9 +109,19 @@ jobs:
             WIPE_ARG="--wipe"
           fi
 
+          # we can branch logic on OCR_ENVIRONMENT here if needed (e.g., select a different env file)
+          # Example (uncomment if we later create environment-specific files):
+          # if [[ "$OCR_ENVIRONMENT" == "staging" ]]; then
+          #   ENV_FILE="ocr-coiled-s3-staging.env"
+          # else
+          #   ENV_FILE="ocr-coiled-s3-qa.env"
+          # fi
+          # For now reuse the existing non-prod env file:
+          ENV_FILE="ocr-coiled-s3.env"
+
           pixi run ocr run \
             $REGION_ARGS \
-            --env-file ocr-coiled-s3.env \
+            --env-file "$ENV_FILE" \
             $WIPE_ARG \
             --platform coiled
 
@@ -130,18 +165,21 @@ jobs:
             echo "Normalized tag '$CLEAN' (from '$RAW_TAG') is not valid SemVer." >&2
             exit 1
           fi
-            echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
+          echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
           echo "ocr_version=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "OCR_ENVIRONMENT=production" >> "$GITHUB_ENV"
 
       - name: Show resolved version
         run: |
           echo "OCR_VERSION: $OCR_VERSION"
+          echo "OCR_ENVIRONMENT: $OCR_ENVIRONMENT"
 
       - name: Deploy (production all regions)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
-          echo "Running production deployment for tag: $OCR_VERSION"
+          echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
             $REGION_ARGS \
@@ -162,14 +200,12 @@ jobs:
             exit 1
           fi
           echo "Provided production_tag: $INPUT_TAG"
-          # Allow leading v or not; deeper SemVer validation later.
 
       - name: Checkout specified tag
         uses: actions/checkout@v5
         with:
-          # actions/checkout handles tag names directly (with or without 'v')
           ref: ${{ github.event.inputs.production_tag }}
-          fetch-depth: 0 # ensure tag & metadata are present
+          fetch-depth: 0
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -201,22 +237,23 @@ jobs:
             echo "Provided tag '$RAW_TAG' normalizes to '$CLEAN' which is not valid SemVer." >&2
             exit 1
           fi
-          # Double-check that the checked-out HEAD corresponds to the tag
           CURRENT_TAG_MATCH="$(git tag --points-at HEAD | grep -E "^(${RAW_TAG}|v${CLEAN}|${CLEAN})$" || true)"
           if [[ -z "$CURRENT_TAG_MATCH" ]]; then
             echo "Warning: HEAD does not appear to match the provided tag '$RAW_TAG' (continuing anyway)." >&2
           fi
-          echo "Detected SemVer: $CLEAN"
           echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
           echo "ocr_version=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "OCR_ENVIRONMENT=production" >> "$GITHUB_ENV"
 
       - name: Show resolved version
         run: |
-          echo "Redeploying production for OCR_VERSION=$OCR_VERSION (input tag=${{ github.event.inputs.production_tag }})"
+          echo "Redeploying production for OCR_VERSION=$OCR_VERSION (tag input=${{ github.event.inputs.production_tag }})"
+          echo "OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
 
       - name: Deploy (production redeploy all regions)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
