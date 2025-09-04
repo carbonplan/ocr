@@ -9,6 +9,7 @@ import numpy as np
 import pydantic
 import pydantic_settings
 import xarray as xr
+from pydantic_extra_types.semantic_version import SemanticVersion
 from upath import UPath
 
 from ocr import catalog
@@ -766,6 +767,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for vector processing'
     )
+    version: SemanticVersion | None = pydantic.Field(
+        default=None, description='Version of the vector processing pipeline'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for vector data, can be a bucket name or local path'
     )
@@ -779,10 +783,39 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/vector/{self.environment.value}'
         if self.prefix is None:
-            self.prefix = f'intermediate/fire-risk/vector/{self.environment.value}'
+            if self.version:
+                self.prefix = f'intermediate/{common_part}/v{self.version}'
+            else:
+                self.prefix = f'intermediate/{common_part}'
+
         if self.output_prefix is None:
-            self.output_prefix = f'output/fire-risk/vector/{self.environment.value}'
+            if self.version:
+                self.output_prefix = f'output/{common_part}/v{self.version}'
+            else:
+                self.output_prefix = f'output/{common_part}'
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
+        if self.output_prefix and self.version:
+            if f'v{self.version}' not in self.output_prefix:
+                # insert version right before the last part of the prefix
+                parts = self.output_prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.output_prefix = (
+                        f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                    )
+                else:
+                    self.output_prefix = (
+                        f'{self.environment.value}/v{self.version}/{self.output_prefix}'
+                    )
 
     def wipe(self):
         """Wipe the vector data storage."""
@@ -888,6 +921,9 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for icechunk processing'
     )
+    version: SemanticVersion | None = pydantic.Field(
+        None, description='Version of the icechunk processing pipeline'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for icechunk data, can be a bucket name or local path'
     )
@@ -896,8 +932,20 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/tensor/{self.environment.value}'
         if self.prefix is None:
-            self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
+            name = 'ocr.icechunk' if self.version is None else f'v{self.version}/ocr.icechunk'
+            prefix = f'output/{common_part}/{name}'
+            self.prefix = prefix
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
 
     def wipe(self):
         """Wipe the icechunk repository."""
@@ -1104,9 +1152,17 @@ class OCRConfig(pydantic_settings.BaseSettings):
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for OCR processing'
     )
+    version: SemanticVersion | None = pydantic.Field(
+        default=None,
+        description=(
+            'Optional semantic version (e.g., 1.2.3 or v1.2.3). When provided, appended to '
+            'intermediate and output prefixes for versioned storage.'
+        ),
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for OCR data, can be a bucket name or local path'
     )
+
     vector: VectorConfig | None = pydantic.Field(None, description='Vector configuration')
     icechunk: IcechunkConfig | None = pydantic.Field(None, description='Icechunk configuration')
     chunking: ChunkingConfig | None = pydantic.Field(
@@ -1124,7 +1180,10 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 self,
                 'vector',
                 VectorConfig(
-                    storage_root=self.storage_root, environment=self.environment, debug=self.debug
+                    storage_root=self.storage_root,
+                    environment=self.environment,
+                    debug=self.debug,
+                    version=self.version,
                 ),
             )
         if self.icechunk is None:
@@ -1135,6 +1194,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     storage_root=self.storage_root,
                     environment=self.environment,
                     debug=self.debug,
+                    version=self.version,
                 ),
             )
         if self.chunking is None:
