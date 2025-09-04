@@ -3,31 +3,49 @@ on:
   workflow_dispatch:
     inputs:
       region_id:
-        description: "Region ID (ignored if all_region_ids is true)"
+        description: "Region ID (ignored if all_region_ids is true; for non-production/manual deploy)"
         required: false
         default: ""
         type: string
       all_region_ids:
-        description: "Process all region IDs (passes --all-region-ids)"
+        description: "Process all region IDs (passes --all-region-ids) for non-production/manual deploy"
         required: false
         type: boolean
         default: false
       wipe:
-        description: "Wipe existing data (icechunk and parquet files) before running"
+        description: "Wipe existing data (icechunk and parquet files) before running (non-production/manual deploy)"
         required: false
         type: boolean
         default: false
+      environment:
+        description: "Target environment for manual deploy (qa or staging). Ignored if production_tag is set."
+        required: true
+        type: choice
+        options:
+          - qa
+          - staging
+        default: qa
+      production_tag:
+        description: "SemVer tag to redeploy to production (e.g. v1.2.3 or 1.2.3). If set, triggers a production redeploy."
+        required: false
+        default: ""
+        type: string
+  release:
+    types:
+      - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  id-token: write # This is required for requesting the JWT
-  contents: read # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
+    # Regular manual (non-production) deploy path
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -39,12 +57,11 @@ jobs:
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
 
-      # seems like using the python setup version is cached by GH, so might be faster
       - uses: actions/checkout@v5
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
           pixi-version: v0.43.3
-          cache: false # no pixi.lock
+          cache: false
           locked: false
           activate-environment: true
 
@@ -53,11 +70,27 @@ jobs:
         run: |
           pixi list -e dev
 
-      - name: Deploy
+      - name: Set OCR_ENVIRONMENT
+        run: |
+          ENV_INPUT="${{ github.event.inputs.environment }}"
+          # (Defensive) validate even though choices enforce it
+          if [[ "$ENV_INPUT" != "qa" && "$ENV_INPUT" != "staging" ]]; then
+            echo "Invalid environment: $ENV_INPUT (expected qa or staging)" >&2
+            exit 1
+          fi
+          echo "Setting OCR_ENVIRONMENT=$ENV_INPUT"
+          echo "OCR_ENVIRONMENT=$ENV_INPUT" >> "$GITHUB_ENV"
+
+      - name: Show environment
+        run: |
+          echo "OCR_ENVIRONMENT is $OCR_ENVIRONMENT"
+
+      - name: Deploy (manual)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
-          # Build region args
+          echo "Starting manual deploy to environment: $OCR_ENVIRONMENT"
           REGION_ARGS=""
           if [[ "${{ github.event.inputs.all_region_ids }}" == "true" ]]; then
             REGION_ARGS="--all-region-ids"
@@ -71,14 +104,159 @@ jobs:
             exit 1
           fi
 
-          # Optional wipe flag
           WIPE_ARG=""
           if [[ "${{ github.event.inputs.wipe }}" == "true" ]]; then
             WIPE_ARG="--wipe"
           fi
 
+          # we can branch logic on OCR_ENVIRONMENT here if needed (e.g., select a different env file)
+          # Example (uncomment if we later create environment-specific files):
+          # if [[ "$OCR_ENVIRONMENT" == "staging" ]]; then
+          #   ENV_FILE="ocr-coiled-s3-staging.env"
+          # else
+          #   ENV_FILE="ocr-coiled-s3-qa.env"
+          # fi
+          # For now reuse the existing non-prod env file:
+          ENV_FILE="ocr-coiled-s3.env"
+
           pixi run ocr run \
             $REGION_ARGS \
-            --env-file ocr-coiled-s3.env \
+            --env-file "$ENV_FILE" \
             $WIPE_ARG \
+            --platform coiled
+
+  deploy-production:
+    # Automatic production deploy on release publish
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list
+
+      - name: Set OCR_VERSION from release tag
+        id: set_version
+        run: |
+          RAW_TAG="${{ github.event.release.tag_name }}"
+          if [[ -z "$RAW_TAG" ]]; then
+            RAW_TAG="${GITHUB_REF_NAME:-${GITHUB_REF#refs/tags/}}"
+          fi
+          CLEAN="${RAW_TAG#refs/tags/}"
+          CLEAN="${CLEAN#v}"
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "$CLEAN" =~ $SEMVER_REGEX ]]; then
+            echo "Normalized tag '$CLEAN' (from '$RAW_TAG') is not valid SemVer." >&2
+            exit 1
+          fi
+          echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
+          echo "ocr_version=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "OCR_ENVIRONMENT=production" >> "$GITHUB_ENV"
+
+      - name: Show resolved version
+        run: |
+          echo "OCR_VERSION: $OCR_VERSION"
+          echo "OCR_ENVIRONMENT: $OCR_ENVIRONMENT"
+
+      - name: Deploy (production all regions)
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+        run: |
+          echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
+          REGION_ARGS="--all-region-ids"
+          pixi run ocr run \
+            $REGION_ARGS \
+            --env-file ocr-coiled-s3-prod.env \
+            --platform coiled
+
+  production-rerun:
+    # Manual production redeploy via workflow_dispatch + production_tag input
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate provided tag format (basic pre-check)
+        id: validate_input
+        run: |
+          INPUT_TAG="${{ github.event.inputs.production_tag }}"
+          if [[ -z "$INPUT_TAG" ]]; then
+            echo "No production_tag provided." >&2
+            exit 1
+          fi
+          echo "Provided production_tag: $INPUT_TAG"
+
+      - name: Checkout specified tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.production_tag }}
+          fetch-depth: 0
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list
+
+      - name: Derive & validate OCR_VERSION from input tag
+        id: set_version
+        run: |
+          RAW_TAG="${{ github.event.inputs.production_tag }}"
+          CLEAN="${RAW_TAG#refs/tags/}"
+          CLEAN="${CLEAN#v}"
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "$CLEAN" =~ $SEMVER_REGEX ]]; then
+            echo "Provided tag '$RAW_TAG' normalizes to '$CLEAN' which is not valid SemVer." >&2
+            exit 1
+          fi
+          CURRENT_TAG_MATCH="$(git tag --points-at HEAD | grep -E "^(${RAW_TAG}|v${CLEAN}|${CLEAN})$" || true)"
+          if [[ -z "$CURRENT_TAG_MATCH" ]]; then
+            echo "Warning: HEAD does not appear to match the provided tag '$RAW_TAG' (continuing anyway)." >&2
+          fi
+          echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
+          echo "ocr_version=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "OCR_ENVIRONMENT=production" >> "$GITHUB_ENV"
+
+      - name: Show resolved version
+        run: |
+          echo "Redeploying production for OCR_VERSION=$OCR_VERSION (tag input=${{ github.event.inputs.production_tag }})"
+          echo "OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
+
+      - name: Deploy (production redeploy all regions)
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+        run: |
+          REGION_ARGS="--all-region-ids"
+          pixi run ocr run \
+            $REGION_ARGS \
+            --env-file ocr-coiled-s3-prod.env \
             --platform coiled
