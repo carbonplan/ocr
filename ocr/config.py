@@ -783,21 +783,39 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/vector/{self.environment.value}'
         if self.prefix is None:
             if self.version:
-                self.prefix = (
-                    f'intermediate/fire-risk/vector/{self.environment.value}/v{self.version}'
-                )
+                self.prefix = f'intermediate/{common_part}/v{self.version}'
             else:
-                self.prefix = f'intermediate/fire-risk/vector/{self.environment.value}'
+                self.prefix = f'intermediate/{common_part}'
 
         if self.output_prefix is None:
             if self.version:
-                self.output_prefix = (
-                    f'output/fire-risk/vector/{self.environment.value}/v{self.version}'
-                )
+                self.output_prefix = f'output/{common_part}/v{self.version}'
             else:
-                self.output_prefix = f'output/fire-risk/vector/{self.environment.value}'
+                self.output_prefix = f'output/{common_part}'
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
+        if self.output_prefix and self.version:
+            if f'v{self.version}' not in self.output_prefix:
+                # insert version right before the last part of the prefix
+                parts = self.output_prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.output_prefix = (
+                        f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                    )
+                else:
+                    self.output_prefix = (
+                        f'{self.environment.value}/v{self.version}/{self.output_prefix}'
+                    )
 
     def wipe(self):
         """Wipe the vector data storage."""
@@ -914,10 +932,20 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/tensor/{self.environment.value}'
         if self.prefix is None:
             name = 'ocr.icechunk' if self.version is None else f'v{self.version}/ocr.icechunk'
-            prefix = f'output/fire-risk/tensor/{self.environment.value}/{name}'
+            prefix = f'output/{common_part}/{name}'
             self.prefix = prefix
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
 
     def wipe(self):
         """Wipe the icechunk repository."""

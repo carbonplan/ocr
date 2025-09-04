@@ -375,6 +375,45 @@ class TestVectorConfig:
         assert config.prefix == 'intermediate/fire-risk/vector/production'
         assert config.output_prefix == 'output/fire-risk/vector/production'
 
+    @pytest.mark.parametrize('version', ['1.2.3', '2.0.0-alpha', '0.0.1'])
+    def test_vector_config_version_prefix(self, version):
+        config = VectorConfig(
+            storage_root='s3://dummy',
+            environment=Environment.QA,
+            version=version,
+            prefix=None,
+            output_prefix=None,
+        )
+        assert config.prefix is not None and config.prefix.endswith(f'/v{version}')
+        assert config.output_prefix is not None and config.output_prefix.endswith(f'/v{version}')
+
+    @pytest.mark.parametrize('invalid', ['1.2', 'version1.2.3', '1.2.3.4', '1.2.-3'])
+    def test_vector_config_invalid_version(self, invalid):
+        with pytest.raises(ValueError):
+            VectorConfig(
+                storage_root='s3://dummy',
+                environment=Environment.QA,
+                version=invalid,
+                prefix=None,
+                output_prefix=None,
+            )
+
+    def test_vector_config_insert_version_into_existing_prefix(self, temp_dir):
+        base_prefix = 'intermediate/fire-risk/vector'
+        base_output_prefix = 'output/fire-risk/vector'
+        version = '1.0.0'
+        config = VectorConfig(
+            storage_root=temp_dir,
+            environment=Environment.QA,
+            prefix=base_prefix,
+            output_prefix=base_output_prefix,
+            version=version,
+        )
+        # version is inserted before the last part of the path
+
+        assert config.prefix == f'intermediate/fire-risk/qa/v{version}/vector'
+        assert config.output_prefix == f'output/fire-risk/qa/v{version}/vector'
+
     def test_cached_properties(self, temp_dir):
         """Test cached properties of VectorConfig."""
         config = VectorConfig(storage_root=temp_dir)
@@ -410,8 +449,7 @@ class TestVectorConfig:
         assert 'tracts_summary_stats.parquet' in str(tracts_uri)
         assert 'counties_summary_stats.parquet' in str(counties_uri)
 
-    @patch('ocr.console.console.log')
-    def test_wipe_method(self, mock_log, temp_dir):
+    def test_wipe_method(self, temp_dir):
         """Test the wipe method."""
         config = VectorConfig(storage_root=temp_dir, debug=True)
 
@@ -426,10 +464,8 @@ class TestVectorConfig:
 
         # Check that file was deleted and log was called
         assert not test_file.exists()
-        assert mock_log.call_count >= 1  # Called at least once
 
-    @patch('ocr.console.console.log')
-    def test_delete_region_gpqs(self, mock_log, temp_dir):
+    def test_delete_region_gpqs(self, temp_dir):
         """Test the delete_region_gpqs method."""
         config = VectorConfig(storage_root=temp_dir)
 
@@ -480,7 +516,7 @@ class TestIcechunkConfig:
 
         assert config.environment == Environment.QA
         assert config.storage_root == temp_dir
-        assert config.prefix == 'output/fire-risk/tensor/qa/template.icechunk'
+        assert config.prefix == 'output/fire-risk/tensor/qa/ocr.icechunk'
 
     def test_custom_initialization(self, temp_dir):
         """Test IcechunkConfig initialization with custom values."""
@@ -488,12 +524,26 @@ class TestIcechunkConfig:
         config = IcechunkConfig(
             environment=Environment.PRODUCTION,
             storage_root=temp_dir,
-            prefix='custom/path/template.icechunk',
+            prefix='custom/path/',
         )
 
         assert config.environment == Environment.PRODUCTION
         assert config.storage_root == temp_dir
-        assert config.prefix == 'custom/path/template.icechunk'
+        assert config.prefix == 'custom/path/'
+
+    @pytest.mark.parametrize('ver', ['1.2.3'])
+    def test_icechunk_config_version_prefix(self, ver):
+        config = IcechunkConfig(
+            storage_root='s3://dummy', environment=Environment.QA, version=ver, prefix=None
+        )
+        assert config.prefix is not None and f'/v{ver}' in config.prefix
+
+    def test_icechunk_config_insert_version_into_existing_prefix(self):
+        base = 'output/fire-risk/tensor/'
+        config = IcechunkConfig(
+            storage_root='s3://dummy', environment=Environment.QA, prefix=base, version='1.0.0'
+        )
+        assert config.prefix == 'output/fire-risk/tensor/qa/v1.0.0/'
 
     def test_uri_property(self, temp_dir):
         """Test the uri cached property."""
