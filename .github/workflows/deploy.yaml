@@ -17,17 +17,21 @@ on:
         required: false
         type: boolean
         default: false
+  release:
+    types:
+      - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  id-token: write # This is required for requesting the JWT
-  contents: read # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -39,12 +43,11 @@ jobs:
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
 
-      # seems like using the python setup version is cached by GH, so might be faster
       - uses: actions/checkout@v5
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
           pixi-version: v0.43.3
-          cache: false # no pixi.lock
+          cache: false
           locked: false
           activate-environment: true
 
@@ -53,11 +56,10 @@ jobs:
         run: |
           pixi list -e dev
 
-      - name: Deploy
+      - name: Deploy (manual)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
-          # Build region args
           REGION_ARGS=""
           if [[ "${{ github.event.inputs.all_region_ids }}" == "true" ]]; then
             REGION_ARGS="--all-region-ids"
@@ -71,7 +73,6 @@ jobs:
             exit 1
           fi
 
-          # Optional wipe flag
           WIPE_ARG=""
           if [[ "${{ github.event.inputs.wipe }}" == "true" ]]; then
             WIPE_ARG="--wipe"
@@ -81,4 +82,72 @@ jobs:
             $REGION_ARGS \
             --env-file ocr-coiled-s3.env \
             $WIPE_ARG \
+            --platform coiled
+
+  deploy-production:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list
+
+      - name: Set OCR_VERSION from tag
+        id: set_version
+        run: |
+          # Prefer the release tag name supplied by the release event
+            # (e.g. "v1.2.3", "1.2.3", "v1.2.3-rc.1+build.5").
+          RAW_TAG="${{ github.event.release.tag_name }}"
+          # Fallback if empty (shouldn't happen on published release, but just in case):
+          if [[ -z "$RAW_TAG" ]]; then
+            RAW_TAG="${GITHUB_REF_NAME:-${GITHUB_REF#refs/tags/}}"
+          fi
+
+          # Remove any leading refs/tags/ just in case and a leading 'v'
+          CLEAN="${RAW_TAG#refs/tags/}"
+          CLEAN="${CLEAN#v}"
+
+          # SemVer regex (major.minor.patch + optional prerelease + build)
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+          if [[ ! "$CLEAN" =~ $SEMVER_REGEX ]]; then
+            echo "Normalized tag '$CLEAN' (from '$RAW_TAG') is not valid SemVer." >&2
+            exit 1
+          fi
+
+          echo "Detected SemVer: $CLEAN"
+          echo "OCR_VERSION=$CLEAN" >> "$GITHUB_ENV"
+          echo "ocr_version=$CLEAN" >> "$GITHUB_OUTPUT"
+
+      - name: Show resolved version
+        run: |
+          echo "OCR_VERSION environment variable: $OCR_VERSION"
+          echo "Step output (for reuse in needs): ${{ steps.set_version.outputs.ocr_version }}"
+
+      - name: Deploy (production all regions)
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+        run: |
+          echo "Running production deployment for tag: $OCR_VERSION"
+          REGION_ARGS="--all-region-ids"
+          pixi run ocr run \
+            $REGION_ARGS \
+            --env-file ocr-coiled-s3-prod.env \
             --platform coiled
