@@ -35,19 +35,22 @@ cardinal directions in this order: ['N','NE','E','SE','S','SW','W','NW'].
 from __future__ import annotations
 
 import time
-from typing import cast
 
 import coiled
 import rich
 import typer
 import xarray as xr
-import xclim
 from dask.base import optimize
-from odc.geo import CRS
-from odc.geo.xr import assign_crs
 
-from ocr.datasets import catalog, load_conus404
-from ocr.risks.fire import classify_wind_directions, direction_histogram, nws_fire_weather
+from ocr.conus404 import (
+    build_fire_weather_mask,
+    compute_modal_wind_direction,
+    compute_relative_humidity,
+    compute_wind_speed_and_direction,
+    load_conus404,
+    reproject_mode,
+    rotate_winds_to_earth,
+)
 
 console = rich.console.Console()
 app = typer.Typer(help='Compute fire-weather modal wind direction (CONUS404).')
@@ -98,126 +101,10 @@ def setup_cluster(
 # ---------------------------------------------------------------------------
 
 
-def compute_relative_humidity(ds: xr.Dataset) -> xr.DataArray:
-    """Compute relative humidity from temperature and dewpoint in ds."""
-    with xr.set_options(keep_attrs=True):
-        hurs = xclim.indicators.atmos.relative_humidity_from_dewpoint(tas=ds['T2'], tdps=ds['TD2'])
-    hurs.name = 'hurs'
-    return hurs
-
-
-def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
-    """Rotate grid-relative 10 m winds (U10,V10) to earth-relative components.
-
-    Uses SINALPHA / COSALPHA convention from WRF (same as notebook).
-
-    """
-    # rotate the grid-relative winds to earth-relative winds: https://forum.mmm.ucar.edu/threads/rotating-wrf-u-and-v-winds-before-and-after-reprojection.11788/
-    # earth_u = u*cosa(ix,iy)-v*sina(ix,iy)
-    # earth_v = v*cosa(ix,iy)+u*sina(ix,iy)
-    with xr.set_options(keep_attrs=True):
-        earth_u = ds.U10 * ds.COSALPHA - ds.V10 * ds.SINALPHA
-        earth_v = ds.V10 * ds.COSALPHA + ds.U10 * ds.SINALPHA
-    earth_u.name = 'u10_earth'
-    earth_v.name = 'v10_earth'
-    return earth_u, earth_v
-
-
-def compute_wind_speed_and_direction(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
-    """Derive hourly wind speed (m/s) and direction (degrees from) using xclim."""
-    winds = xclim.indicators.atmos.wind_speed_from_vector(uas=u10, vas=v10)
-    # xclim returns a tuple-like (speed, direction). Merge keeps names (sfcWind, sfcWindfromdir)
-    wind_ds = xr.merge(winds)
-    return wind_ds
-
-
-def build_fire_weather_mask(
-    hurs: xr.DataArray,
-    wind_ds: xr.Dataset,
-    *,
-    hurs_threshold: float,
-    wind_threshold: float,
-    wind_gust_factor: float = 1.4,
-) -> xr.DataArray:
-    """Compute a boolean fire weather mask.
-
-    Applies gust factor to sustained wind speed before thresholding.
-    """
-    # Convert sustained to approximate gusts via multiplier
-    # reason that wind gusts are typically ~40% higher than average wind speed
-    # and we want to base this on wind gusts (need a citation for this)
-    gust_like = wind_ds['sfcWind'] * wind_gust_factor
-    mask = nws_fire_weather(
-        hurs, hurs_threshold, gust_like, wind_threshold, tas=None, tas_threshold=None
-    )
-    mask.name = 'fire_weather_mask'
-    return mask
-
-
-def compute_modal_wind_direction(
-    direction: xr.DataArray,
-    fire_weather_mask: xr.DataArray,
-) -> xr.Dataset:
-    """Compute modal wind direction (0-7) for hours satisfying fire weather.
-
-    Direction codes follow: 0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW
-    """
-    direction_indices = classify_wind_directions(direction)
-    masked = direction_indices.where(fire_weather_mask)
-    fraction = direction_histogram(masked)
-    # Help static type checkers – ensure fraction is treated as DataArray
-    fraction = cast(xr.DataArray, fraction)
-    assert isinstance(fraction, xr.DataArray)
-
-    # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
-    any_fire_weather = fraction.sum(dim='wind_direction') > 0
-
-    mode = fraction.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
-    # Optimize graph early
-    mode = optimize(mode)[0]
-    mode.name = 'wind_direction_mode'
-    mode.attrs.update(
-        {
-            'long_name': 'Modal wind direction during fire-weather hours',
-            'description': 'Most frequent of 8 cardinal directions during hours meeting fire weather criteria',
-            'direction_labels': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-            'fire_weather_definition': 'RH < hurs_threshold (%), gust_like_wind > wind_threshold (mph)',
-        }
-    )
-    return mode.to_dataset()
-
-
 def save_zarr(data: xr.DataArray | xr.Dataset, path: str, overwrite: bool = True) -> None:
     mode = 'w' if overwrite else 'w-'
     console.log(f'Writing Zarr to {path} (mode={mode})')
     data.to_zarr(path, zarr_format=3, mode=mode)
-
-
-def reproject_mode(
-    mode: xr.Dataset,
-    src_crs_wkt: str,
-    target_dataset_name: str,
-    *,
-    chunk_lat: int = 6000,
-    chunk_lon: int = 4500,
-) -> xr.Dataset:
-    """Reproject the modal wind direction to the geobox of a target dataset."""
-    tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
-    tgt = assign_crs(tgt, crs='EPSG:4326')
-    geobox = tgt.odc.geobox
-
-    src_crs = CRS(src_crs_wkt)
-    mode_src = assign_crs(mode, crs=src_crs)
-
-    console.log('Reprojecting modal wind direction to target geobox')
-    result = (
-        mode_src.odc.reproject(geobox, resampling='nearest')
-        .astype('float32')
-        .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
-    )
-    result = optimize(result)[0]
-    result.attrs.update({'reprojected_to': target_dataset_name})
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +179,7 @@ def main(
     mode = compute_modal_wind_direction(wind_ds['sfcWindfromdir'], fire_weather_mask)
 
     # Persist before writing to reduce scheduler chatter during write
+    mode = optimize(mode)[0]
     mode = mode.persist()
 
     # Save native-grid result
