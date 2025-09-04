@@ -588,7 +588,7 @@ def test_classify_wind_directions_output_domain():
 
 
 def test_create_composite_bp_map_nan_and_invalid_handling():
-    """Invalid indices (-1, 8+, <0) and NaNs should produce NaNs in output, valid indices select correct layer."""
+    """Invalid indices (<0 or >8) and NaNs should produce NaNs; valid 0-8 indices (including 8 'circular') select correct layer."""
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
     # Build a tiny synthetic bp dataset with distinct constant planes per direction
     ny, nx = 4, 5
@@ -611,7 +611,7 @@ def test_create_composite_bp_map_nan_and_invalid_handling():
                 1.0,
                 8,
                 0,
-            ],  # 8 invalid (== circular index) should be treated as missing per code (valid <8)
+            ],  # 8 is the 'circular' direction index and SHOULD be treated as valid
         ],
         dtype=float,
     )
@@ -626,7 +626,8 @@ def test_create_composite_bp_map_nan_and_invalid_handling():
 
     # Positions with invalid / NaN indices should be NaN
     def is_invalid(v):
-        return (np.isnan(v)) or (v < 0) or (v >= 8)
+        # Treat 8 (circular) as a valid direction; invalidate only values >8 or <0 or NaN
+        return (np.isnan(v)) or (v < 0) or (v > 8)
 
     expected_nan_mask = np.vectorize(is_invalid)(wind_vals)
     np.testing.assert_array_equal(np.isnan(composite.values), expected_nan_mask)
