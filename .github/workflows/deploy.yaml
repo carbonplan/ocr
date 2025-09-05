@@ -1,8 +1,8 @@
 name: deploy
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       region_id:
