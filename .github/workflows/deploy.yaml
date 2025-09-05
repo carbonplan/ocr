@@ -48,7 +48,7 @@ permissions:
 jobs:
   deploy-staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: staging
     runs-on: ubuntu-latest
     steps:
