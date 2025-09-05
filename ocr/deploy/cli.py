@@ -192,6 +192,9 @@ def run(
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'm8g.2xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge'
+                if len(provided_region_ids) > 10
+                else 'm8g.2xlarge',
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -203,6 +206,9 @@ def run(
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge'
+                if len(provided_region_ids) > 10
+                else 'c8g.2xlarge',
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -215,6 +221,9 @@ def run(
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge'
+                if len(provided_region_ids) > 10
+                else 'c8g.2xlarge',
                 'disk_size': 250 if len(provided_region_ids) > 10 else 150,
             },
         )
@@ -228,6 +237,9 @@ def run(
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.4xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge'
+                if len(provided_region_ids) > 10
+                else 'c8g.4xlarge',
                 'disk_size': 250 if len(provided_region_ids) > 10 else 150,
             },  # PMTiles creation needs more disk space
         )
