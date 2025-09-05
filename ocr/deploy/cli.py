@@ -191,6 +191,7 @@ def run(
             name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'm8g.2xlarge',
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -201,7 +202,7 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'm8g.2xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -213,7 +214,8 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.2xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
+                'disk_size': 250 if len(provided_region_ids) > 10 else 150,
             },
         )
 
@@ -225,8 +227,9 @@ def run(
             name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.xlarge',
-            },
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.4xlarge',
+                'disk_size': 250 if len(provided_region_ids) > 10 else 150,
+            },  # PMTiles creation needs more disk space
         )
 
         batch_manager_03.wait_for_completion(exit_on_failure=True)

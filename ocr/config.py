@@ -26,7 +26,7 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     ntasks: pydantic.PositiveInt = pydantic.Field(
         1, description='Number of tasks to run in parallel'
     )
-    vm_type: str = pydantic.Field('m8g.xlarge', description='VM type to use for the worker nodes')
+    vm_type: str = pydantic.Field('m8g.2xlarge', description='VM type to use for the worker nodes')
     scheduler_vm_type: str = pydantic.Field(
         'm8g.xlarge', description='VM type to use for the scheduler node'
     )
