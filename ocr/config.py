@@ -28,7 +28,7 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     )
     vm_type: str = pydantic.Field('m8g.2xlarge', description='VM type to use for the worker nodes')
     scheduler_vm_type: str = pydantic.Field(
-        'm8g.xlarge', description='VM type to use for the scheduler node'
+        'm8g.2xlarge', description='VM type to use for the scheduler node'
     )
 
     model_config = {
