@@ -87,7 +87,7 @@ This document visualizes the deployment workflow logic you described, including 
                      v
               Run production deploy
               - REGION_ARGS="--all-region-ids"
-              - env-file: ocr-coiled-s3-prod.env
+              - env-file: ocr-coiled-s3-production.env
                      |
                      v
               (End production deploy)
