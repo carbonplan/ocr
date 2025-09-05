@@ -147,6 +147,7 @@ def custom_histogram_query(
         h.avg_wind_risk_2011_horizon_1,
         h.avg_wind_risk_2011_horizon_15,
         h.avg_wind_risk_2011_horizon_30,
+
         h.avg_wind_risk_2047_horizon_1,
         h.avg_wind_risk_2047_horizon_15,
         h.avg_wind_risk_2047_horizon_30,
