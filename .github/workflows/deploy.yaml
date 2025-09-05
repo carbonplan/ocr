@@ -1,8 +1,8 @@
 name: deploy
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -46,9 +46,9 @@ permissions:
   contents: read
 
 jobs:
-  deploy-staging-main:
+  staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: staging
     runs-on: ubuntu-latest
     steps:
@@ -75,14 +75,18 @@ jobs:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
           echo "Starting automatic deploy to staging (main branch push)"
-          REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5 --region-id y2_x6 --region-id y2_x7 --region-id y2_x8"
+          REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5 --region-id y2_x6 --region-id y2_x7 --region-id y2_x8 --region-id y2_x9 --region-id y2_x10 --region-id y3_x3 --region-id y3_x4 --region-id y3_x5 --region-id y3_x6 --region-id y3_x7 --region-id y3_x8 --region-id y3_x9 --region-id y3_x10
+          --region-id y6_x3 --region-id y6_x4 --region-id y7_x3 --region-id y7_x4 --region-id y8_x4 --region-id y8_x5 --region-id y9_x5 --region-id y9_x6 --region-id y9_x7 --region-id y10_x6 --region-id y10_x7 --region-id y10_x8 --region-id y9_x8
+          --region-id y6_x16 --region-id y6_x17 --region-id y7_x16 --region-id y7_x17
+          --region-id y2_x23 --region-id y2_x24 --region-id y2_x25
+          --region-id y8_x31 --region-id y8_x32 --region-id y9_x31 --region-id y9_x32"
           ENV_FILE="ocr-coiled-s3-staging.env"
           pixi run ocr run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled
 
-  deploy:
+  staging-manual:
     # Regular manual (non-production) deploy path
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
     runs-on: ubuntu-latest
@@ -164,7 +168,7 @@ jobs:
             $WIPE_ARG \
             --platform coiled
 
-  deploy-production:
+  production:
     # Automatic production deploy on release publish
     if: github.event_name == 'release'
     environment: production
