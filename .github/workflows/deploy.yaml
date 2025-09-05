@@ -1,8 +1,8 @@
 name: deploy
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -45,11 +45,19 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  PRODUCTION_URL: https://ocr.carbonplan.org
+  STAGING_URL: https://ocr.staging.carbonplan.org
+  QA_URL: https://ocr.qa.carbonplan.org
+
 jobs:
   staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: ${{ env.STAGING_URL }}
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -84,11 +92,15 @@ jobs:
           pixi run ocr run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
-            --platform coiled
+            --platform coiled \
+            --wipe
 
-  staging-manual:
+  manual:
     # Regular manual (non-production) deploy path
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: ${{ github.event.inputs.environment == 'staging' && env.STAGING_URL || env.QA_URL }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -171,7 +183,9 @@ jobs:
   production:
     # Automatic production deploy on release publish
     if: github.event_name == 'release'
-    environment: production
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -233,7 +247,9 @@ jobs:
   production-rerun:
     # Manual production redeploy via workflow_dispatch + production_tag input
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag != ''
-    environment: production
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
     steps:
       - name: Validate provided tag format (basic pre-check)
