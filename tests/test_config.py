@@ -60,8 +60,8 @@ class TestCoiledConfig:
         assert config.forward_aws_credentials is True
         assert config.region == 'us-west-2'
         assert config.ntasks == 1
-        assert config.vm_type == 'm8g.xlarge'
-        assert config.scheduler_vm_type == 'm8g.xlarge'
+        assert config.vm_type == 'm8g.2xlarge'
+        assert config.scheduler_vm_type == 'm8g.2xlarge'
 
     def test_custom_initialization(self):
         """Test CoiledConfig initialization with custom values."""
