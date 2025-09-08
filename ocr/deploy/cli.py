@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import typing
 from pathlib import Path
 
@@ -86,6 +87,13 @@ def run(
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='VM type override for dispatch-platform (Coiled only).'
     ),
+    process_retries: int = typer.Option(
+        1,
+        '--process-retries',
+        min=0,
+        help='Number of times to retry failed process-region tasks (Coiled only). 0 disables retries.',
+        show_default=True,
+    ),
 ):
     """
     Run the OCR deployment pipeline. This will process regions, aggregate geoparquet files,
@@ -168,22 +176,43 @@ def run(
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
 
-        batch_manager_01 = _get_manager(Platform.COILED, config.debug)
+        # --- 01 Process Regions (with optional retries) ---
+        remaining_to_process = sorted(list(unprocessed_valid_region_ids))
+        attempt = 0
+        while True:
+            attempt += 1
+            batch_manager_01 = _get_manager(Platform.COILED, config.debug)
 
-        # Submit one mapped job instead of one job per region
-        kwargs = _coiled_kwargs(config, env_file)
-        del kwargs['ntasks']
-        batch_manager_01.submit_job(
-            command=f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}',
-            name=f'process-region-{config.environment.value}',
-            kwargs={
-                **kwargs,
-                'map_over_values': sorted(list(unprocessed_valid_region_ids)),
-            },
-        )
+            kwargs = _coiled_kwargs(config, env_file)
+            # remove ntasks so we use map semantics
+            kwargs.pop('ntasks', None)
+            batch_manager_01.submit_job(
+                command=(
+                    f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
+                ),
+                name=f'process-region-{config.environment.value}-attempt-{attempt}',
+                kwargs={
+                    **kwargs,
+                    'map_over_values': remaining_to_process,
+                },
+            )
+            completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
 
-        # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
-        batch_manager_01.wait_for_completion(exit_on_failure=True)
+            if not failed:
+                break
+            # map_over_values failure detection: we need to infer failures by difference
+            # coiled batch currently only tracks job level; re-submit failed values if any remain
+            # For now we conservatively retry all remaining values if any task failed.
+            console.log(
+                f'[yellow]Attempt {attempt} finished with failures. Retrying up to {process_retries} times.[/yellow]'
+            )
+            if attempt > process_retries:
+                raise RuntimeError(
+                    f'process-region mapping failed after {attempt} attempts. Failed job ids: {failed}'
+                )
+            # Retry all values (could refine by inspecting logs later)
+            # small backoff
+            time.sleep(5 * attempt)
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = _get_manager(Platform.COILED, config.debug)
@@ -192,9 +221,9 @@ def run(
             name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'm8g.2xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'm8g.2xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 10
+                if len(provided_region_ids) > 20
                 else 'm8g.2xlarge',
             },
         )
@@ -206,9 +235,9 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.2xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 10
+                if len(provided_region_ids) > 20
                 else 'c8g.2xlarge',
             },
         )
@@ -221,11 +250,11 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.2xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.2xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 10
+                if len(provided_region_ids) > 20
                 else 'c8g.2xlarge',
-                'disk_size': 250 if len(provided_region_ids) > 10 else 150,
+                'disk_size': 250 if len(provided_region_ids) > 20 else 150,
             },
         )
 
@@ -237,11 +266,11 @@ def run(
             name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 10 else 'c8g.4xlarge',
+                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.4xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 10
+                if len(provided_region_ids) > 20
                 else 'c8g.4xlarge',
-                'disk_size': 250 if len(provided_region_ids) > 10 else 150,
+                'disk_size': 250 if len(provided_region_ids) > 20 else 150,
             },  # PMTiles creation needs more disk space
         )
 
