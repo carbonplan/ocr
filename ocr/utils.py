@@ -5,26 +5,32 @@ import xarray as xr
 from upath import UPath
 
 
-def apply_s3_creds(region: str = 'us-west-2') -> None:
-    """
-    Applies duckdb region and access credentials to session.
-
-    Parameters
-    ----------
-    region : str, optional
-        AWS Region, by default 'us-west-2'
-
-    """
+def apply_s3_creds(region: str = 'us-west-2'):
     import boto3
     import duckdb
 
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    return duckdb.sql(f"""CREATE SECRET (
-    TYPE s3,
-    KEY_ID '{credentials.access_key}',
-    SECRET '{credentials.secret_key}',
-    REGION '{region}');""")
+    sess = boto3.Session()
+    creds = sess.get_credentials()
+    if creds is None:
+        raise RuntimeError('No AWS credentials found by boto3.')
+    frozen = creds.get_frozen_credentials()
+
+    # Create or replace a named secret so we can USE it explicitly (optional)
+    parts = [
+        'CREATE OR REPLACE SECRET s3_default (',
+        '  TYPE S3,',
+        f"  KEY_ID '{frozen.access_key}',",
+        f"  SECRET '{frozen.secret_key}',",
+        f"  REGION '{region}'",
+    ]
+    if frozen.token:
+        parts.append(f",  SESSION_TOKEN '{frozen.token}'")
+    parts.append(');')
+    sql = '\n'.join(parts)
+
+    duckdb.sql(sql)
+    # Optionally ensure this secret is used
+    duckdb.sql('USE SECRET s3_default;')
 
 
 def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool = True):
