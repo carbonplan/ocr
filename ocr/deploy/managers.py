@@ -58,7 +58,19 @@ class CoiledBatchManager(AbstractBatchManager):
         return job_id
 
     def wait_for_completion(self, exit_on_failure: bool = False):
-        """Wait for all tracked jobs to complete."""
+        """Wait for all tracked jobs to complete.
+
+        Parameters
+        ----------
+        exit_on_failure : bool, default False
+            If True, raise an Exception immediately when a job failure is detected.
+
+        Returns
+        -------
+        tuple[set[str], set[str]]
+            A tuple of (completed_job_ids, failed_job_ids). If ``exit_on_failure`` is True
+            and a failure is encountered the method will raise before returning.
+        """
 
         # sets instead of lists so we don't add duplicates on each check
         completed: set = set()
@@ -116,28 +128,30 @@ class CoiledBatchManager(AbstractBatchManager):
                 )
                 if len(completed) + len(failed) < len(self.job_ids):
                     time.sleep(self.status_check_int)
-        if self.debug:
-            table = Table(title='Job Completion Summary')
-            table.add_column('Status', style='cyan')
-            table.add_column('Count', justify='right', style='magenta')
-            table.add_column('Job IDs', style='green')
-            table.add_row(
-                '✅ Completed',
-                str(len(completed)),
-                ', '.join([str(job_id) for job_id in list(completed)[:5]])
-                + ('...' if len(completed) > 5 else ''),
-            )
+            if self.debug:
+                table = Table(title='Job Completion Summary')
+                table.add_column('Status', style='cyan')
+                table.add_column('Count', justify='right', style='magenta')
+                table.add_column('Job IDs', style='green')
+                table.add_row(
+                    '✅ Completed',
+                    str(len(completed)),
+                    ', '.join([str(job_id) for job_id in list(completed)[:5]])
+                    + ('...' if len(completed) > 5 else ''),
+                )
 
-            table.add_row(
-                '❌ Failed',
-                str(len(failed)),
-                ', '.join([str(job_id) for job_id in list(failed)[:5]])
-                + ('...' if len(failed) > 5 else ''),
-            )
+                table.add_row(
+                    '❌ Failed',
+                    str(len(failed)),
+                    ', '.join([str(job_id) for job_id in list(failed)[:5]])
+                    + ('...' if len(failed) > 5 else ''),
+                )
 
-            console.print('\n')
-            console.print(table)
-            console.print(f'\n[bold green]All {len(self.job_ids)} jobs finished![/bold green]')
+                console.print('\n')
+                console.print(table)
+                console.print(f'\n[bold green]All {len(self.job_ids)} jobs finished![/bold green]')
+
+        return completed, failed
 
 
 class LocalBatchManager(AbstractBatchManager):
@@ -208,11 +222,23 @@ class LocalBatchManager(AbstractBatchManager):
             }
 
     def wait_for_completion(self, exit_on_failure: bool = False):
-        """Wait for all tracked jobs to complete."""
+        """Wait for all tracked jobs to complete.
+
+        Parameters
+        ----------
+        exit_on_failure : bool, default False
+            If True, raise an Exception immediately when a job failure is detected.
+
+        Returns
+        -------
+        tuple[set[str], set[str]]
+            A tuple of (completed_job_ids, failed_job_ids). If ``exit_on_failure`` is True
+            and a failure is encountered the method will raise before returning.
+        """
         if not self.jobs:
             if self.debug:
                 console.log('No jobs to wait for')
-            return
+            return set(), set()
 
         completed: set = set()
         failed: set = set()
@@ -297,36 +323,40 @@ class LocalBatchManager(AbstractBatchManager):
                 if len(completed) + len(failed) < len(self.jobs):
                     time.sleep(self.status_check_int)
 
-        if self.debug:
-            # Display summary table
-            table = Table(title='Local Job Completion Summary')
-            table.add_column('Status', style='cyan')
-            table.add_column('Count', justify='right', style='magenta')
-            table.add_column('Job IDs', style='green')
+            if self.debug:
+                # Display summary table
+                table = Table(title='Local Job Completion Summary')
+                table.add_column('Status', style='cyan')
+                table.add_column('Count', justify='right', style='magenta')
+                table.add_column('Job IDs', style='green')
 
-            completed_ids = [job_id for job_id in completed]
-            failed_ids = [job_id for job_id in failed]
+                completed_ids = [job_id for job_id in completed]
+                failed_ids = [job_id for job_id in failed]
 
-            table.add_row(
-                '✅ Completed',
-                str(len(completed)),
-                ', '.join(completed_ids[:5]) + ('...' if len(completed) > 5 else ''),
-            )
+                table.add_row(
+                    '✅ Completed',
+                    str(len(completed)),
+                    ', '.join(completed_ids[:5]) + ('...' if len(completed) > 5 else ''),
+                )
 
-            table.add_row(
-                '❌ Failed',
-                str(len(failed)),
-                ', '.join(failed_ids[:5]) + ('...' if len(failed) > 5 else ''),
-            )
+                table.add_row(
+                    '❌ Failed',
+                    str(len(failed)),
+                    ', '.join(failed_ids[:5]) + ('...' if len(failed) > 5 else ''),
+                )
 
-            console.print('\n')
-            console.print(table)
-            console.print(f'\n[bold green]All {len(self.jobs)} local jobs finished![/bold green]')
+                console.print('\n')
+                console.print(table)
+                console.print(
+                    f'\n[bold green]All {len(self.jobs)} local jobs finished![/bold green]'
+                )
 
         # Cleanup executor
         if self._executor:
             self._executor.shutdown(wait=True)
             self._executor = None
+
+        return completed, failed
 
 
 def _get_manager(platform: Platform, debug: bool):
