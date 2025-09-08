@@ -46,9 +46,11 @@ def create_regional_pmtiles(
                     'avg_wind_risk_2011_horizon_1', avg_wind_risk_2011_horizon_1,
                     'avg_wind_risk_2011_horizon_15', avg_wind_risk_2011_horizon_15,
                     'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
+
                     'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
                     'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                    'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
+                    'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
+
                     'USFS_RPS_horizon_1', USFS_RPS_horizon_1,
                     'USFS_RPS_horizon_15', USFS_RPS_horizon_15,
                     'USFS_RPS_horizon_30', USFS_RPS_horizon_30,
@@ -56,6 +58,7 @@ def create_regional_pmtiles(
                     'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
                     'wind_risk_2011_horizon_15', wind_risk_2011_horizon_15,
                     'wind_risk_2011_horizon_30', wind_risk_2011_horizon_30,
+
                     'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1,
                     'wind_risk_2047_horizon_15', wind_risk_2047_horizon_15,
                     'wind_risk_2047_horizon_30', wind_risk_2047_horizon_30

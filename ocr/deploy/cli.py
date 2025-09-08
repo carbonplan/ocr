@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import typing
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import dotenv
 import typer
 
 from ocr.config import OCRConfig, load_config
+from ocr.console import console
 from ocr.deploy.managers import _get_manager
 from ocr.types import Platform, RiskType
 
@@ -85,6 +87,13 @@ def run(
     vm_type: str | None = typer.Option(
         None, '--vm-type', help='VM type override for dispatch-platform (Coiled only).'
     ),
+    process_retries: int = typer.Option(
+        1,
+        '--process-retries',
+        min=0,
+        help='Number of times to retry failed process-region tasks (Coiled only). 0 disables retries.',
+        show_default=True,
+    ),
 ):
     """
     Run the OCR deployment pipeline. This will process regions, aggregate geoparquet files,
@@ -133,56 +142,57 @@ def run(
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
+    # Defensive: sub-configs are populated in OCRConfig.model_post_init
+    assert config.icechunk is not None and config.chunking is not None and config.vector is not None
     config.icechunk.init_repo()  # Ensure the Icechunk repo is initialized
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
 
-    if all_region_ids:
-        provided_region_ids = set(config.chunking.valid_region_ids)
-    else:
-        provided_region_ids = set(region_id or [])
-    valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
-    processed_region_ids = set(config.icechunk.processed_regions())
-    unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
-
-    if len(unprocessed_valid_region_ids) == 0:
-        invalid_region_ids = provided_region_ids.difference(config.chunking.valid_region_ids)
-        previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
-        error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
-
-        if invalid_region_ids:
-            error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_region_ids))}\n'
-            error_message += f'  Valid region IDs: {", ".join(sorted(list(config.chunking.valid_region_ids)))}...\n'
-
-        if previously_processed_ids:
-            error_message += (
-                f'- Already processed region IDs: {", ".join(sorted(previously_processed_ids))}\n'
-            )
-
-        error_message += "\nPlease provide valid region IDs that haven't been processed yet."
-
-        raise ValueError(error_message)
-
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
 
-        batch_manager_01 = _get_manager(Platform.COILED, config.debug)
+        # --- 01 Process Regions (with optional retries) ---
 
-        # Submit one mapped job instead of one job per region
-        kwargs = _coiled_kwargs(config, env_file)
-        del kwargs['ntasks']
-        batch_manager_01.submit_job(
-            command=f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}',
-            name=f'process-region-{config.environment.value}',
-            kwargs={
-                **kwargs,
-                'map_over_values': sorted(list(unprocessed_valid_region_ids)),
-            },
-        )
+        attempt = 0
+        while True:
+            attempt += 1
+            # Use central config helper to resolve / validate region IDs
+            region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+            remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-        # # this is a monitoring / blocking func. We should be able to block with this, then run 02, 03 etc.
-        batch_manager_01.wait_for_completion(exit_on_failure=True)
+            batch_manager_01 = _get_manager(Platform.COILED, config.debug)
+
+            kwargs = _coiled_kwargs(config, env_file)
+            # remove ntasks so we use map semantics
+            kwargs.pop('ntasks', None)
+            batch_manager_01.submit_job(
+                command=(
+                    f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
+                ),
+                name=f'process-region-{config.environment.value}-attempt-{attempt}',
+                kwargs={
+                    **kwargs,
+                    'map_over_values': remaining_to_process,
+                },
+            )
+            completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
+
+            if not failed:
+                break
+            # map_over_values failure detection: we need to infer failures by difference
+            # coiled batch currently only tracks job level; re-submit failed values if any remain
+            # For now we conservatively retry all remaining values if any task failed.
+            console.log(
+                f'[yellow]Attempt {attempt} finished with failures. Retrying up to {process_retries} times.[/yellow]'
+            )
+            if attempt > process_retries:
+                raise RuntimeError(
+                    f'process-region mapping failed after {attempt} attempts. Failed job ids: {failed}'
+                )
+            # Retry all values (could refine by inspecting logs later)
+            # small backoff
+            time.sleep(5 * attempt)
 
         # ----------- 02 Aggregate -------------
         batch_manager_aggregate_02 = _get_manager(Platform.COILED, config.debug)
@@ -191,6 +201,8 @@ def run(
             name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -201,7 +213,8 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'm8g.2xlarge',
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -213,7 +226,9 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.2xlarge',
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
+                'disk_size': 250,
             },
         )
 
@@ -225,8 +240,10 @@ def run(
             name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.xlarge',
-            },
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
+                'disk_size': 250,
+            },  # PMTiles creation needs more disk space
         )
 
         batch_manager_03.wait_for_completion(exit_on_failure=True)
@@ -234,7 +251,11 @@ def run(
     elif platform == Platform.LOCAL:
         manager = _get_manager(Platform.LOCAL, config.debug)
 
-        for rid in unprocessed_valid_region_ids:
+        # Use central config helper to resolve / validate region IDs
+        region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+        remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
+
+        for rid in remaining_to_process:
             manager.submit_job(
                 command=f'ocr process-region {rid} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{config.environment.value}',
@@ -287,6 +308,11 @@ def run(
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
+
+    if config.debug:
+        # Print out the pretty paths
+        console.log('Run complete. Current configuration paths:')
+        config.pretty_paths()
 
 
 @app.command()

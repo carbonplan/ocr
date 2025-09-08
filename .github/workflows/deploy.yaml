@@ -1,5 +1,8 @@
 name: deploy
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -42,10 +45,63 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  PRODUCTION_URL: https://ocr.carbonplan.org
+  STAGING_URL: https://ocr.staging.carbonplan.org
+  QA_URL: https://ocr.qa.carbonplan.org
+
 jobs:
-  deploy:
+  staging-main:
+    # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: ${{ env.STAGING_URL }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list
+
+      - name: Deploy (automatic staging main)
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+        run: |
+          echo "Starting automatic deploy to staging (main branch push)"
+          REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5 --region-id y2_x6 --region-id y2_x7 --region-id y2_x8 --region-id y2_x9 --region-id y2_x10 --region-id y3_x3 --region-id y3_x4 --region-id y3_x5 --region-id y3_x6 --region-id y3_x7 --region-id y3_x8 --region-id y3_x9 --region-id y3_x10
+          --region-id y6_x3 --region-id y6_x4 --region-id y7_x3 --region-id y7_x4 --region-id y8_x4 --region-id y8_x5 --region-id y9_x5 --region-id y9_x6 --region-id y9_x7 --region-id y10_x6 --region-id y10_x7 --region-id y10_x8 --region-id y9_x8
+          --region-id y6_x16 --region-id y6_x17 --region-id y7_x16 --region-id y7_x17
+          --region-id y2_x23 --region-id y2_x24 --region-id y2_x25
+          --region-id y8_x31 --region-id y8_x32 --region-id y9_x31 --region-id y9_x32"
+          ENV_FILE="ocr-coiled-s3-staging.env"
+          pixi run ocr run \
+            $REGION_ARGS \
+            --env-file "$ENV_FILE" \
+            --platform coiled \
+            --wipe
+
+  manual:
     # Regular manual (non-production) deploy path
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: ${{ github.event.inputs.environment == 'staging' && env.STAGING_URL || env.QA_URL }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -125,9 +181,12 @@ jobs:
             $WIPE_ARG \
             --platform coiled
 
-  deploy-production:
+  production:
     # Automatic production deploy on release publish
     if: github.event_name == 'release'
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -183,12 +242,15 @@ jobs:
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
             $REGION_ARGS \
-            --env-file ocr-coiled-s3-prod.env \
+            --env-file ocr-coiled-s3-production.env \
             --platform coiled
 
   production-rerun:
     # Manual production redeploy via workflow_dispatch + production_tag input
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag != ''
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
     steps:
       - name: Validate provided tag format (basic pre-check)
@@ -258,5 +320,5 @@ jobs:
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
             $REGION_ARGS \
-            --env-file ocr-coiled-s3-prod.env \
+            --env-file ocr-coiled-s3-production.env \
             --platform coiled

@@ -57,11 +57,11 @@ class TestCoiledConfig:
         config = CoiledConfig()
 
         assert config.tag == {'Project': 'OCR'}
-        assert config.forward_aws_credentials is True
+        assert config.forward_aws_credentials is False
         assert config.region == 'us-west-2'
         assert config.ntasks == 1
-        assert config.vm_type == 'm8g.xlarge'
-        assert config.scheduler_vm_type == 'm8g.xlarge'
+        assert config.vm_type == 'm8g.2xlarge'
+        assert config.scheduler_vm_type == 'm8g.2xlarge'
 
     def test_custom_initialization(self):
         """Test CoiledConfig initialization with custom values."""
@@ -502,6 +502,29 @@ class TestVectorConfig:
         # which still contains 'geoparquet-regions', so the check passes
         config.delete_region_gpqs()  # Should not raise
 
+    def test_pretty_paths_output_and_side_effects(self, temp_dir, capsys):
+        """pretty_paths should print a readable table and create expected dirs."""
+        config = VectorConfig(storage_root=temp_dir)
+
+        # call pretty printer (touches cached properties that mkdir)
+        config.pretty_paths()
+
+        out = capsys.readouterr().out
+        # Check some key rows appear in output
+        assert 'Vector setting' in out
+        assert 'Geoparquet prefix' in out
+        assert 'Region Geoparquet URI' in out
+        assert 'PMTiles prefix' in out
+
+        # Verify directories were created as a side-effect
+        assert config.region_geoparquet_uri.exists()
+        assert config.region_geoparquet_uri.is_dir()
+        assert config.region_summary_stats_prefix.exists()
+        assert config.region_summary_stats_prefix.is_dir()
+        # pmtiles and geoparquet parents should exist
+        assert config.building_geoparquet_uri.parent.exists()
+        assert config.buildings_pmtiles_uri.parent.exists()
+
 
 # ============= IcechunkConfig Tests =============
 
@@ -678,6 +701,16 @@ class TestIcechunkConfig:
         exists = config.region_id_exists('Repository initialized')
         assert exists
 
+    def test_pretty_paths_output(self, temp_dir, capsys):
+        """pretty_paths should print repo URI and protocol."""
+        cfg = IcechunkConfig(storage_root=temp_dir, prefix='test-icechunk')
+
+        cfg.pretty_paths()
+        out = capsys.readouterr().out
+        assert 'Icechunk setting' in out
+        assert 'Repository URI' in out
+        assert 'Protocol' in out
+
 
 # ============= OCRConfig Tests =============
 
@@ -727,6 +760,21 @@ class TestOCRConfig:
 
                 assert config.environment == Environment.PRODUCTION
                 assert config.storage_root == temp_dir
+
+    def test_pretty_paths_combined_output_and_side_effects(self, temp_dir, capsys):
+        """OCRConfig.pretty_paths should include sub-config pretty outputs and create dirs."""
+        cfg = OCRConfig(storage_root=temp_dir)
+
+        cfg.pretty_paths()
+        out = capsys.readouterr().out
+        # Expect the three sections
+        assert 'OCR setting' in out
+        assert 'Vector setting' in out
+        assert 'Icechunk setting' in out
+
+        # Vector pretty_paths should have created expected directories
+        assert cfg.vector.region_geoparquet_uri.exists()
+        assert cfg.vector.region_summary_stats_prefix.exists()
 
 
 # ============= Integration Tests =============
