@@ -7,6 +7,7 @@ import dotenv
 import typer
 
 from ocr.config import OCRConfig, load_config
+from ocr.console import console
 from ocr.deploy.managers import _get_manager
 from ocr.types import Platform, RiskType
 
@@ -302,6 +303,11 @@ def run(
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
+
+    if config.debug:
+        # Print out the pretty paths
+        console.log('Run complete. Current configuration paths:')
+        config.pretty_paths()
 
 
 @app.command()

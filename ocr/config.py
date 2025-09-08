@@ -878,7 +878,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
@@ -913,6 +913,54 @@ class VectorConfig(pydantic_settings.BaseSettings):
         else:
             if self.debug:
                 console.log('No files found to delete.')
+
+    def pretty_paths(self) -> None:
+        """Pretty print key VectorConfig paths and URIs.
+
+        This method intentionally touches cached properties that create
+        directories (e.g., via mkdir) so you can verify real locations.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+
+        # high-level
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+
+        # prefixes (touch real properties)
+        rows.append(nv('Intermediate prefix', self.prefix))
+        rows.append(nv('Output prefix', self.output_prefix))
+        rows.append(nv('Geoparquet prefix', self.geoparquet_prefix))
+        rows.append(nv('Region Geoparquet prefix', self.region_geoparquet_prefix))
+        rows.append(nv('PMTiles prefix', self.pmtiles_prefix))
+
+        # derived URIs (touch cached properties that mkdir/prepare parents)
+        rows.extend(
+            [
+                nv('Region Geoparquet URI', str(self.region_geoparquet_uri)),
+                nv('Buildings Geoparquet URI', str(self.building_geoparquet_uri)),
+                nv('Region summary stats dir', str(self.region_summary_stats_prefix)),
+                nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
+                nv('Counties summary stats', str(self.counties_summary_stats_uri)),
+                nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
+                nv('Tracts PMTiles', str(self.tracts_pmtiles_uri)),
+                nv('Counties PMTiles', str(self.counties_pmtiles_uri)),
+            ]
+        )
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('Vector setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='VectorConfig paths', title_align='left'))
 
 
 class IcechunkConfig(pydantic_settings.BaseSettings):
@@ -1145,6 +1193,37 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                 time.sleep(delay)
                 pass
 
+    def pretty_paths(self) -> None:
+        """Pretty print key IcechunkConfig paths and URIs.
+
+        This version touches cached properties (e.g., uri, storage) to
+        surface real configuration and types.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+        rows.append(nv('Prefix', self.prefix))
+
+        # Touch real cached properties
+        uri = self.uri
+        rows.append(nv('Repository URI', str(uri)))
+        rows.append(nv('Protocol', uri.protocol or 'file'))
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('Icechunk setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='IcechunkConfig paths', title_align='left'))
+
 
 class OCRConfig(pydantic_settings.BaseSettings):
     """Configuration settings for OCR processing."""
@@ -1210,6 +1289,38 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 'coiled',
                 CoiledConfig(),
             )
+
+    def pretty_paths(self) -> None:
+        """Pretty print key OCRConfig paths and URIs.
+
+        This method intentionally touches cached properties that create
+        directories (e.g., via mkdir) so you can verify real locations.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+
+        # high-level
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('OCR setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='OCRConfig paths', title_align='left'))
+
+        if self.vector:
+            self.vector.pretty_paths()
+        if self.icechunk:
+            self.icechunk.pretty_paths()
 
 
 def load_config(file_path: Path | None) -> OCRConfig:
