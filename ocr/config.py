@@ -1,6 +1,7 @@
 import functools
 import random
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
@@ -1225,6 +1226,16 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         console.print(Panel(table, title='IcechunkConfig paths', title_align='left'))
 
 
+@dataclass
+class RegionIDStatus:
+    provided_region_ids: set[str]
+    valid_region_ids: set[str]
+    invalid_region_ids: set[str]
+    processed_region_ids: set[str]
+    previously_processed_ids: set[str]
+    unprocessed_valid_region_ids: set[str]
+
+
 class OCRConfig(pydantic_settings.BaseSettings):
     """Configuration settings for OCR processing."""
 
@@ -1322,16 +1333,76 @@ class OCRConfig(pydantic_settings.BaseSettings):
         if self.icechunk:
             self.icechunk.pretty_paths()
 
+    # ------------------------------------------------------------------
+    # Region ID selection / validation helpers (used by CLI pipeline)
+    # ------------------------------------------------------------------
+    def _compose_region_id_error(self, status: 'RegionIDStatus') -> str:
+        """Compose a detailed error message mirroring previous CLI behavior.
+
+        Parameters
+        ----------
+        status : RegionIDStatus
+            Computed status object.
+        """
+        error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
+        # Ensure required sub-config present (defensive; model_post_init guarantees this)
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        if status.invalid_region_ids:
+            error_message += (
+                f'- Invalid region IDs: {", ".join(sorted(status.invalid_region_ids))}\n'
+            )
+            # include (truncated) list of valid ids for reference
+            error_message += (
+                '  Valid region IDs: '
+                f'{", ".join(sorted(list(self.chunking.valid_region_ids)))}...\n'
+            )
+        if status.previously_processed_ids:
+            error_message += (
+                '- Already processed region IDs: '
+                f'{", ".join(sorted(status.previously_processed_ids))}\n'
+            )
+        error_message += "\nPlease provide valid region IDs that haven't been processed yet."
+        return error_message
+
+    def resolve_region_ids(self, provided_region_ids: set[str]) -> 'RegionIDStatus':
+        """Validate provided region IDs against valid + processed sets.
+
+        Returns a RegionIDStatus object or raises ValueError if none are processable.
+        """
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        assert self.icechunk is not None, 'Icechunk configuration not initialized'
+        all_valid = set(self.chunking.valid_region_ids)
+        valid_region_ids = provided_region_ids.intersection(all_valid)
+        processed_region_ids = set(self.icechunk.processed_regions())
+        unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
+        invalid_region_ids = provided_region_ids.difference(all_valid)
+        previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
+        status = RegionIDStatus(
+            provided_region_ids=provided_region_ids,
+            valid_region_ids=valid_region_ids,
+            invalid_region_ids=invalid_region_ids,
+            processed_region_ids=processed_region_ids,
+            previously_processed_ids=previously_processed_ids,
+            unprocessed_valid_region_ids=unprocessed_valid_region_ids,
+        )
+        if len(unprocessed_valid_region_ids) == 0:
+            raise ValueError(self._compose_region_id_error(status))
+        return status
+
+    def select_region_ids(
+        self, region_ids: list[str] | None, *, all_region_ids: bool = False
+    ) -> 'RegionIDStatus':
+        """Helper to pick the effective set of region IDs (all or user-provided) and
+        return the validated status object.
+        """
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        provided = set(self.chunking.valid_region_ids) if all_region_ids else set(region_ids or [])
+        return self.resolve_region_ids(provided)
+
 
 def load_config(file_path: Path | None) -> OCRConfig:
-    """
-    Load OCR configuration from a YAML file.
-    """
-
+    """Load OCR configuration from an env file (dotenv) or current environment."""
     if file_path is None:
-        config = OCRConfig()
-    else:
-        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        config = OCRConfig()  # loads from environment variables
-
-    return config
+        return OCRConfig()
+    dotenv.load_dotenv(file_path)
+    return OCRConfig()
