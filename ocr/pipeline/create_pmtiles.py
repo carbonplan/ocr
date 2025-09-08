@@ -1,73 +1,98 @@
 import subprocess
 import tempfile
+from pathlib import Path
 
+import duckdb
 from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
-from ocr.utils import copy_or_upload
+from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
 
 
-def create_pmtiles(config: OCRConfig):
+def create_pmtiles(
+    config: OCRConfig,
+    *,
+    connection: duckdb.DuckDBPyConnection | None = None,
+):
+    """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
+
+    Steps:
+      1. (Optionally) create or reuse a DuckDB connection and load extensions.
+      2. Export feature rows as NDJSON GeoJSON features via COPY ... TO.
+      3. Invoke tippecanoe on the NDJSON to produce a PMTiles archive.
+      4. Upload resulting PMTiles to the configured destination.
     """
-    Convert consolidated geoparquet to PMTiles format.
 
-    This function:
-    2. Reads the geoparquet with duckdb spatial
-    3. Creates PMTiles using tippecanoe
-    4. Uploads the result back to S3
-    """
+    input_path = config.vector.building_geoparquet_uri  # type: ignore[attr-defined]
+    output_path = config.vector.buildings_pmtiles_uri  # type: ignore[attr-defined]
 
-    input_path = config.vector.building_geoparquet_uri
-    output_path = config.vector.buildings_pmtiles_uri
+    needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = UPath(tmpdir)
-        local_pmtiles = tmp_path / 'aggregated.pmtiles'
+    # Prepare connection
+    close_con = False
+    if connection is None:
+        connection = duckdb.connect(database=':memory:')
+        close_con = True
 
-        # Run duckdb to generate GeoJSON and pipe to tippecanoe
-        duckdb_building_query = f"""
-        install spatial; load spatial; install httpfs; load httpfs;
-        COPY (
-            SELECT
-                'Feature' AS type,
-                json_object(
-                    'USFS_RPS', CAST(USFS_RPS AS DECIMAL(10,2)),
-                    'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
-                    'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
-                     ) AS properties,
-                json(ST_AsGeoJson(geometry)) AS geometry
-            FROM read_parquet('{input_path}')
-        ) TO STDOUT (FORMAT json);
-        """
-        duckdb_proc = subprocess.Popen(
-            ['duckdb', '-c', duckdb_building_query], stdout=subprocess.PIPE
-        )
+    try:
+        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True)
+        if needs_s3:
+            apply_s3_creds(region='us-west-2')
 
-        tippecanoe_cmd = [
-            'tippecanoe',
-            '-o',
-            str(local_pmtiles),
-            '-l',
-            'risk',
-            '-n',
-            'building',
-            '-f',
-            '-P',
-            '--drop-smallest-as-needed',
-            '-q',
-            '--extend-zooms-if-still-dropping',
-            '-zg',
-            '--generate-ids',
-        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = UPath(tmpdir)
+            local_pmtiles = tmp_path / 'aggregated.pmtiles'
+            ndjson_path = Path(tmpdir) / 'buildings.ndjson'
 
-        _ = subprocess.run(tippecanoe_cmd, stdin=duckdb_proc.stdout, check=True)
+            if config.debug:
+                console.log(f'Exporting features from {input_path} to NDJSON')
 
-        if config.debug:
-            console.log('Tippecanoe tiles generation complete')
-            console.log(f'Uploading PMTiles to {output_path}')
+            copy_sql = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        'USFS_RPS', CAST(USFS_RPS AS DECIMAL(10,2)),
+                        'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
+                        'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{input_path}')
+            ) TO '{ndjson_path.as_posix()}' (FORMAT json);
+            """
+            connection.execute(copy_sql)
 
-        copy_or_upload(local_pmtiles, output_path)
+            tippecanoe_cmd = [
+                'tippecanoe',
+                '-o',
+                str(local_pmtiles),
+                '-l',
+                'risk',
+                '-n',
+                'building',
+                '-f',
+                '-P',
+                '--drop-smallest-as-needed',
+                '-q',
+                '--extend-zooms-if-still-dropping',
+                '-zg',
+                '--generate-ids',
+                str(ndjson_path),
+            ]
+            subprocess.run(tippecanoe_cmd, check=True)
 
-        if config.debug:
-            console.log('PMTiles upload completed successfully')
+            if config.debug:
+                console.log('Tippecanoe tiles generation complete')
+                console.log(f'Uploading PMTiles to {output_path}')
+
+            copy_or_upload(local_pmtiles, output_path)
+
+            if config.debug:
+                console.log('PMTiles upload completed successfully')
+    finally:
+        if close_con:
+            try:
+                connection.close()
+            except Exception:
+                pass
