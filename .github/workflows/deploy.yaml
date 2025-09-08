@@ -1,8 +1,8 @@
 name: deploy
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -53,7 +53,7 @@ env:
 jobs:
   staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: staging
       url: ${{ env.STAGING_URL }}
@@ -67,7 +67,7 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 900
+
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
           pixi-version: v0.43.3
@@ -112,7 +112,6 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 7200
 
       - uses: actions/checkout@v5
       - uses: prefix-dev/setup-pixi@v0.9.0
@@ -198,7 +197,6 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 7200
 
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
@@ -277,7 +275,6 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 7200
 
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
