@@ -15,7 +15,7 @@ def apply_s3_creds(region: str = 'us-west-2'):
         raise RuntimeError('No AWS credentials found by boto3.')
     frozen = creds.get_frozen_credentials()
 
-    # Create or replace a named secret so we can USE it explicitly (optional)
+    # Create or replace a named secret
     parts = [
         'CREATE OR REPLACE SECRET s3_default (',
         '  TYPE S3,',
@@ -29,8 +29,6 @@ def apply_s3_creds(region: str = 'us-west-2'):
     sql = '\n'.join(parts)
 
     duckdb.sql(sql)
-    # Optionally ensure this secret is used
-    duckdb.sql('USE SECRET s3_default;')
 
 
 def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool = True):
