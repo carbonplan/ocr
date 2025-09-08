@@ -142,36 +142,17 @@ def run(
     # ------------- CONFIG ---------------
 
     config = load_config(env_file)
+    # Defensive: sub-configs are populated in OCRConfig.model_post_init
+    assert config.icechunk is not None and config.chunking is not None and config.vector is not None
     config.icechunk.init_repo()  # Ensure the Icechunk repo is initialized
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
 
-    if all_region_ids:
-        provided_region_ids = set(config.chunking.valid_region_ids)
-    else:
-        provided_region_ids = set(region_id or [])
-    valid_region_ids = provided_region_ids.intersection(config.chunking.valid_region_ids)
-    processed_region_ids = set(config.icechunk.processed_regions())
-    unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
-
-    if len(unprocessed_valid_region_ids) == 0:
-        invalid_region_ids = provided_region_ids.difference(config.chunking.valid_region_ids)
-        previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
-        error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
-
-        if invalid_region_ids:
-            error_message += f'- Invalid region IDs: {", ".join(sorted(invalid_region_ids))}\n'
-            error_message += f'  Valid region IDs: {", ".join(sorted(list(config.chunking.valid_region_ids)))}...\n'
-
-        if previously_processed_ids:
-            error_message += (
-                f'- Already processed region IDs: {", ".join(sorted(previously_processed_ids))}\n'
-            )
-
-        error_message += "\nPlease provide valid region IDs that haven't been processed yet."
-
-        raise ValueError(error_message)
+    # Use central config helper to resolve / validate region IDs
+    region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+    provided_region_ids = region_status.provided_region_ids
+    unprocessed_valid_region_ids = region_status.unprocessed_valid_region_ids
 
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
