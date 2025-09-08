@@ -57,7 +57,7 @@ class TestCoiledConfig:
         config = CoiledConfig()
 
         assert config.tag == {'Project': 'OCR'}
-        assert config.forward_aws_credentials is True
+        assert config.forward_aws_credentials is False
         assert config.region == 'us-west-2'
         assert config.ntasks == 1
         assert config.vm_type == 'm8g.2xlarge'

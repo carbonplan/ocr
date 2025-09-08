@@ -21,7 +21,7 @@ from ocr.types import Environment
 class CoiledConfig(pydantic_settings.BaseSettings):
     tag: dict[str, str] = pydantic.Field({'Project': 'OCR'})
     forward_aws_credentials: bool = pydantic.Field(
-        True, description='Whether to forward AWS credentials to the worker nodes'
+        False, description='Whether to forward AWS credentials to the worker nodes'
     )
     region: str = pydantic.Field('us-west-2', description='AWS region to use for the worker nodes')
     ntasks: pydantic.PositiveInt = pydantic.Field(
