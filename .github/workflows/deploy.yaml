@@ -1,8 +1,8 @@
 name: deploy
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -53,7 +53,7 @@ env:
 jobs:
   staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: staging
       url: ${{ env.STAGING_URL }}
