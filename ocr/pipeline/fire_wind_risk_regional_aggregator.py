@@ -177,6 +177,11 @@ def custom_histogram_query(
 def compute_regional_fire_wind_risk_statistics(
     config: OCRConfig,
 ):
+    from ocr.utils import apply_s3_creds, install_load_extensions
+
+    install_load_extensions()
+    apply_s3_creds()
+
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
     consolidated_buildings_path = config.vector.building_geoparquet_uri
@@ -187,7 +192,6 @@ def compute_regional_fire_wind_risk_statistics(
     dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
     con = duckdb.connect(database=':memory:')
-    con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
     hist_bins = [5, 10, 15, 20, 25, 100]
