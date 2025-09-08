@@ -1390,7 +1390,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
         return status
 
     def select_region_ids(
-        self, region_ids: list[str] | None, *, all_region_ids: bool
+        self, region_ids: list[str] | None, *, all_region_ids: bool = False
     ) -> 'RegionIDStatus':
         """Helper to pick the effective set of region IDs (all or user-provided) and
         return the validated status object.

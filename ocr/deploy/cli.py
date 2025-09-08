@@ -149,19 +149,18 @@ def run(
         config.icechunk.wipe()
         config.vector.wipe()
 
-    # Use central config helper to resolve / validate region IDs
-    region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
-    provided_region_ids = region_status.provided_region_ids
-    unprocessed_valid_region_ids = region_status.unprocessed_valid_region_ids
-
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
 
         # --- 01 Process Regions (with optional retries) ---
-        remaining_to_process = sorted(list(unprocessed_valid_region_ids))
+
         attempt = 0
         while True:
             attempt += 1
+            # Use central config helper to resolve / validate region IDs
+            region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+            remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
+
             batch_manager_01 = _get_manager(Platform.COILED, config.debug)
 
             kwargs = _coiled_kwargs(config, env_file)
@@ -202,10 +201,8 @@ def run(
             name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'm8g.2xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 20
-                else 'm8g.2xlarge',
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -216,10 +213,8 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.2xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 20
-                else 'c8g.2xlarge',
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -231,11 +226,9 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.2xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 20
-                else 'c8g.2xlarge',
-                'disk_size': 250 if len(provided_region_ids) > 20 else 150,
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
+                'disk_size': 250,
             },
         )
 
@@ -247,11 +240,9 @@ def run(
             name=f'create-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge' if len(provided_region_ids) > 20 else 'c8g.4xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge'
-                if len(provided_region_ids) > 20
-                else 'c8g.4xlarge',
-                'disk_size': 250 if len(provided_region_ids) > 20 else 150,
+                'vm_type': 'c8g.8xlarge',
+                'scheduler_vm_type': 'c8g.8xlarge',
+                'disk_size': 250,
             },  # PMTiles creation needs more disk space
         )
 
@@ -260,7 +251,11 @@ def run(
     elif platform == Platform.LOCAL:
         manager = _get_manager(Platform.LOCAL, config.debug)
 
-        for rid in unprocessed_valid_region_ids:
+        # Use central config helper to resolve / validate region IDs
+        region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+        remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
+
+        for rid in remaining_to_process:
             manager.submit_job(
                 command=f'ocr process-region {rid} --risk-type {risk_type.value}',
                 name=f'process-region-{rid}-{config.environment.value}',
