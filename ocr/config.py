@@ -1,6 +1,7 @@
 import functools
 import random
 import time
+import typing
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +23,10 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     tag: dict[str, str] = pydantic.Field({'Project': 'OCR'})
     forward_aws_credentials: bool = pydantic.Field(
         False, description='Whether to forward AWS credentials to the worker nodes'
+    )
+    spot_policy: typing.Literal['on-demand', 'spot', 'spot_with_fallback'] = pydantic.Field(
+        'spot_with_fallback',
+        description='Spot instance policy for Coiled cluster. See Coiled docs for details.',
     )
     region: str = pydantic.Field('us-west-2', description='AWS region to use for the worker nodes')
     ntasks: pydantic.PositiveInt = pydantic.Field(
