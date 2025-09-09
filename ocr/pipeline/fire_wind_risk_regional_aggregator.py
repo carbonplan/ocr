@@ -22,19 +22,19 @@ def create_summary_stat_tmp_tables(
 
 
     -- Single-year risks are stored as percentages (0-100)
-    round(USFS_RPS, 2) as USFS_RPS_horizon_1,
+    USFS_RPS as USFS_RPS_horizon_1,
     -- Convert percentage to probability (divide by 100) for multi-year aggregation, then back to percentage (multiply by 100)
-    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 15)) * 100 , 2) as USFS_RPS_horizon_15,
-    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 30)) * 100 , 2) as USFS_RPS_horizon_30,
+    (1.0 - POWER((1 - (USFS_RPS / 100.0)), 15)) * 100  as USFS_RPS_horizon_15,
+    (1.0 - POWER((1 - (USFS_RPS / 100.0)), 30)) * 100  as USFS_RPS_horizon_30,
 
 
-    round(wind_risk_2011, 2) as wind_risk_2011_horizon_1,
-    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 15)) * 100 , 2) as wind_risk_2011_horizon_15,
-    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 30)) * 100 , 2) as wind_risk_2011_horizon_30,
+    wind_risk_2011 as wind_risk_2011_horizon_1,
+    (1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 15)) * 100  as wind_risk_2011_horizon_15,
+    (1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 30)) * 100  as wind_risk_2011_horizon_30,
 
-    round(wind_risk_2047, 2) as wind_risk_2047_horizon_1,
-    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 15)) * 100 , 2) as wind_risk_2047_horizon_15,
-    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 30)) * 100 , 2) as wind_risk_2047_horizon_30,
+    wind_risk_2047 as wind_risk_2047_horizon_1,
+    (1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 15)) * 100  as wind_risk_2047_horizon_15,
+    (1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 30)) * 100  as wind_risk_2047_horizon_30,
 
 
         FROM read_parquet('{consolidated_buildings_path}')
@@ -99,16 +99,16 @@ def custom_histogram_query(
     SELECT
         b.NAME as NAME,
         count(a.USFS_RPS_horizon_1) as building_count,
-        round(avg(a.USFS_RPS_horizon_1), 2) as avg_USFS_RPS_horizon_1,
-        round(avg(a.USFS_RPS_horizon_15), 2) as avg_USFS_RPS_horizon_15,
-        round(avg(a.USFS_RPS_horizon_30), 2) as avg_USFS_RPS_horizon_30,
+        avg(a.USFS_RPS_horizon_1) as avg_USFS_RPS_horizon_1,
+        avg(a.USFS_RPS_horizon_15) as avg_USFS_RPS_horizon_15,
+        avg(a.USFS_RPS_horizon_30) as avg_USFS_RPS_horizon_30,
 
-        round(avg(a.wind_risk_2011_horizon_1), 2) as avg_wind_risk_2011_horizon_1,
-        round(avg(a.wind_risk_2011_horizon_15), 2) as avg_wind_risk_2011_horizon_15,
-        round(avg(a.wind_risk_2011_horizon_30), 2) as avg_wind_risk_2011_horizon_30,
-        round(avg(a.wind_risk_2047_horizon_1), 2) as avg_wind_risk_2047_horizon_1,
-        round(avg(a.wind_risk_2047_horizon_15), 2) as avg_wind_risk_2047_horizon_15,
-        round(avg(a.wind_risk_2047_horizon_30), 2) as avg_wind_risk_2047_horizon_30,
+        avg(a.wind_risk_2011_horizon_1) as avg_wind_risk_2011_horizon_1,
+        avg(a.wind_risk_2011_horizon_15) as avg_wind_risk_2011_horizon_15,
+        avg(a.wind_risk_2011_horizon_30) as avg_wind_risk_2011_horizon_30,
+        avg(a.wind_risk_2047_horizon_1) as avg_wind_risk_2047_horizon_1,
+        avg(a.wind_risk_2047_horizon_15) as avg_wind_risk_2047_horizon_15,
+        avg(a.wind_risk_2047_horizon_30) as avg_wind_risk_2047_horizon_30,
 
         map_values(histogram(CASE WHEN a.USFS_RPS_horizon_1 <> 0 AND a.USFS_RPS_horizon_1 <= 100 THEN a.USFS_RPS_horizon_1 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_1,
         map_values(histogram(CASE WHEN a.USFS_RPS_horizon_15 <> 0 AND a.USFS_RPS_horizon_15 <= 100 THEN a.USFS_RPS_horizon_15 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_15,
