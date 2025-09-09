@@ -1,6 +1,3 @@
-# aggregate geoparquet regions, reproject and write
-
-
 from ocr.config import OCRConfig
 
 
@@ -10,17 +7,21 @@ def aggregated_gpq(config: OCRConfig):
     from ocr.console import console
     from ocr.utils import apply_s3_creds, install_load_extensions
 
-    install_load_extensions()
-    apply_s3_creds()
+    connection = duckdb.connect(database=':memory:')
 
     input_path = config.vector.region_geoparquet_uri
     output_path = config.vector.building_geoparquet_uri
     path = input_path / '*.parquet'
 
+    needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
+
+    install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
+    apply_s3_creds(region='us-west-2', con=connection)
+
     if config.debug:
         console.log(f'Aggregating geoparquet regions from: {path}')
 
-    duckdb.sql(f"""
+    connection.execute(f"""
         SET preserve_insertion_order=false;
         COPY (
         SELECT *
