@@ -1,4 +1,5 @@
 import typing
+import warnings
 
 import numpy as np
 import xarray as xr
@@ -290,12 +291,18 @@ def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr
     # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
     bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
     # select the entry that corresponds to the wind direction index
-    # TODO: let's test this to confirm it's working as expected
-    # Preserve NaNs: mask them out after selection
-    missing = wind_directions.isnull()
-    valid = (wind_directions >= 0) & (wind_directions < 8)
-    missing = missing | ~valid
-    safe_indexer = xr.where(missing, 8, wind_directions).astype(np.int16)
+    # Preserve NaNs & truly invalid indices ( <0 or >8 ) as missing.
+    # Indices 0-7 correspond to cardinal directions; 8 is the explicit 'circular' direction
+    missing = wind_directions.isnull() | (wind_directions < 0) | (wind_directions > 8)
+    # if missing.sum() > 0. let's warn
+    if missing.sum() > 0:
+        warnings.warn(
+            f'Missing and/or invalid wind direction data for {missing.sum().data!r} points.',
+            UserWarning,
+            stacklevel=2,
+        )
+    # For valid positions (including 8) we can index directly
+    safe_indexer = wind_directions.where(~missing, 0).astype(np.int16)
     out = bp_da.isel(direction=safe_indexer).where(~missing)
     return out
 

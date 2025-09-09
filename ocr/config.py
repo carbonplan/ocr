@@ -1,6 +1,8 @@
 import functools
 import random
 import time
+import typing
+from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
@@ -9,6 +11,7 @@ import numpy as np
 import pydantic
 import pydantic_settings
 import xarray as xr
+from pydantic_extra_types.semantic_version import SemanticVersion
 from upath import UPath
 
 from ocr import catalog
@@ -19,15 +22,19 @@ from ocr.types import Environment
 class CoiledConfig(pydantic_settings.BaseSettings):
     tag: dict[str, str] = pydantic.Field({'Project': 'OCR'})
     forward_aws_credentials: bool = pydantic.Field(
-        True, description='Whether to forward AWS credentials to the worker nodes'
+        False, description='Whether to forward AWS credentials to the worker nodes'
+    )
+    spot_policy: typing.Literal['on-demand', 'spot', 'spot_with_fallback'] = pydantic.Field(
+        'spot_with_fallback',
+        description='Spot instance policy for Coiled cluster. See Coiled docs for details.',
     )
     region: str = pydantic.Field('us-west-2', description='AWS region to use for the worker nodes')
     ntasks: pydantic.PositiveInt = pydantic.Field(
         1, description='Number of tasks to run in parallel'
     )
-    vm_type: str = pydantic.Field('m8g.xlarge', description='VM type to use for the worker nodes')
+    vm_type: str = pydantic.Field('m8g.2xlarge', description='VM type to use for the worker nodes')
     scheduler_vm_type: str = pydantic.Field(
-        'm8g.xlarge', description='VM type to use for the scheduler node'
+        'm8g.2xlarge', description='VM type to use for the scheduler node'
     )
 
     model_config = {
@@ -766,6 +773,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for vector processing'
     )
+    version: SemanticVersion | None = pydantic.Field(
+        default=None, description='Version of the vector processing pipeline'
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for vector data, can be a bucket name or local path'
     )
@@ -779,10 +789,39 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/vector/{self.environment.value}'
         if self.prefix is None:
-            self.prefix = f'intermediate/fire-risk/vector/{self.environment.value}'
+            if self.version:
+                self.prefix = f'intermediate/{common_part}/v{self.version}'
+            else:
+                self.prefix = f'intermediate/{common_part}'
+
         if self.output_prefix is None:
-            self.output_prefix = f'output/fire-risk/vector/{self.environment.value}'
+            if self.version:
+                self.output_prefix = f'output/{common_part}/v{self.version}'
+            else:
+                self.output_prefix = f'output/{common_part}'
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
+        if self.output_prefix and self.version:
+            if f'v{self.version}' not in self.output_prefix:
+                # insert version right before the last part of the prefix
+                parts = self.output_prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.output_prefix = (
+                        f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                    )
+                else:
+                    self.output_prefix = (
+                        f'{self.environment.value}/v{self.version}/{self.output_prefix}'
+                    )
 
     def wipe(self):
         """Wipe the vector data storage."""
@@ -856,7 +895,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents=True, exist_ok=True)
         return path
 
     @functools.cached_property
@@ -904,12 +943,63 @@ class VectorConfig(pydantic_settings.BaseSettings):
         region_path = UPath(self.region_geoparquet_uri)
         self.upath_delete(region_path)
 
+    def pretty_paths(self) -> None:
+        """Pretty print key VectorConfig paths and URIs.
+
+        This method intentionally touches cached properties that create
+        directories (e.g., via mkdir) so you can verify real locations.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+
+        # high-level
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+
+        # prefixes (touch real properties)
+        rows.append(nv('Intermediate prefix', self.prefix))
+        rows.append(nv('Output prefix', self.output_prefix))
+        rows.append(nv('Geoparquet prefix', self.geoparquet_prefix))
+        rows.append(nv('Region Geoparquet prefix', self.region_geoparquet_prefix))
+        rows.append(nv('PMTiles prefix', self.pmtiles_prefix))
+
+        # derived URIs (touch cached properties that mkdir/prepare parents)
+        rows.extend(
+            [
+                nv('Region Geoparquet URI', str(self.region_geoparquet_uri)),
+                nv('Buildings Geoparquet URI', str(self.building_geoparquet_uri)),
+                nv('Region summary stats dir', str(self.region_summary_stats_prefix)),
+                nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
+                nv('Counties summary stats', str(self.counties_summary_stats_uri)),
+                nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
+                nv('Tracts PMTiles', str(self.tracts_pmtiles_uri)),
+                nv('Counties PMTiles', str(self.counties_pmtiles_uri)),
+            ]
+        )
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('Vector setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='VectorConfig paths', title_align='left'))
+
 
 class IcechunkConfig(pydantic_settings.BaseSettings):
     """Configuration for icechunk processing."""
 
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for icechunk processing'
+    )
+    version: SemanticVersion | None = pydantic.Field(
+        None, description='Version of the icechunk processing pipeline'
     )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for icechunk data, can be a bucket name or local path'
@@ -919,8 +1009,20 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/tensor/{self.environment.value}'
         if self.prefix is None:
-            self.prefix = f'output/fire-risk/tensor/{self.environment.value}/template.icechunk'
+            name = 'ocr.icechunk' if self.version is None else f'v{self.version}/ocr.icechunk'
+            prefix = f'output/{common_part}/{name}'
+            self.prefix = prefix
+
+        if self.prefix and self.version:
+            if f'v{self.version}' not in self.prefix:
+                # insert version right before the last part of the prefix
+                parts = self.prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.prefix = f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                else:
+                    self.prefix = f'{self.environment.value}/v{self.version}/{self.prefix}'
 
     def wipe(self):
         """Wipe the icechunk repository."""
@@ -1120,6 +1222,47 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                 time.sleep(delay)
                 pass
 
+    def pretty_paths(self) -> None:
+        """Pretty print key IcechunkConfig paths and URIs.
+
+        This version touches cached properties (e.g., uri, storage) to
+        surface real configuration and types.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+        rows.append(nv('Prefix', self.prefix))
+
+        # Touch real cached properties
+        uri = self.uri
+        rows.append(nv('Repository URI', str(uri)))
+        rows.append(nv('Protocol', uri.protocol or 'file'))
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('Icechunk setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='IcechunkConfig paths', title_align='left'))
+
+
+@dataclass
+class RegionIDStatus:
+    provided_region_ids: set[str]
+    valid_region_ids: set[str]
+    invalid_region_ids: set[str]
+    processed_region_ids: set[str]
+    previously_processed_ids: set[str]
+    unprocessed_valid_region_ids: set[str]
+
 
 class OCRConfig(pydantic_settings.BaseSettings):
     """Configuration settings for OCR processing."""
@@ -1127,9 +1270,17 @@ class OCRConfig(pydantic_settings.BaseSettings):
     environment: Environment = pydantic.Field(
         default=Environment.QA, description='Environment for OCR processing'
     )
+    version: SemanticVersion | None = pydantic.Field(
+        default=None,
+        description=(
+            'Optional semantic version (e.g., 1.2.3 or v1.2.3). When provided, appended to '
+            'intermediate and output prefixes for versioned storage.'
+        ),
+    )
     storage_root: str = pydantic.Field(
         ..., description='Root storage path for OCR data, can be a bucket name or local path'
     )
+
     vector: VectorConfig | None = pydantic.Field(None, description='Vector configuration')
     icechunk: IcechunkConfig | None = pydantic.Field(None, description='Icechunk configuration')
     chunking: ChunkingConfig | None = pydantic.Field(
@@ -1147,7 +1298,10 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 self,
                 'vector',
                 VectorConfig(
-                    storage_root=self.storage_root, environment=self.environment, debug=self.debug
+                    storage_root=self.storage_root,
+                    environment=self.environment,
+                    debug=self.debug,
+                    version=self.version,
                 ),
             )
         if self.icechunk is None:
@@ -1158,6 +1312,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     storage_root=self.storage_root,
                     environment=self.environment,
                     debug=self.debug,
+                    version=self.version,
                 ),
             )
         if self.chunking is None:
@@ -1174,16 +1329,108 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 CoiledConfig(),
             )
 
+    def pretty_paths(self) -> None:
+        """Pretty print key OCRConfig paths and URIs.
+
+        This method intentionally touches cached properties that create
+        directories (e.g., via mkdir) so you can verify real locations.
+        """
+        from rich.panel import Panel
+        from rich.table import Table
+
+        def nv(name: str, value: str | None):
+            return name, (str(value) if value not in (None, '') else '—')
+
+        rows: list[tuple[str, str]] = []
+
+        # high-level
+        rows.append(nv('Environment', getattr(self.environment, 'value', str(self.environment))))
+        rows.append(nv('Version', (str(self.version) if self.version else '—')))
+        rows.append(nv('Storage root', self.storage_root))
+
+        table = Table(title=None, show_header=True, header_style='bold magenta')
+        table.add_column('OCR setting', style='bold cyan', no_wrap=True)
+        table.add_column('Value', style='green')
+        for k, v in rows:
+            table.add_row(k, v)
+
+        console.print(Panel(table, title='OCRConfig paths', title_align='left'))
+
+        if self.vector:
+            self.vector.pretty_paths()
+        if self.icechunk:
+            self.icechunk.pretty_paths()
+
+    # ------------------------------------------------------------------
+    # Region ID selection / validation helpers (used by CLI pipeline)
+    # ------------------------------------------------------------------
+    def _compose_region_id_error(self, status: 'RegionIDStatus') -> str:
+        """Compose a detailed error message mirroring previous CLI behavior.
+
+        Parameters
+        ----------
+        status : RegionIDStatus
+            Computed status object.
+        """
+        error_message = 'No valid region IDs to process. All provided region IDs were rejected for the following reasons:\n'
+        # Ensure required sub-config present (defensive; model_post_init guarantees this)
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        if status.invalid_region_ids:
+            error_message += (
+                f'- Invalid region IDs: {", ".join(sorted(status.invalid_region_ids))}\n'
+            )
+            # include (truncated) list of valid ids for reference
+            error_message += (
+                '  Valid region IDs: '
+                f'{", ".join(sorted(list(self.chunking.valid_region_ids)))}...\n'
+            )
+        if status.previously_processed_ids:
+            error_message += (
+                '- Already processed region IDs: '
+                f'{", ".join(sorted(status.previously_processed_ids))}\n'
+            )
+        error_message += "\nPlease provide valid region IDs that haven't been processed yet."
+        return error_message
+
+    def resolve_region_ids(self, provided_region_ids: set[str]) -> 'RegionIDStatus':
+        """Validate provided region IDs against valid + processed sets.
+
+        Returns a RegionIDStatus object or raises ValueError if none are processable.
+        """
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        assert self.icechunk is not None, 'Icechunk configuration not initialized'
+        all_valid = set(self.chunking.valid_region_ids)
+        valid_region_ids = provided_region_ids.intersection(all_valid)
+        processed_region_ids = set(self.icechunk.processed_regions())
+        unprocessed_valid_region_ids = valid_region_ids.difference(processed_region_ids)
+        invalid_region_ids = provided_region_ids.difference(all_valid)
+        previously_processed_ids = provided_region_ids.intersection(processed_region_ids)
+        status = RegionIDStatus(
+            provided_region_ids=provided_region_ids,
+            valid_region_ids=valid_region_ids,
+            invalid_region_ids=invalid_region_ids,
+            processed_region_ids=processed_region_ids,
+            previously_processed_ids=previously_processed_ids,
+            unprocessed_valid_region_ids=unprocessed_valid_region_ids,
+        )
+        if len(unprocessed_valid_region_ids) == 0:
+            raise ValueError(self._compose_region_id_error(status))
+        return status
+
+    def select_region_ids(
+        self, region_ids: list[str] | None, *, all_region_ids: bool = False
+    ) -> 'RegionIDStatus':
+        """Helper to pick the effective set of region IDs (all or user-provided) and
+        return the validated status object.
+        """
+        assert self.chunking is not None, 'Chunking configuration not initialized'
+        provided = set(self.chunking.valid_region_ids) if all_region_ids else set(region_ids or [])
+        return self.resolve_region_ids(provided)
+
 
 def load_config(file_path: Path | None) -> OCRConfig:
-    """
-    Load OCR configuration from a YAML file.
-    """
-
+    """Load OCR configuration from an env file (dotenv) or current environment."""
     if file_path is None:
-        config = OCRConfig()
-    else:
-        dotenv.load_dotenv(file_path)  # loads environment variables from the specified file
-        config = OCRConfig()  # loads from environment variables
-
-    return config
+        return OCRConfig()
+    dotenv.load_dotenv(file_path)
+    return OCRConfig()

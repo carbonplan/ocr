@@ -1,33 +1,52 @@
 import shutil
+from typing import Any
 
 import geopandas as gpd
 import xarray as xr
 from upath import UPath
 
 
-def apply_s3_creds(region: str = 'us-west-2') -> None:
-    """
-    Applies duckdb region and access credentials to session.
+def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None):
+    """Register AWS credentials as a DuckDB SECRET on the given connection.
 
     Parameters
     ----------
-    region : str, optional
-        AWS Region, by default 'us-west-2'
-
+    region : str
+        AWS region used for S3 access.
+    con : duckdb.DuckDBPyConnection | None
+        Connection to apply credentials to. If None, uses duckdb's default
+        connection (duckdb.sql), preserving prior behavior.
     """
     import boto3
     import duckdb
 
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    return duckdb.sql(f"""CREATE SECRET (
-    TYPE s3,
-    KEY_ID '{credentials.access_key}',
-    SECRET '{credentials.secret_key}',
-    REGION '{region}');""")
+    sess = boto3.Session()
+    creds = sess.get_credentials()
+    if creds is None:
+        raise RuntimeError('No AWS credentials found by boto3.')
+    frozen = creds.get_frozen_credentials()
+
+    parts = [
+        'CREATE OR REPLACE SECRET s3_default (',
+        '  TYPE S3,',
+        f"  KEY_ID '{frozen.access_key}',",
+        f"  SECRET '{frozen.secret_key}',",
+        f"  REGION '{region}'",
+    ]
+    if frozen.token:
+        parts.append(f",  SESSION_TOKEN '{frozen.token}'")
+    parts.append(');')
+    sql = '\n'.join(parts)
+
+    if con is None:
+        duckdb.sql(sql)
+    else:
+        con.execute(sql)
 
 
-def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool = True):
+def install_load_extensions(
+    aws: bool = True, spatial: bool = True, httpfs: bool = True, con: Any | None = None
+):
     """
     Installs and applies duckdb extensions.
 
@@ -39,6 +58,8 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
         Install and load SPATIAL extension, by default True
     httpfs : bool, optional
         Install and load HTTPFS extension, by default True
+    con : duckdb.DuckDBPyConnection | None
+        Connection to apply extensions to. If None, uses duckdb's default
 
     """
     import duckdb
@@ -50,7 +71,10 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
         ext_str += """INSTALL SPATIAL; LOAD SPATIAL;"""
     if httpfs:
         ext_str += """INSTALL httpfs; LOAD httpfs"""
-    return duckdb.sql(ext_str)
+    if con is None:
+        duckdb.sql(ext_str)
+    else:
+        con.execute(ext_str)
 
 
 def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
@@ -101,7 +125,6 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
 
     TODO: Should/can this be a DataArray for typing
     """
-    import xarray as xr
 
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
