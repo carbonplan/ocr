@@ -12,8 +12,6 @@ from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
 
 def create_regional_pmtiles(
     config: OCRConfig,
-    *,
-    connection: duckdb.DuckDBPyConnection | None = None,
 ):
     """Create PMTiles for tract and county regional risk statistics.
 
@@ -25,10 +23,7 @@ def create_regional_pmtiles(
     ----------
     config : OCRConfig
         Project configuration object (provides input/output URIs and debug flag).
-    connection : duckdb.DuckDBPyConnection, optional
-        Optionally pass an existing DuckDB connection (e.g. to reuse caches or
-        a persistent database). If omitted, an in-memory connection is created
-        and closed inside this function.
+
     """
 
     # Access vector config attributes (these exist on OCRConfig.vector)
@@ -42,17 +37,14 @@ def create_regional_pmtiles(
         str(p).startswith('s3://') for p in [tracts_summary_stats_path, counties_summary_stats_path]
     )
 
-    # Use provided connection or create ephemeral one
-    close_con = False
-    if connection is None:
-        connection = duckdb.connect(database=':memory:')
-        close_con = True
+    connection = duckdb.connect(database=':memory:')
+
     try:
         # Install/load required extensions
-        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True)
+        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
         if needs_s3:
             # Apply credentials so httpfs/aws can access objects; region optional (default us-west-2)
-            apply_s3_creds(region='us-west-2')
+            apply_s3_creds(region='us-west-2', con=connection)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = UPath(tmpdir)
@@ -180,8 +172,7 @@ def create_regional_pmtiles(
             if config.debug:
                 console.log('PMTiles uploads completed successfully')
     finally:
-        if close_con:
-            try:
-                connection.close()
-            except Exception:
-                pass
+        try:
+            connection.close()
+        except Exception:
+            pass

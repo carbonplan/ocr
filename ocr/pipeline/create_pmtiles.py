@@ -12,8 +12,6 @@ from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
 
 def create_pmtiles(
     config: OCRConfig,
-    *,
-    connection: duckdb.DuckDBPyConnection | None = None,
 ):
     """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
 
@@ -29,16 +27,12 @@ def create_pmtiles(
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
 
-    # Prepare connection
-    close_con = False
-    if connection is None:
-        connection = duckdb.connect(database=':memory:')
-        close_con = True
+    connection = duckdb.connect(database=':memory:')
 
     try:
-        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True)
+        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
         if needs_s3:
-            apply_s3_creds(region='us-west-2')
+            apply_s3_creds(region='us-west-2', con=connection)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = UPath(tmpdir)
@@ -91,8 +85,7 @@ def create_pmtiles(
             if config.debug:
                 console.log('PMTiles upload completed successfully')
     finally:
-        if close_con:
-            try:
-                connection.close()
-            except Exception:
-                pass
+        try:
+            connection.close()
+        except Exception:
+            pass

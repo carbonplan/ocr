@@ -4,6 +4,7 @@ from upath import UPath
 from ocr import catalog
 from ocr.config import OCRConfig
 from ocr.console import console
+from ocr.utils import apply_s3_creds, install_load_extensions
 
 
 def create_summary_stat_tmp_tables(
@@ -13,6 +14,7 @@ def create_summary_stat_tmp_tables(
     tracts_path: UPath,
     consolidated_buildings_path: UPath,
 ):
+    # Assume extensions & creds handled by caller.
     # tmp table for buildings
     con.execute(f"""
         CREATE TEMP TABLE buildings AS
@@ -56,7 +58,6 @@ def create_summary_stat_tmp_tables(
     con.execute('CREATE INDEX buildings_spatial_idx ON buildings USING RTREE (geometry)')
     con.execute('CREATE INDEX counties_spatial_idx ON county USING RTREE (geometry)')
     con.execute('CREATE INDEX tracts_spatial_idx ON tract USING RTREE (geometry)')
-    return con
 
 
 def custom_histogram_query(
@@ -69,6 +70,7 @@ def custom_histogram_query(
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
     then add them on to a histogram that excludes values of 0.
     """
+    # Connection, extensions, and credentials are managed by caller.
 
     # First temp table: zero counts by county.
     zero_counts_query = f"""
@@ -174,14 +176,7 @@ def custom_histogram_query(
     con.execute(merge_and_write)
 
 
-def compute_regional_fire_wind_risk_statistics(
-    config: OCRConfig,
-):
-    from ocr.utils import apply_s3_creds, install_load_extensions
-
-    install_load_extensions()
-    apply_s3_creds()
-
+def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
     consolidated_buildings_path = config.vector.building_geoparquet_uri
@@ -191,7 +186,6 @@ def compute_regional_fire_wind_risk_statistics(
 
     dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
-    con = duckdb.connect(database=':memory:')
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
     hist_bins = [5, 10, 15, 20, 25, 100]
@@ -199,8 +193,14 @@ def compute_regional_fire_wind_risk_statistics(
     if config.debug:
         console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
 
+    connection = duckdb.connect(database=':memory:')
+
+    # Load required extensions (spatial + httpfs + aws) before any spatial ops or S3 reads
+    install_load_extensions(aws=True, spatial=True, httpfs=True, con=connection)
+    apply_s3_creds(con=connection)
+
     create_summary_stat_tmp_tables(
-        con=con,
+        con=connection,
         counties_path=counties_path,
         tracts_path=tracts_path,
         consolidated_buildings_path=consolidated_buildings_path,
@@ -209,7 +209,7 @@ def compute_regional_fire_wind_risk_statistics(
     if config.debug:
         console.log('Computing county summary statistics')
     custom_histogram_query(
-        con=con,
+        con=connection,
         geo_table_name='county',
         summary_stats_path=counties_summary_stats_path,
         hist_bins=hist_bins,
@@ -219,10 +219,15 @@ def compute_regional_fire_wind_risk_statistics(
     if config.debug:
         console.log('Computing tract summary statistics')
     custom_histogram_query(
-        con=con,
+        con=connection,
         geo_table_name='tract',
         summary_stats_path=tracts_summary_stats_path,
         hist_bins=hist_bins,
     )
     if config.debug:
         console.log(f'Wrote summary statistics for tract to {tracts_summary_stats_path}')
+
+    try:
+        connection.close()
+    except Exception:
+        pass
