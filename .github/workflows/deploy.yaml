@@ -56,7 +56,16 @@ env:
 jobs:
   qa-pr:
     # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' &&  (
+      (
+      contains(github.event.pull_request.labels.*.name, 'e2e') ||
+      contains(github.event.pull_request.labels.*.name, 'QA/QC')
+      ) ||
+      (
+      contains(github.event.pull_request.title, '[e2e]') ||
+      contains(github.event.pull_request.body, '[e2e]')
+      )
+      )
     environment:
       name: qa
       url: ${{ env.QA_URL }}
