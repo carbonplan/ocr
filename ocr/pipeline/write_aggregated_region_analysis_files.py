@@ -23,6 +23,9 @@ def write_stats_table(
     region_analysis_path = config.vector.aggregated_region_analysis_uri
     consolidated_buildings_path = config.vector.building_geoparquet_uri
 
+    region_stats_path = region_analysis_path / stats_table_name
+    region_stats_path.mkdir(parents=True, exist_ok=True)
+
     con.execute(f"""
         CREATE TEMP TABLE {stats_table_name} AS
         SELECT a.NAME,
@@ -69,22 +72,22 @@ def write_stats_table(
             ON ST_Intersects(a.geometry, b.geometry)
         GROUP BY a.NAME, a.geometry ;
     """)
-    con.execute(f"""COPY {stats_table_name} TO '{region_analysis_path}/{stats_table_name}/stats.parquet' (
+    con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.parquet' (
         FORMAT 'parquet',
         COMPRESSION 'zstd',
         OVERWRITE_OR_IGNORE true);""")
     # NotImplementedException: Not implemented Error: Unsupported type for OGR: HUGEINT[]
 
     con.execute(
-        f"""COPY {stats_table_name} TO '{region_analysis_path}/{stats_table_name}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS');"""
+        f"""COPY {stats_table_name} TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS');"""
     )
 
     # this might break, shapefiles are terrible
     # IOException: IO Error: GDAL Error (1): Failed to create file
-    # con.execute(f"""COPY {stats_table_name} TO '{output_stats_path}/stats.shp' (FORMAT GDAL, DRIVER 'ESRI Shapefile');""")
+    # con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.shp' (FORMAT GDAL, DRIVER 'ESRI Shapefile');""")
 
     con.execute(
-        f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_analysis_path}/{stats_table_name}/stats.csv';"""
+        f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_stats_path}/stats.csv';"""
     )
 
     return con

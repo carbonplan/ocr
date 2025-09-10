@@ -299,6 +299,17 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        if write_region_files:
+            manager = _get_manager(Platform.LOCAL, config.debug)
+
+            manager.submit_job(
+                command='ocr write-aggregated-region-analysis-files',
+                name=f'write-aggregated-region-analysis-files-{config.environment.value}',
+                kwargs={
+                    **_local_kwargs(),
+                },
+            )
+
         manager = _get_manager(Platform.LOCAL, config.debug)
         # Aggregate regional fire and wind risk statistics
         manager.submit_job(
