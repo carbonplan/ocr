@@ -203,3 +203,4 @@
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
     start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook-128gb  = { cmd = "coiled notebook start --sync --vm-type m5n.8xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
