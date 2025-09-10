@@ -88,7 +88,7 @@ def run(
         None, '--vm-type', help='VM type override for dispatch-platform (Coiled only).'
     ),
     process_retries: int = typer.Option(
-        1,
+        2,
         '--process-retries',
         min=0,
         help='Number of times to retry failed process-region tasks (Coiled only). 0 disables retries.',
