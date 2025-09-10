@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       region_id:
@@ -51,6 +54,56 @@ env:
   QA_URL: https://ocr.qa.carbonplan.org
 
 jobs:
+  qa-pr:
+    # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
+    if: github.event_name == 'pull_request' &&  (
+      (
+      contains(github.event.pull_request.labels.*.name, 'e2e') ||
+      contains(github.event.pull_request.labels.*.name, 'QA/QC')
+      ) ||
+      (
+      contains(github.event.pull_request.title, '[e2e]') ||
+      contains(github.event.pull_request.body, '[e2e]')
+      )
+      )
+    environment:
+      name: qa
+      url: ${{ env.QA_URL }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list
+
+      - name: Deploy (automatic QA PR)
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+        run: |
+          echo "Starting automatic deploy to QA (PR to main)"
+          REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5"
+          ENV_FILE="ocr-coiled-s3.env"
+          pixi run ocr run \
+            $REGION_ARGS \
+            --env-file "$ENV_FILE" \
+            --platform coiled \
+            --wipe
+
   staging-main:
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
