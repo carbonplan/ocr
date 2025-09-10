@@ -49,7 +49,7 @@ def create_pmtiles(
                     json_object(
                         'USFS_RPS', USFS_RPS,
                         'wind_risk_2011', wind_risk_2011,
-                        'wind_risk_2047', wind_risk_2047,
+                        'wind_risk_2047', wind_risk_2047
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{input_path}')
