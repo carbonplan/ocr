@@ -3,11 +3,7 @@ from typing import cast
 
 import pyproj
 import xarray as xr
-import xclim.indicators.atmos
-from odc.geo import CRS
-from odc.geo.xr import assign_crs
-
-from ocr import catalog
+from xclim import convert
 
 
 def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
@@ -24,6 +20,8 @@ def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
     xr.Dataset
         The CONUS 404 dataset.
     """
+
+    from ocr import catalog
 
     variables = ['PSFC', 'Q2', 'T2', 'TD2', 'U10', 'V10']
     dsets = []
@@ -56,7 +54,8 @@ def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
     # add lat, lon back in
     dset = catalog.get_dataset('conus404-hourly-T2').to_xarray()
     ds = ds.assign_coords(lat=dset['lat'], lon=dset['lon'])
-    ds = ds.set_coords(['crs'])
+    if 'crs' in ds:
+        ds = ds.set_coords(['crs'])
     return ds
 
 
@@ -75,7 +74,8 @@ def compute_relative_humidity(ds: xr.Dataset) -> xr.DataArray:
         Relative humidity as a percentage.
     """
     with xr.set_options(keep_attrs=True):
-        hurs = xclim.indicators.atmos.relative_humidity_from_dewpoint(tas=ds['T2'], tdps=ds['TD2'])
+        hurs = convert.relative_humidity_from_dewpoint(tas=ds['T2'], tdps=ds['TD2'])
+        hurs = cast(xr.DataArray, hurs)
     hurs.name = 'hurs'
     return hurs
 
@@ -99,94 +99,11 @@ def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
 
 def compute_wind_speed_and_direction(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
     """Derive hourly wind speed (m/s) and direction (degrees from) using xclim."""
-    winds = xclim.indicators.atmos.wind_speed_from_vector(uas=u10, vas=v10)
+    winds = convert.wind_speed_from_vector(uas=u10, vas=v10)
+    winds = cast(tuple[xr.DataArray, xr.DataArray], winds)
     # xclim returns a tuple-like (speed, direction). Merge keeps names (sfcWind, sfcWindfromdir)
     wind_ds = xr.merge(winds)
     return wind_ds
-
-
-def build_fire_weather_mask(
-    hurs: xr.DataArray,
-    wind_ds: xr.Dataset,
-    *,
-    hurs_threshold: float,
-    wind_threshold: float,
-    wind_gust_factor: float = 1.4,
-) -> xr.DataArray:
-    """Compute a boolean fire weather mask.
-
-    Applies gust factor to sustained wind speed before thresholding.
-    """
-    from ocr.risks.fire import nws_fire_weather
-
-    # Convert sustained to approximate gusts via multiplier
-    # reason that wind gusts are typically ~40% higher than average wind speed
-    # and we want to base this on wind gusts (need a citation for this)
-    gust_like = wind_ds['sfcWind'] * wind_gust_factor
-    mask = nws_fire_weather(
-        hurs, hurs_threshold, gust_like, wind_threshold, tas=None, tas_threshold=None
-    )
-    mask.name = 'fire_weather_mask'
-    return mask
-
-
-def compute_modal_wind_direction(
-    direction: xr.DataArray,
-    fire_weather_mask: xr.DataArray,
-) -> xr.Dataset:
-    """Compute modal wind direction (0-7) for hours satisfying fire weather.
-
-    Direction codes follow: 0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW
-    """
-    from ocr.risks.fire import classify_wind_directions, direction_histogram
-
-    direction_indices = classify_wind_directions(direction)
-    masked = direction_indices.where(fire_weather_mask)
-    fraction = direction_histogram(masked)
-    # Help static type checkers – ensure fraction is treated as DataArray
-    fraction = cast(xr.DataArray, fraction)
-    assert isinstance(fraction, xr.DataArray)
-
-    # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
-    any_fire_weather = fraction.sum(dim='wind_direction') > 0
-
-    mode = fraction.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
-    mode.name = 'wind_direction_mode'
-    mode.attrs.update(
-        {
-            'long_name': 'Modal wind direction during fire-weather hours',
-            'description': 'Most frequent of 8 cardinal directions during hours meeting fire weather criteria',
-            'direction_labels': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-            'fire_weather_definition': 'RH < hurs_threshold (%), gust_like_wind > wind_threshold (mph)',
-        }
-    )
-    return mode.to_dataset()
-
-
-def reproject_mode(
-    mode: xr.Dataset,
-    src_crs_wkt: str,
-    target_dataset_name: str,
-    *,
-    chunk_lat: int = 6000,
-    chunk_lon: int = 4500,
-) -> xr.Dataset:
-    """Reproject the modal wind direction to the geobox of a target dataset."""
-    tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
-    tgt = assign_crs(tgt, crs='EPSG:4326')
-    geobox = tgt.odc.geobox
-
-    src_crs = CRS(src_crs_wkt)
-    mode_src = assign_crs(mode, crs=src_crs)
-
-    result = (
-        mode_src.odc.reproject(geobox, resampling='nearest')
-        .astype('float32')
-        .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
-    )
-
-    result.attrs.update({'reprojected_to': target_dataset_name})
-    return result
 
 
 @lru_cache
