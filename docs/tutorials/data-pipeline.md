@@ -212,6 +212,15 @@ Generate PMTiles from the main consolidated dataset.
 ocr create-pmtiles --env-file .env
 ```
 
+#### `ocr write-aggregated-region-analysis-files` - Write Analysis Files
+
+Write aggregated region analysis files (csv, geoparquet and geojson).
+You can add the flag `--write-region-files` to `ocr run` to add this optional step in the pipeline.
+
+```bash
+ocr write-aggregated-region-analysis-files --env-file .env
+```
+
 ## Troubleshooting
 
 ### Common Issues

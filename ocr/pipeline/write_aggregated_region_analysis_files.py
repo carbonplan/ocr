@@ -8,9 +8,6 @@ from ocr.config import OCRConfig
 from ocr.console import console
 from ocr.utils import apply_s3_creds, install_load_extensions
 
-install_load_extensions()
-apply_s3_creds()
-
 
 def write_stats_table(
     *,
@@ -24,6 +21,7 @@ def write_stats_table(
     consolidated_buildings_path = config.vector.building_geoparquet_uri
 
     region_stats_path = region_analysis_path / stats_table_name
+
     region_stats_path.mkdir(parents=True, exist_ok=True)
 
     con.execute(f"""
@@ -72,25 +70,26 @@ def write_stats_table(
             ON ST_Intersects(a.geometry, b.geometry)
         GROUP BY a.NAME, a.geometry ;
     """)
+
+    # Write Geoparquet
     con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.parquet' (
         FORMAT 'parquet',
         COMPRESSION 'zstd',
         OVERWRITE_OR_IGNORE true);""")
-    # NotImplementedException: Not implemented Error: Unsupported type for OGR: HUGEINT[]
 
+    # Write GeoJSON
     con.execute(
-        f"""COPY {stats_table_name} TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS');"""
+        f"""COPY {stats_table_name} TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
+    )
+
+    # Write CSV
+    con.execute(
+        f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_stats_path}/stats.csv';"""
     )
 
     # this might break, shapefiles are terrible
     # IOException: IO Error: GDAL Error (1): Failed to create file
     # con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.shp' (FORMAT GDAL, DRIVER 'ESRI Shapefile');""")
-
-    con.execute(
-        f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_stats_path}/stats.csv';"""
-    )
-
-    return con
 
 
 def write_aggregated_region_analysis_files(config: OCRConfig):
@@ -102,8 +101,11 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     tracts_dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{tracts_dataset.bucket}/{tracts_dataset.prefix}')
 
-    con = duckdb.connect(database=':memory:')
-    con.execute("""install spatial; load spatial; install httpfs; load httpfs;""")
+    connection = duckdb.connect(database=':memory:')
+
+    # Load required extensions (spatial + httpfs + aws) before any spatial ops or S3 reads
+    install_load_extensions(aws=True, spatial=True, httpfs=True, con=connection)
+    apply_s3_creds(con=connection)
 
     # NotImplementedException: Not implemented Error: GDAL Error (6): The GeoJSON driver does not overwrite existing files.
     # So we need to clear any existing files
@@ -111,8 +113,8 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
 
     if config.debug:
         console.log('Writing aggregated region analysis files for counties.')
-    con = write_stats_table(
-        con=con,
+    write_stats_table(
+        con=connection,
         config=config,
         region_path=counties_path,
         stats_table_name='counties',
@@ -120,8 +122,8 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     )
     if config.debug:
         console.log('Writing aggregated region analysis files for tracts.')
-    con = write_stats_table(
-        con=con,
+    write_stats_table(
+        con=connection,
         config=config,
         region_path=tracts_path,
         stats_table_name='tracts',
