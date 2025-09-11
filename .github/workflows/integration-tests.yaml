@@ -63,6 +63,9 @@ jobs:
       - name: aggregate geoparquet regions
         run: |
           pixi run ocr aggregate --platform local --env-file ocr-local.env
+      - name: write regional analysis files
+        run: |
+          pixi run ocr write-aggregated-region-analysis-files --platform local --env-file ocr-local.env
       - name: aggregate region risk summary stats
         run: |
           pixi run ocr aggregate-region-risk-summary-stats --platform local --env-file ocr-local.env
