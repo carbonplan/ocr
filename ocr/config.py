@@ -830,6 +830,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 f'Wiping intermediate vector data storage at {self.storage_root}/{self.prefix}'
             )
         self.delete_region_gpqs()
+        self.delete_region_analysis_files()
 
     # ----------------------------
     # output pmtiles
@@ -876,6 +877,16 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
+    def aggregated_region_analysis_prefix(self) -> str:
+        return f'{self.output_prefix}/region-analysis'
+
+    @functools.cached_property
+    def aggregated_region_analysis_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.aggregated_region_analysis_prefix}')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
     def building_geoparquet_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -899,6 +910,26 @@ class VectorConfig(pydantic_settings.BaseSettings):
         geo_table_name = 'counties'
         return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
+    def upath_delete(self, path):
+        # Use UPath to handle deletion in a cloud-agnostic way
+        # First, get a list of all files in the region geoparquet prefix
+        if path.exists():
+            for file in path.rglob('*'):
+                if file.is_file():
+                    file.unlink()
+        else:
+            if self.debug:
+                console.log('No files found to delete.')
+
+    def delete_region_analysis_files(self):
+        """Deletes the region aggregated analysis files"""
+        if self.debug:
+            console.log(
+                f'Deleting region aggregated analysis files from {self.aggregated_region_analysis_uri}'
+            )
+        aggregated_region_path = UPath(self.aggregated_region_analysis_uri)
+        self.upath_delete(aggregated_region_path)
+
     def delete_region_gpqs(self):
         """Delete region geoparquet files from the storage."""
         if self.debug:
@@ -909,16 +940,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
             raise ValueError(
                 'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
             )
-        # Use UPath to handle deletion in a cloud-agnostic way
-        # First, get a list of all files in the region geoparquet prefix
         region_path = UPath(self.region_geoparquet_uri)
-        if region_path.exists():
-            for file in region_path.glob('*'):
-                if file.is_file():
-                    file.unlink()
-        else:
-            if self.debug:
-                console.log('No files found to delete.')
+        self.upath_delete(region_path)
 
     def pretty_paths(self) -> None:
         """Pretty print key VectorConfig paths and URIs.
