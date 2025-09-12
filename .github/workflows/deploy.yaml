@@ -102,6 +102,7 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
+            --write-region-files \
             --wipe
 
   staging-main:
@@ -163,6 +164,7 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
+            --write-region-files \
             --wipe
 
   manual:
@@ -253,6 +255,7 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             $WIPE_ARG \
+            --write-region-files \
             --platform coiled
 
   production:
@@ -335,6 +338,7 @@ jobs:
           pixi run ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
+            --write-region-files \
             --platform coiled
 
   production-rerun:
@@ -431,4 +435,5 @@ jobs:
           pixi run ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
+            --write-region-files \
             --platform coiled
