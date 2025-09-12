@@ -16,8 +16,9 @@ This page explains the high-level method used to compute building-level fire ris
 
 ## Outputs
 
-- Regional geoparquet files containing building-level risk metrics and metadata.
-- Aggregated county/tract statistics.
+- Regional and aggregated geoparquet files containing building-level risk metrics and metadata.
+- An aggregated 1, 15 and 30 year time-horizon regional summary statistics PMTiles file.
+- Summary stats files (geoparquet, geojson, csv) for region (county / census tract) aggregations.
 
 ## References and further reading
 

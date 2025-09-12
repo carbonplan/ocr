@@ -132,6 +132,22 @@ jobs:
         run: |
           pixi list
 
+      - name: Ensure OCR_ENVIRONMENT in env file (staging)
+        env:
+          ENV_FILE: ocr-coiled-s3-staging.env
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$ENV_FILE" ]]; then
+            echo "Env file not found: $ENV_FILE" >&2
+            exit 1
+          fi
+          echo "Updating $ENV_FILE with OCR_ENVIRONMENT=staging"
+          echo "Before update (matching lines):"
+          grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
+          pixi run python -c "import os; from dotenv import set_key; env_file=os.environ['ENV_FILE']; set_key(env_file, 'OCR_ENVIRONMENT', 'staging'); print('Updated', env_file, 'OCR_ENVIRONMENT=staging')"
+          echo "After update (matching lines):"
+          grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
+
       - name: Deploy (automatic staging main)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
@@ -166,7 +182,6 @@ jobs:
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
 
-      - uses: actions/checkout@v5
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
           pixi-version: v0.43.3
@@ -218,15 +233,21 @@ jobs:
             WIPE_ARG="--wipe"
           fi
 
-          # we can branch logic on OCR_ENVIRONMENT here if needed (e.g., select a different env file)
-          # Example (uncomment if we later create environment-specific files):
-          # if [[ "$OCR_ENVIRONMENT" == "staging" ]]; then
-          #   ENV_FILE="ocr-coiled-s3-staging.env"
-          # else
-          #   ENV_FILE="ocr-coiled-s3-qa.env"
-          # fi
-          # For now reuse the existing non-prod env file:
-          ENV_FILE="ocr-coiled-s3.env"
+          # Select env file based on OCR_ENVIRONMENT
+          if [[ "$OCR_ENVIRONMENT" == "staging" ]]; then
+            ENV_FILE="ocr-coiled-s3-staging.env"
+          else
+            ENV_FILE="ocr-coiled-s3.env"
+          fi
+
+          # Ensure OCR_ENVIRONMENT is set correctly in the selected env file
+          if [[ ! -f "$ENV_FILE" ]]; then
+            echo "Env file not found: $ENV_FILE" >&2
+            exit 1
+          fi
+          export ENV_FILE
+
+          pixi run python -c "import os; from dotenv import set_key; env_file=os.environ['ENV_FILE']; env=os.environ['OCR_ENVIRONMENT']; set_key(env_file, 'OCR_ENVIRONMENT', env); print('Updated', env_file, 'OCR_ENVIRONMENT=', env)"
 
           pixi run ocr run \
             $REGION_ARGS \
@@ -286,11 +307,29 @@ jobs:
           echo "OCR_VERSION: $OCR_VERSION"
           echo "OCR_ENVIRONMENT: $OCR_ENVIRONMENT"
 
+      - name: Inject OCR_VERSION and OCR_ENVIRONMENT into env file (production)
+        env:
+          ENV_FILE: ocr-coiled-s3-production.env
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$ENV_FILE" ]]; then
+            echo "Env file not found: $ENV_FILE" >&2
+            exit 1
+          fi
+          echo "Updating $ENV_FILE with OCR_VERSION=$OCR_VERSION and OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
+          echo "Before update (matching lines):"
+          grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
+
+          pixi run python -c "import os; from dotenv import set_key; env_file=os.environ['ENV_FILE']; v=os.environ.get('OCR_VERSION'); e=os.environ.get('OCR_ENVIRONMENT'); (set_key(env_file,'OCR_VERSION',v) if v else None); (set_key(env_file,'OCR_ENVIRONMENT',e) if e else None); print('Updated keys:', ('OCR_VERSION' if v else '-'), ('OCR_ENVIRONMENT' if e else '-'))"
+          echo "After update (matching lines):"
+          grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
+
       - name: Deploy (production all regions)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
           OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
+          cat ocr-coiled-s3-production.env
           echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
@@ -365,11 +404,29 @@ jobs:
           echo "Redeploying production for OCR_VERSION=$OCR_VERSION (tag input=${{ github.event.inputs.production_tag }})"
           echo "OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
 
+      - name: Inject OCR_VERSION and OCR_ENVIRONMENT into env file (production rerun)
+        env:
+          ENV_FILE: ocr-coiled-s3-production.env
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$ENV_FILE" ]]; then
+            echo "Env file not found: $ENV_FILE" >&2
+            exit 1
+          fi
+          echo "Updating $ENV_FILE with OCR_VERSION=$OCR_VERSION and OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
+          echo "Before update (matching lines):"
+          grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
+
+          pixi run python -c "import os; from dotenv import set_key; env_file=os.environ['ENV_FILE']; v=os.environ.get('OCR_VERSION'); e=os.environ.get('OCR_ENVIRONMENT'); (set_key(env_file,'OCR_VERSION',v) if v else None); (set_key(env_file,'OCR_ENVIRONMENT',e) if e else None); print('Updated keys:', ('OCR_VERSION' if v else '-'), ('OCR_ENVIRONMENT' if e else '-'))"
+          echo "After update (matching lines):"
+          grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
+
       - name: Deploy (production redeploy all regions)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
           OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
         run: |
+          cat ocr-coiled-s3-production.env
           REGION_ARGS="--all-region-ids"
           pixi run ocr run \
             $REGION_ARGS \

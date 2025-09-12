@@ -150,6 +150,7 @@ The main command that orchestrates the complete processing pipeline.
 - `--all-region-ids` - Process all available regions
 - `--platform` - Choose `local` or `coiled` execution
 - `--risk-type` - Calculate `fire` or `wind` risk (default: fire)
+- `--write-region-files` - Write regional aggregated summary stats geospatial files.
 
 **Examples:**
 
@@ -162,6 +163,7 @@ ocr run --all-region-ids --platform coiled --env-file prod.env
 
 # Multi-region wind risk analysis
 ocr run --region-id y10_x2 --region-id y11_x3 --risk-type wind --platform coiled
+
 ```
 
 ### Individual Stage Commands
@@ -208,6 +210,15 @@ Generate PMTiles from the main consolidated dataset.
 
 ```bash
 ocr create-pmtiles --env-file .env
+```
+
+#### `ocr write-aggregated-region-analysis-files` - Write Analysis Files
+
+Write aggregated region analysis files (csv, geoparquet and geojson).
+You can add the flag `--write-region-files` to `ocr run` to add this optional step in the pipeline.
+
+```bash
+ocr write-aggregated-region-analysis-files --env-file .env
 ```
 
 ## Troubleshooting

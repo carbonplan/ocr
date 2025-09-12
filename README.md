@@ -34,6 +34,9 @@ ocr run --region-id y10_x2 --platform local --risk-type fire
 # Process multiple regions on Coiled cloud infrastructure
 ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled
 
+# Process and write regional geospatial files
+ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --write-region-files
+
 # Process all available regions
 ocr run --all-region-ids --platform coiled
 ```
