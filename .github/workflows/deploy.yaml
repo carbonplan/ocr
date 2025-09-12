@@ -144,13 +144,7 @@ jobs:
           echo "Updating $ENV_FILE with OCR_ENVIRONMENT=staging"
           echo "Before update (matching lines):"
           grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
-          pixi run python - <<'PY'
-          import os
-          from dotenv import set_key
-          env_file = os.environ['ENV_FILE']
-          set_key(env_file, 'OCR_ENVIRONMENT', 'staging')
-          print('Updated', env_file, 'OCR_ENVIRONMENT=staging')
-          PY
+          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT=staging
           echo "After update (matching lines):"
           grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
 
@@ -253,14 +247,7 @@ jobs:
           fi
           export ENV_FILE
 
-          pixi run python - <<'PY'
-          import os
-          from dotenv import set_key
-          env_file = os.environ['ENV_FILE']
-          env = os.environ['OCR_ENVIRONMENT']
-          set_key(env_file, 'OCR_ENVIRONMENT', env)
-          print('Updated', env_file, 'OCR_ENVIRONMENT=', env)
-          PY
+          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
 
           pixi run ocr run \
             $REGION_ARGS \
@@ -333,18 +320,7 @@ jobs:
           echo "Before update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
-          pixi run python - <<'PY'
-          import os
-          from dotenv import set_key
-          env_file = os.environ['ENV_FILE']
-          v = os.environ.get('OCR_VERSION')
-          e = os.environ.get('OCR_ENVIRONMENT')
-          if v:
-              set_key(env_file, 'OCR_VERSION', v)
-          if e:
-              set_key(env_file, 'OCR_ENVIRONMENT', e)
-          print('Updated keys:', ('OCR_VERSION' if v else '-'), ('OCR_ENVIRONMENT' if e else '-'))
-          PY
+          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
           echo "After update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
@@ -441,18 +417,7 @@ jobs:
           echo "Before update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
-          pixi run python - <<'PY'
-          import os
-          from dotenv import set_key
-          env_file = os.environ['ENV_FILE']
-          v = os.environ.get('OCR_VERSION')
-          e = os.environ.get('OCR_ENVIRONMENT')
-          if v:
-              set_key(env_file, 'OCR_VERSION', v)
-          if e:
-              set_key(env_file, 'OCR_ENVIRONMENT', e)
-          print('Updated keys:', ('OCR_VERSION' if v else '-'), ('OCR_ENVIRONMENT' if e else '-'))
-          PY
+          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
           echo "After update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
