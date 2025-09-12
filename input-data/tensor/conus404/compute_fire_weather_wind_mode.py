@@ -154,25 +154,41 @@ def build_fire_weather_mask(
     return mask
 
 
-def compute_modal_wind_direction(
+def compute_wind_direction_distribution(
     direction: xr.DataArray,
     fire_weather_mask: xr.DataArray,
 ) -> xr.Dataset:
-    """Compute modal wind direction (0-7) for hours satisfying fire weather.
+    """Compute wind direction distribution (0-7) for hours satisfying fire weather.
 
     Direction codes follow: 0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW
     """
     direction_indices = classify_wind_directions(direction)
     masked = direction_indices.where(fire_weather_mask)
-    fraction = direction_histogram(masked)
+    distribution = direction_histogram(masked)
     # Help static type checkers – ensure fraction is treated as DataArray
-    fraction = cast(xr.DataArray, fraction)
-    assert isinstance(fraction, xr.DataArray)
+    distribution = cast(xr.DataArray, distribution)
+    distribution.name = 'wind_direction_distribution'
+    distribution.attrs['long_name'] = 'Wind direction distribution during fire-weather hours'
+    distribution.attrs['description'] = (
+        'Fraction of hours in each of 8 cardinal directions during hours meeting fire weather criteria'
+    )
+
+    return distribution.to_dataset()
+
+
+def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
+    """Compute modal wind direction (0-7) for hours satisfying fire weather.
+
+    Direction codes follow: 0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW
+    """
 
     # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
-    any_fire_weather = fraction.sum(dim='wind_direction') > 0
-
-    mode = fraction.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
+    any_fire_weather = distribution.wind_direction_distribution.sum(dim='wind_direction') > 0
+    mode = (
+        distribution.wind_direction_distribution.argmax(dim='wind_direction')
+        .where(any_fire_weather)
+        .chunk({'x': -1, 'y': -1})
+    )
     # Optimize graph early
     mode = optimize(mode)[0]
     mode.name = 'wind_direction_mode'

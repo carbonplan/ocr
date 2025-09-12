@@ -475,3 +475,59 @@ def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
         'units': 'probability',
     }
     return fraction
+
+
+def fosberg_fire_weather_index(hurs: xr.DataArray, T2: xr.DataArray, sfcWind: xr.DataArray):
+    """
+    Calculate the Fosberg Fire Weather Index (FFWI) based on relative humidity, temperature, and wind speed.
+    taken from https://wikifire.wsl.ch/tiki-indexb1d5.html?page=Fosberg+fire+weather+index&structure=Fire
+    hurs, T2, sfcWind are arrays
+
+    Parameters
+    ----------
+    hurs : xr.DataArray
+        Relative humidity in percentage (0-100).
+    T2 : xr.DataArray
+        Temperature
+    sfcWind : xr.DataArray
+        Wind speed in meters per second.
+
+
+    Returns
+    -------
+    xr.DataArray
+        Fosberg Fire Weather Index (FFWI).
+    """
+    import pint_xarray  # noqa: F401
+
+    # Convert temperature to Fahrenheit
+    T2 = T2.pint.quantify().pint.to('degF').pint.dequantify()
+
+    # Convert wind speed to meters per second if necessary
+    sfcWind = sfcWind.pint.quantify().pint.to('m/s').pint.dequantify()
+
+    hurs = hurs.pint.quantify().pint.to('percent').pint.dequantify()
+
+    emc = xr.where(
+        (hurs >= 0) & (hurs < 10),
+        0.03229 + 0.281073 * hurs - 0.000578 * hurs * T2,
+        xr.where(
+            (hurs >= 10) & (hurs < 50),
+            2.22749 + 0.160107 * hurs - 0.01478 * T2,
+            xr.where(
+                (hurs >= 50) & (hurs <= 100),
+                21.0606 + 0.005565 * hurs**2 - 0.00035 * hurs * T2 - 0.483199 * hurs,
+                np.nan,
+            ),
+        ),
+    )
+
+    # emc: equilibrium moisture content, units are %
+    nu = 1 - 2 * (emc / 30) + 1.5 * ((emc / 30) ** 2) - 0.5 * ((emc / 30) ** 3)
+    ffwi = nu * np.sqrt(1 + (sfcWind**2))
+    ffwi = typing.cast(xr.DataArray, ffwi)
+    ffwi.name = 'FFWI'
+    ffwi.attrs['long_name'] = 'Fosberg Fire Weather Index'
+    ffwi.attrs['units'] = 'dimensionless'
+
+    return ffwi

@@ -99,7 +99,8 @@ def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
 
 def compute_wind_speed_and_direction(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
     """Derive hourly wind speed (m/s) and direction (degrees from) using xclim."""
-    winds = xclim.indicators.atmos.wind_speed_from_vector(uas=u10, vas=v10)
+    with xr.set_options(keep_attrs=True):
+        winds = xclim.indicators.atmos.wind_speed_from_vector(uas=u10, vas=v10)
     winds = cast(tuple[xr.DataArray, xr.DataArray], winds)
     # xclim returns a tuple-like (speed, direction). Merge keeps names (sfcWind, sfcWindfromdir)
     wind_ds = xr.merge(winds)
