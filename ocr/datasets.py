@@ -651,6 +651,13 @@ datasets = [
         prefix='input/fire-risk/tensor/conus404-ffwi/winds.icechunk',
         data_format='zarr',
     ),
+    Dataset(
+        name='conus404-ffwi-p99-mode-reprojected',
+        description='Modal wind direction during FFWI p99 conditions reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode_reprojected.icechunk',
+        data_format='zarr',
+    ),
 ]
 
 

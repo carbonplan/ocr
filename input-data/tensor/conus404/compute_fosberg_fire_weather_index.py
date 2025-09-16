@@ -326,7 +326,7 @@ def postprocess_ffwi(
         console.log(f'Computing and saving {quantile} quantile to {q_out_path}...')
         ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1})
         ffwi_quantile = dask.base.optimize(ffwi_quantile)[0]
-        ffwi_quantile = ffwi_quantile.persist()
+        # ffwi_quantile = ffwi_quantile.persist()
         ffwi_quantile.FFWI.attrs['description'] = (
             f'Fosberg Fire Weather Index {quantile} quantile over time dimension.'
         )
@@ -366,6 +366,73 @@ def postprocess_ffwi(
                 overwrite=overwrite,
             )
             console.log(f'Saved mode to {path}.')
+
+    if cluster is not None:
+        console.log('Closing Coiled cluster')
+        cluster.close()
+
+    console.log(f'Completed in {(time.time() - start) / 60:.2f} minutes')
+    console.rule('Done')
+
+
+@app.command('reproject-mode')
+def reproject_ffwi_mode(
+    input_path: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode.icechunk',
+        help='Input path to the FFWI mode Icechunk repository.',
+    ),
+    output_path: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode_reprojected.icechunk',
+        help='Output path for the reprojected FFWI mode Icechunk repository.',
+    ),
+    overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
+    dry_run: bool = typer.Option(
+        False, help='If true, do not create cluster or run full computations. Run a test instead.'
+    ),
+    min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
+    max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
+    worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
+):
+    """Reproject the FFWI mode dataset to the geobox of a target dataset."""
+    start = time.time()
+    cluster = None
+    if not dry_run:
+        cluster = setup_cluster(
+            name='ffwi-postprocess',
+            min_workers=min_workers,
+            max_workers=max_workers,
+            worker_vm_types=worker_vm_types,
+            scheduler_vm_types='m8g.large',
+        )
+        if cluster is None:
+            raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
+        client = cluster.get_client()
+        console.log(f'Dask client: {client}')
+        console.log('Waiting 60 seconds for cluster to stabilize...')
+
+    console.log(f'Loading FFWI mode from {input_path}...')
+    ffwi_mode = _open_icechunk_dataset(input_path)
+    console.log(f'Loaded FFWI mode: {ffwi_mode}')
+
+    conus404 = load_conus404(add_spatial_constants=True)
+    src_crs_wkt = conus404['crs'].attrs['crs_wkt']
+    console.log(f'CONUS404 CRS WKT: {src_crs_wkt}')
+
+    target_dataset_name = 'USFS-wildfire-risk-communities-4326'
+
+    reprojected_mode = reproject_mode(
+        ffwi_mode,
+        src_crs_wkt,
+        target_dataset_name,
+    )
+    console.log(f'Reprojected FFWI mode: {reprojected_mode}')
+
+    _write_icechunk_store(
+        out_path=output_path,
+        dataset=reprojected_mode,
+        commit_message=f'Reprojected FFWI mode to {target_dataset_name} geobox.',
+        overwrite=overwrite,
+    )
 
     if cluster is not None:
         console.log('Closing Coiled cluster')
