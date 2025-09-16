@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 import coiled
+import dask.base
 import icechunk
 import icechunk.xarray
 import rich
@@ -312,18 +313,20 @@ def postprocess_ffwi(
     # Load stored FFWI
     ffwi_path = f'{output_base}/fosberg-fire-weather-index.icechunk'
     console.log(f'Loading FFWI from {ffwi_path}...')
-    ffwi = _open_icechunk_dataset(ffwi_path).persist()
+    ffwi = _open_icechunk_dataset(ffwi_path)
 
     winds_path = f'{output_base}/winds.icechunk'
     console.log(f'Loading winds from {winds_path}...')
-    wind_ds = _open_icechunk_dataset(winds_path).persist()
+    wind_ds = _open_icechunk_dataset(winds_path)
 
     # Quantiles and optional mode
     console.log(f'Postprocessing FFWI: {ffwi}')
     for quantile in quantiles:
         q_out_path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}.icechunk'
         console.log(f'Computing and saving {quantile} quantile to {q_out_path}...')
-        ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1}).persist()
+        ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1})
+        ffwi_quantile = dask.base.optimize(ffwi_quantile)[0]
+        ffwi_quantile = ffwi_quantile.persist()
         ffwi_quantile.FFWI.attrs['description'] = (
             f'Fosberg Fire Weather Index {quantile} quantile over time dimension.'
         )
@@ -348,7 +351,7 @@ def postprocess_ffwi(
             path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_wind_direction_distribution.icechunk'
             _write_icechunk_store(
                 out_path=path,
-                dataset=distribution,
+                dataset=dask.base.optimize(distribution)[0],
                 commit_message=f'Add wind direction distribution for Fosberg Fire Weather Index > {quantile} quantile.',
                 overwrite=overwrite,
             )
@@ -358,7 +361,7 @@ def postprocess_ffwi(
             path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_mode.icechunk'
             _write_icechunk_store(
                 out_path=path,
-                dataset=ffwi_mode.chunk({'x': -1, 'y': -1}),
+                dataset=dask.base.optimize(ffwi_mode.chunk({'x': -1, 'y': -1}))[0],
                 commit_message=f'Add Fosberg Fire Weather Index mode for > {quantile} quantile.',
                 overwrite=overwrite,
             )

@@ -594,6 +594,63 @@ datasets = [
         prefix='input/fire-risk/vector/aggregated_regions/counties.parquet',
         data_format='geoparquet',
     ),
+    # CONUS404 Fosberg Fire Weather Index (FFWI) datasets
+    Dataset(
+        name='conus404-ffwi',
+        description='Fosberg Fire Weather Index (FFWI) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95',
+        description='FFWI p95 (95th percentile) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p95.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95-mode',
+        description='Modal wind direction during FFWI p95 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p95_mode.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95-wind-direction-distribution',
+        description='Wind direction distribution during FFWI p95 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p95_wind_direction_distribution.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99',
+        description='FFWI p99 (99th percentile) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-mode',
+        description='Modal wind direction during FFWI p99 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-wind-direction-distribution',
+        description='Wind direction distribution during FFWI p99 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_wind_direction_distribution.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-winds',
+        description='Wind variables associated with FFWI computations on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/winds.icechunk',
+        data_format='zarr',
+    ),
 ]
 
 
