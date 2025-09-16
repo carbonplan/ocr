@@ -1,9 +1,21 @@
+# COILED n-tasks 1
+# COILED --region us-west-2
+# COILED --tag Project=OCR
+
+import time
+from typing import Any
+
 import coiled
 import icechunk
 import icechunk.xarray
 import rich
 import typer
+import upath
+import xarray as xr
+from odc.geo import CRS
+from odc.geo.xr import assign_crs
 
+from ocr import catalog
 from ocr.conus404 import (
     compute_relative_humidity,
     compute_wind_speed_and_direction,
@@ -11,10 +23,40 @@ from ocr.conus404 import (
     load_conus404,
     rotate_winds_to_earth,
 )
-from ocr.risks.fire import fosberg_fire_weather_index
+from ocr.risks.fire import (
+    compute_modal_wind_direction,
+    compute_wind_direction_distribution,
+    fosberg_fire_weather_index,
+)
 
 console = rich.console.Console()
 app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')
+
+
+def reproject_mode(
+    mode: xr.Dataset,
+    src_crs_wkt: str,
+    target_dataset_name: str,
+    *,
+    chunk_lat: int = 6000,
+    chunk_lon: int = 4500,
+) -> xr.Dataset:
+    """Reproject the modal wind direction to the geobox of a target dataset."""
+    tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
+    tgt = assign_crs(tgt, crs='EPSG:4326')
+    geobox = tgt.odc.geobox
+
+    src_crs = CRS(src_crs_wkt)
+    mode_src = assign_crs(mode, crs=src_crs)
+
+    result = (
+        mode_src.odc.reproject(geobox, resampling='nearest')
+        .astype('float32')
+        .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
+    )
+
+    result.attrs.update({'reprojected_to': target_dataset_name})
+    return result
 
 
 def setup_cluster(
@@ -22,7 +64,7 @@ def setup_cluster(
     region: str = 'us-west-2',
     min_workers: int = 2,
     max_workers: int = 50,
-    worker_vm_types: str = 'm8g.xlarge',
+    worker_vm_types: str = 'm8g.2xlarge',
     scheduler_vm_types: str = 'm8g.large',
 ) -> coiled.Cluster | None:
     """Create and return a Coiled cluster (or None if min_workers == 0).
@@ -41,6 +83,7 @@ def setup_cluster(
         'tags': {'Project': 'OCR'},
         'worker_vm_types': worker_vm_types,
         'scheduler_vm_types': scheduler_vm_types,
+        'spot_policy': 'spot_with_fallback',
     }
     console.log(f'Creating Coiled cluster with args: {args}')
     cluster = coiled.Cluster(**args)
@@ -52,19 +95,143 @@ def setup_cluster(
     return cluster
 
 
-@app.command()
-def main(
+def _write_icechunk_store(
+    *,
+    out_path: str,
+    dataset: xr.Dataset,
+    commit_message: str,
+    overwrite: bool,
+):
+    """Write dataset to an Icechunk repo and perform housekeeping.
+
+    Steps:
+    - Open or create repository at out_path
+    - Skip if commit already present and not overwriting
+    - Write data via a writable session
+    - Rebase with BasicConflictSolver and commit
+    - Expire old snapshots and garbage collect pieces
+    """
+    path = upath.UPath(out_path)
+    protocol = path.protocol
+    if protocol == 's3':
+        parts = path.parts
+        bucket = parts[0].strip('/')
+        prefix = '/'.join(parts[1:])
+        storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
+    elif protocol in {'file', 'local'} or protocol == '':
+        storage = icechunk.local_filesystem_storage(path=str(path))
+    else:
+        raise ValueError(f'Unsupported protocol: {protocol}')
+    repo = icechunk.Repository.open_or_create(storage)
+
+    # Inspect history
+    messages = [commit.message for commit in repo.ancestry(branch='main')]
+    if commit_message in messages and not overwrite:
+        console.log(f'Data already committed to {out_path}, skipping save (overwrite=False).')
+        return
+
+    if overwrite and commit_message in messages:
+        console.log(f'Overwriting existing data at {out_path}...')
+        # If a full reset is desired, uncomment the following line and pick an init commit
+        # init_commit = list(repo.ancestry(branch="main"))[-1]
+        # repo.reset_branch('main', init_commit.id)
+
+    # Write data
+    session = repo.writable_session('main')
+    console.log(f'Saving dataset to {out_path}...')
+    icechunk.xarray.to_icechunk(
+        dataset,
+        session,
+        mode='w',
+    )
+
+    # Rebase and commit
+    session.rebase(
+        icechunk.BasicConflictSolver(on_chunk_conflict=icechunk.VersionSelection.UseOurs)
+    )
+    session.commit(commit_message)
+
+    # Housekeeping: expire old snapshots and GC pieces
+    latest_commit = list(repo.ancestry(branch='main'))[0]
+    console.log(latest_commit)
+    expired = repo.expire_snapshots(older_than=latest_commit.written_at)
+    console.log(f'{out_path} Expired {len(expired)} old snapshots.')
+    results = repo.garbage_collect(latest_commit.written_at)
+    console.log(f'{out_path} Garbage collection results: {results}')
+
+
+def _open_icechunk_dataset(path: str) -> xr.Dataset:
+    """Open an Icechunk repo path (s3 or local) as an xarray.Dataset (readonly).
+
+    Parameters
+    ----------
+    path : str
+        Path to the Icechunk repository. Supports s3:// and local paths.
+
+    Returns
+    -------
+    xr.Dataset
+        Opened dataset using zarr engine with no eager loading (lazy dask arrays).
+    """
+    up = upath.UPath(path)
+    protocol = up.protocol
+    if protocol == 's3':
+        parts = up.parts
+        bucket = parts[0].strip('/')
+        prefix = '/'.join(parts[1:])
+        storage = icechunk.s3_storage(bucket=bucket, prefix=prefix, from_env=True)
+    elif protocol in {'file', 'local'} or protocol == '':
+        storage = icechunk.local_filesystem_storage(path=str(up))
+    else:
+        raise ValueError(f'Unsupported protocol: {protocol}')
+
+    repo = icechunk.Repository.open(storage)
+    session = repo.readonly_session('main')
+    store: Any = session.store
+    ds = xr.open_dataset(store, engine='zarr', consolidated=False, chunks={})
+    return ds
+
+
+@app.command('compute')
+def compute_ffwi(
     dry_run: bool = typer.Option(
         False, help='If true, do not create cluster or run full computations. Run a test instead.'
     ),
     overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
-    output_base: str = typer.Option('/tmp', help='Base output path.'),
+    output_base: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi', help='Base output path.'
+    ),
+    min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
+    max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
+    worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
 ):
-    """Compute Fosberg Fire Weather Index from CONUS404 data."""
+    """Compute and save the Fosberg Fire Weather Index (FFWI) from CONUS404 data.
+
+    This command computes only the base FFWI dataset and writes it to Icechunk.
+    Use the `postprocess` command to compute quantiles and modes later without
+    recomputing FFWI.
+    """
+    start = time.time()
+    cluster = None
+    if not dry_run:
+        cluster = setup_cluster(
+            name='ffwi-computation',
+            min_workers=min_workers,
+            max_workers=max_workers,
+            worker_vm_types=worker_vm_types,
+            scheduler_vm_types='m8g.large',
+        )
+        if cluster is None:
+            raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
+        client = cluster.get_client()
+        console.log(f'Dask client: {client}')
+        console.log('Waiting 60 seconds for cluster to stabilize...')
+
     ds = load_conus404(add_spatial_constants=True)
     if dry_run:
         console.log('Running in dry run mode. Skipping cluster creation and full computations.')
-        ds = geo_sel(ds, bbox=(-120.1, 39.1, -120, 39)).compute()
+        ds = geo_sel(ds, bbox=(-120.1, 39.1, -120, 39))
+
     console.log(f'Loaded CONUS404 data: {ds}')
 
     # compute relative humidity
@@ -76,51 +243,133 @@ def main(
     ffwi = fosberg_fire_weather_index(
         hurs=hurs, T2=ds['T2'], sfcWind=wind_ds['sfcWind']
     ).to_dataset()
+    ffwi = ffwi.chunk({'x': 10, 'y': 10})
     console.log(f'Computed Fosberg Fire Weather Index: {ffwi}')
     console.log(ffwi)
-    # save to icechunk zarr
-    out_path = f'{output_base}/ffwi.icechunk'
-    storage = icechunk.local_filesystem_storage(out_path)
-    repo = icechunk.Repository.open_or_create(storage)
-    messages = []
-    for commit in repo.ancestry(branch='main'):
-        messages.append(commit.message)
+    # save to icechunk zarr (full FFWI)
+    out_path = f'{output_base}/fosberg-fire-weather-index.icechunk'
+    _write_icechunk_store(
+        out_path=out_path,
+        dataset=ffwi,
+        commit_message='Add Fosberg Fire Weather Index data.',
+        overwrite=overwrite,
+    )
 
-    console.print(messages)
-    if 'Add Fosberg Fire Weather Index data.' in messages and not overwrite:
-        console.log(
-            f'Fosberg Fire Weather Index data already committed to {out_path}, skipping save.'
+    # save winds
+    wind_out_path = f'{output_base}/winds.icechunk'
+    wind_ds = wind_ds.chunk({'x': 10, 'y': 10})
+    _write_icechunk_store(
+        out_path=wind_out_path,
+        dataset=wind_ds,
+        commit_message='Add surface wind data used in Fosberg Fire Weather Index computation.',
+        overwrite=overwrite,
+    )
+
+    if cluster is not None:
+        console.log('Closing Coiled cluster')
+        cluster.close()
+
+    console.log(f'Completed in {(time.time() - start) / 60:.2f} minutes')
+    console.rule('Done')
+
+
+@app.command('postprocess')
+def postprocess_ffwi(
+    dry_run: bool = typer.Option(
+        False, help='If true, do not create cluster or run full computations. Run a test instead.'
+    ),
+    overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
+    output_base: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi', help='Base output path.'
+    ),
+    quantiles: list[float] = typer.Option([0.95, 0.99], help='Quantiles to compute and save.'),
+    mode: bool = typer.Option(True, help='If true, compute mode of FFWI.'),
+    min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
+    max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
+    worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
+):
+    """Compute quantiles and wind-direction mode using a precomputed FFWI store.
+
+    This command loads an existing FFWI dataset (produced by `compute`) and computes
+    quantiles and, optionally, the prevailing wind direction (mode) for high-FFWI periods.
+    """
+    start = time.time()
+    cluster = None
+    if not dry_run:
+        cluster = setup_cluster(
+            name='ffwi-postprocess',
+            min_workers=min_workers,
+            max_workers=max_workers,
+            worker_vm_types=worker_vm_types,
+            scheduler_vm_types='m8g.large',
         )
-        return
+        if cluster is None:
+            raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
+        client = cluster.get_client()
+        console.log(f'Dask client: {client}')
+        console.log('Waiting 60 seconds for cluster to stabilize...')
 
-    else:
-        # wipe out existing data if overwrite is True
-        if overwrite:
-            console.log(f'Overwriting existing data at {out_path}...')
-            #  repo.reset_branch('main', init_commit.id)
+    # Load stored FFWI
+    ffwi_path = f'{output_base}/fosberg-fire-weather-index.icechunk'
+    console.log(f'Loading FFWI from {ffwi_path}...')
+    ffwi = _open_icechunk_dataset(ffwi_path).persist()
 
-    session = repo.writable_session('main')
-    console.log(f'Saving Fosberg Fire Weather Index to {out_path}...')
-    icechunk.xarray.to_icechunk(
-        ffwi,
-        session,
-        mode='w',
-    )
-    session.rebase(
-        icechunk.BasicConflictSolver(on_chunk_conflict=icechunk.VersionSelection.UseOurs)
-    )
+    winds_path = f'{output_base}/winds.icechunk'
+    console.log(f'Loading winds from {winds_path}...')
+    wind_ds = _open_icechunk_dataset(winds_path).persist()
 
-    session.commit(
-        'Add Fosberg Fire Weather Index data.',
-    )
+    # Quantiles and optional mode
+    console.log(f'Postprocessing FFWI: {ffwi}')
+    for quantile in quantiles:
+        q_out_path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}.icechunk'
+        console.log(f'Computing and saving {quantile} quantile to {q_out_path}...')
+        ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1}).persist()
+        ffwi_quantile.FFWI.attrs['description'] = (
+            f'Fosberg Fire Weather Index {quantile} quantile over time dimension.'
+        )
+        ffwi_quantile.FFWI.attrs['computed_for_quantile'] = quantile
+        _write_icechunk_store(
+            out_path=q_out_path,
+            dataset=ffwi_quantile,
+            commit_message=f'Add Fosberg Fire Weather Index {quantile} quantile data.',
+            overwrite=overwrite,
+        )
+        console.log(f'Saved {quantile} quantile to {q_out_path}.')
 
-    latest_commit = list(repo.ancestry(branch='main'))[0]
-    console.log(latest_commit)
-    expired = repo.expire_snapshots(older_than=latest_commit.written_at)
-    console.log(f'Expired {len(expired)} old snapshots.')
-    # delete data associated with expired snapshots
-    results = repo.garbage_collect(latest_commit.written_at)
-    console.log(f'{results}')
+        if mode:
+            console.log('Computing and saving mode of FFWI...')
+            fire_weather_mask = ffwi.FFWI > ffwi_quantile.FFWI
+            distribution = compute_wind_direction_distribution(
+                wind_ds['sfcWindfromdir'], fire_weather_mask
+            )
+            console.log(
+                f'Computed wind direction distribution for FFWI > {quantile} quantile: {distribution}'
+            )
+            path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_wind_direction_distribution.icechunk'
+            _write_icechunk_store(
+                out_path=path,
+                dataset=distribution,
+                commit_message=f'Add wind direction distribution for Fosberg Fire Weather Index > {quantile} quantile.',
+                overwrite=overwrite,
+            )
+
+            console.log(f'Saved wind direction distribution to {path}.')
+            ffwi_mode = compute_modal_wind_direction(distribution.wind_direction_distribution)
+            path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_mode.icechunk'
+            _write_icechunk_store(
+                out_path=path,
+                dataset=ffwi_mode.chunk({'x': -1, 'y': -1}),
+                commit_message=f'Add Fosberg Fire Weather Index mode for > {quantile} quantile.',
+                overwrite=overwrite,
+            )
+            console.log(f'Saved mode to {path}.')
+
+    if cluster is not None:
+        console.log('Closing Coiled cluster')
+        cluster.close()
+
+    console.log(f'Completed in {(time.time() - start) / 60:.2f} minutes')
+    console.rule('Done')
 
 
 if __name__ == '__main__':

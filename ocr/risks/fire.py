@@ -531,3 +531,70 @@ def fosberg_fire_weather_index(hurs: xr.DataArray, T2: xr.DataArray, sfcWind: xr
     ffwi.attrs['units'] = 'dimensionless'
 
     return ffwi
+
+
+def compute_wind_direction_distribution(
+    direction: xr.DataArray, fire_weather_mask: xr.DataArray
+) -> xr.Dataset:
+    """
+    Compute the wind direction distribution during fire weather conditions.
+
+    Parameters
+    ----------
+    direction : xr.DataArray
+        Wind direction in degrees (0-360).
+    fire_weather_mask : xr.DataArray
+        Boolean mask indicating fire weather conditions.
+
+    Returns
+    -------
+    xr.Dataset
+        Wind direction histogram during fire weather conditions.
+    """
+    # Classify wind directions into 8 cardinal directions
+    classified_directions = classify_wind_directions(direction)
+
+    # Apply fire weather mask to filter relevant data
+    masked_directions = classified_directions.where(fire_weather_mask)
+
+    # Compute histogram of wind directions during fire weather conditions
+    wind_direction_hist = direction_histogram(masked_directions)
+
+    wind_direction_hist.name = 'wind_direction_distribution'
+    wind_direction_hist.attrs['long_name'] = 'Wind direction distribution during fire-weather hours'
+    wind_direction_hist.attrs['description'] = (
+        'Fraction of hours in each of 8 cardinal directions during hours meeting fire weather criteria'
+    )
+
+    return wind_direction_hist.to_dataset()
+
+
+def compute_modal_wind_direction(distribution: xr.DataArray):
+    """
+    Compute the modal wind direction from the wind direction distribution.
+
+    Parameters
+    ----------
+    distribution : xr.DataArray
+        Wind direction distribution.
+
+    Returns
+    -------
+    xr.Dataset
+        Modal wind direction.
+    """
+    # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
+    any_fire_weather = distribution.sum(dim='wind_direction') > 0
+
+    mode = (
+        distribution.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
+    )
+    mode.name = 'wind_direction_mode'
+    mode.attrs.update(
+        {
+            'long_name': 'Modal wind direction during fire-weather hours',
+            'description': 'Most frequent of 8 cardinal directions during hours meeting fire weather criteria',
+            'direction_labels': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+        }
+    )
+    return mode.to_dataset()
