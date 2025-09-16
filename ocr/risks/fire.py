@@ -390,7 +390,7 @@ def calculate_wind_adjusted_risk(
         fire_risk[var].attrs['long_name'] = f'{var} (wind-adjusted)'
         fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
-    return fire_risk.drop_vars(['spatial_ref', 'crs'], errors='ignore')
+    return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 
 
 def nws_fire_weather(
