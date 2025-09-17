@@ -101,7 +101,7 @@
 [tool.pixi.project]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "osx-64", "osx-arm64"]
+    platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 # Only keep local package as an editable PyPI dep (and rare stragglers).
 [tool.pixi.pypi-dependencies]
@@ -191,7 +191,6 @@
     rich                  = ">=14.1.0,<15"
     rioxarray             = ">=0.19.0,<0.20"
     s3fs                  = ">=2025.9.0,<2026"
-    s5cmd                 = ">=2.3.0,<3"
     semver                = ">=3.0.4,<4"
     tqdm                  = ">=4.67.1,<5"
     typer                 = ">=0.17.4,<0.18"
