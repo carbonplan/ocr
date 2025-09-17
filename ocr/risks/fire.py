@@ -82,7 +82,9 @@ def generate_wind_directional_kernels(
         weights_dict[direction] = rotated
 
     circ = generate_weights(
-        method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
+        method='circular_focal_mean',
+        kernel_size=kernel_size,
+        circle_diameter=circle_diameter,
     ).astype(np.float32)
     circ = np.clip(circ, 0, None)
 
@@ -97,7 +99,10 @@ def generate_wind_directional_kernels(
 
 
 def apply_wind_directional_convolution(
-    da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
+    da: xr.DataArray,
+    iterations: int = 3,
+    kernel_size: float = 81.0,
+    circle_diameter: float = 35.0,
 ) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
@@ -308,7 +313,9 @@ def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset, direction_modes_sfc: xr.DataArray, rps_30_subset: xr.Dataset
+    climate_run_subset: xr.Dataset,
+    direction_modes_sfc: xr.DataArray,
+    rps_30_subset: xr.Dataset,
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
@@ -361,7 +368,7 @@ def calculate_wind_adjusted_risk(
     )
 
     direction_modes_sfc = (
-        catalog.get_dataset('conus404-fire-weather-wind-mode-hurs15-wind35-reprojected')
+        catalog.get_dataset('conus404-ffwi-p99-mode-reprojected')
         .to_xarray()
         .wind_direction_mode.sel(latitude=y_slice, longitude=x_slice)
         .load()
@@ -390,7 +397,7 @@ def calculate_wind_adjusted_risk(
         fire_risk[var].attrs['long_name'] = f'{var} (wind-adjusted)'
         fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
-    return fire_risk.drop_vars(['spatial_ref', 'crs'], errors='ignore')
+    return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 
 
 def nws_fire_weather(
@@ -475,3 +482,128 @@ def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
         'units': 'probability',
     }
     return fraction
+
+
+def fosberg_fire_weather_index(hurs: xr.DataArray, T2: xr.DataArray, sfcWind: xr.DataArray):
+    """
+    Calculate the Fosberg Fire Weather Index (FFWI) based on relative humidity, temperature, and wind speed.
+    taken from https://wikifire.wsl.ch/tiki-indexb1d5.html?page=Fosberg+fire+weather+index&structure=Fire
+    hurs, T2, sfcWind are arrays
+
+    Parameters
+    ----------
+    hurs : xr.DataArray
+        Relative humidity in percentage (0-100).
+    T2 : xr.DataArray
+        Temperature
+    sfcWind : xr.DataArray
+        Wind speed in meters per second.
+
+
+    Returns
+    -------
+    xr.DataArray
+        Fosberg Fire Weather Index (FFWI).
+    """
+    import pint_xarray  # noqa: F401
+
+    # Convert temperature to Fahrenheit
+    T2 = T2.pint.quantify().pint.to('degF').pint.dequantify()
+
+    # Convert wind speed to meters per second if necessary
+    sfcWind = sfcWind.pint.quantify().pint.to('m/s').pint.dequantify()
+
+    hurs = hurs.pint.quantify().pint.to('percent').pint.dequantify()
+
+    emc = xr.where(
+        (hurs >= 0) & (hurs < 10),
+        0.03229 + 0.281073 * hurs - 0.000578 * hurs * T2,
+        xr.where(
+            (hurs >= 10) & (hurs < 50),
+            2.22749 + 0.160107 * hurs - 0.01478 * T2,
+            xr.where(
+                (hurs >= 50) & (hurs <= 100),
+                21.0606 + 0.005565 * hurs**2 - 0.00035 * hurs * T2 - 0.483199 * hurs,
+                np.nan,
+            ),
+        ),
+    )
+
+    # emc: equilibrium moisture content, units are %
+    nu = 1 - 2 * (emc / 30) + 1.5 * ((emc / 30) ** 2) - 0.5 * ((emc / 30) ** 3)
+    ffwi = nu * np.sqrt(1 + (sfcWind**2))
+    ffwi = typing.cast(xr.DataArray, ffwi)
+    ffwi.name = 'FFWI'
+    ffwi.attrs['long_name'] = 'Fosberg Fire Weather Index'
+    ffwi.attrs['units'] = 'dimensionless'
+
+    return ffwi
+
+
+def compute_wind_direction_distribution(
+    direction: xr.DataArray, fire_weather_mask: xr.DataArray
+) -> xr.Dataset:
+    """
+    Compute the wind direction distribution during fire weather conditions.
+
+    Parameters
+    ----------
+    direction : xr.DataArray
+        Wind direction in degrees (0-360).
+    fire_weather_mask : xr.DataArray
+        Boolean mask indicating fire weather conditions.
+
+    Returns
+    -------
+    xr.Dataset
+        Wind direction histogram during fire weather conditions.
+    """
+    # Classify wind directions into 8 cardinal directions
+    classified_directions = classify_wind_directions(direction)
+
+    # Apply fire weather mask to filter relevant data
+    masked_directions = classified_directions.where(fire_weather_mask)
+
+    # Compute histogram of wind directions during fire weather conditions
+    wind_direction_hist = direction_histogram(masked_directions)
+
+    wind_direction_hist.name = 'wind_direction_distribution'
+    wind_direction_hist.attrs['long_name'] = 'Wind direction distribution during fire-weather hours'
+    wind_direction_hist.attrs['description'] = (
+        'Fraction of hours in each of 8 cardinal and ordinal directions during hours meeting fire weather criteria'
+    )
+
+    return wind_direction_hist.to_dataset()
+
+
+def compute_modal_wind_direction(distribution: xr.DataArray):
+    """
+    Compute the modal wind direction from the wind direction distribution.
+
+    Parameters
+    ----------
+    distribution : xr.DataArray
+        Wind direction distribution.
+
+    Returns
+    -------
+    xr.Dataset
+        Modal wind direction.
+    """
+    # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
+    any_fire_weather = distribution.sum(dim='wind_direction') > 0
+
+    # TODO: Handling ties.
+    # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html mentions that in case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence are returned.
+    mode = (
+        distribution.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
+    )
+    mode.name = 'wind_direction_mode'
+    mode.attrs.update(
+        {
+            'long_name': 'Modal wind direction during fire-weather hours',
+            'description': 'Most frequent of 8 cardinal directions during hours meeting fire weather criteria',
+            'direction_labels': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+        }
+    )
+    return mode.to_dataset()
