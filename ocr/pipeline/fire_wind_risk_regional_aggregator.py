@@ -110,18 +110,17 @@ def custom_histogram_query(
         round(avg(a.wind_risk_2047_horizon_15), 2) as avg_wind_risk_2047_horizon_15,
         round(avg(a.wind_risk_2047_horizon_30), 2) as avg_wind_risk_2047_horizon_30,
 
-        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_1 <> 0 AND a.USFS_RPS_horizon_1 <= 100 THEN a.USFS_RPS_horizon_1 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_1,
-        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_15 <> 0 AND a.USFS_RPS_horizon_15 <= 100 THEN a.USFS_RPS_horizon_15 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_15,
-        map_values(histogram(CASE WHEN a.USFS_RPS_horizon_30 <> 0 AND a.USFS_RPS_horizon_30 <= 100 THEN a.USFS_RPS_horizon_30 END, {hist_bins})) as nonzero_hist_USFS_RPS_horizon_30,
+        list_resize(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_1 <> 0 THEN a.USFS_RPS_horizon_1 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_USFS_RPS_horizon_1,
+        list_resize(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_15 <> 0 THEN a.USFS_RPS_horizon_15 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_USFS_RPS_horizon_15,
+        list_resize(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_30 <> 0 THEN a.USFS_RPS_horizon_30 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_USFS_RPS_horizon_30,
 
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_1 <> 0 THEN a.wind_risk_2011_horizon_1 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2011_horizon_1,
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_15 <> 0 THEN a.wind_risk_2011_horizon_15 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2011_horizon_15,
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_30 <> 0 THEN a.wind_risk_2011_horizon_30 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2011_horizon_30,
 
-        map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_1 <> 0 AND a.wind_risk_2011_horizon_1 <= 100 THEN a.wind_risk_2011_horizon_1 END, {hist_bins})) as nonzero_hist_wind_risk_2011_horizon_1,
-        map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_15 <> 0 AND a.wind_risk_2011_horizon_15 <= 100 THEN a.wind_risk_2011_horizon_15 END, {hist_bins})) as nonzero_hist_wind_risk_2011_horizon_15,
-        map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_30 <> 0 AND a.wind_risk_2011_horizon_30 <= 100 THEN a.wind_risk_2011_horizon_30 END, {hist_bins})) as nonzero_hist_wind_risk_2011_horizon_30,
-
-        map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_1 <> 0 AND a.wind_risk_2047_horizon_1 <= 100 THEN a.wind_risk_2047_horizon_1 END, {hist_bins})) as nonzero_hist_wind_risk_2047_horizon_1,
-        map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_15 <> 0 AND a.wind_risk_2047_horizon_15 <= 100 THEN a.wind_risk_2047_horizon_15 END, {hist_bins})) as nonzero_hist_wind_risk_2047_horizon_15,
-        map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_30 <> 0 AND a.wind_risk_2047_horizon_30 <= 100 THEN a.wind_risk_2047_horizon_30 END, {hist_bins})) as nonzero_hist_wind_risk_2047_horizon_30,
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_1 <> 0 THEN a.wind_risk_2047_horizon_1 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2047_horizon_1,
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_15 <> 0 THEN a.wind_risk_2047_horizon_15 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2047_horizon_15,
+        list_resize(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_30 <> 0 THEN a.wind_risk_2047_horizon_30 END, {hist_bins})), {len(hist_bins) - 1}, 0) as nonzero_hist_wind_risk_2047_horizon_30,
 
         b.geometry as geometry
     FROM buildings a
