@@ -3,7 +3,7 @@ from typing import cast
 
 import pyproj
 import xarray as xr
-import xclim.indicators.atmos
+from xclim import convert
 
 
 def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
@@ -74,7 +74,7 @@ def compute_relative_humidity(ds: xr.Dataset) -> xr.DataArray:
         Relative humidity as a percentage.
     """
     with xr.set_options(keep_attrs=True):
-        hurs = xclim.indicators.atmos.relative_humidity_from_dewpoint(tas=ds['T2'], tdps=ds['TD2'])
+        hurs = convert.relative_humidity_from_dewpoint(tas=ds['T2'], tdps=ds['TD2'])
         hurs = cast(xr.DataArray, hurs)
     hurs.name = 'hurs'
     return hurs
@@ -99,7 +99,7 @@ def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
 
 def compute_wind_speed_and_direction(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
     """Derive hourly wind speed (m/s) and direction (degrees from) using xclim."""
-    winds = xclim.indicators.atmos.wind_speed_from_vector(uas=u10, vas=v10)
+    winds = convert.wind_speed_from_vector(uas=u10, vas=v10)
     winds = cast(tuple[xr.DataArray, xr.DataArray], winds)
     # xclim returns a tuple-like (speed, direction). Merge keeps names (sfcWind, sfcWindfromdir)
     wind_ds = xr.merge(winds)
