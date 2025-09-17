@@ -24,7 +24,7 @@ pixi run python input-data/tensor/conus404/subset_conus404_from_osn.py --help   
 │ --spatial-tile-size         INTEGER  Size of spatial tiles for chunking [default: 10]                                                                                                 │
 │ --install-completion                 Install completion for the current shell.                                                                                                        │
 │ --show-completion                    Show completion for the current shell, to copy it or customize the installation.                                                                 │
-│ --help                               Show this message and exit.                                                                                                                      │
+│ --help                               Show this message and exit.                                                                                                                      |
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -98,108 +98,89 @@ Attributes: (12/148)
 
 ```
 
-## Fire-weather modal wind direction
+## Fosberg Fire Weather Index (FFWI)
 
-The script `compute_fire_weather_wind_mode.py` computes, for every CONUS404 grid cell, the **most common (modal) wind direction during hours that meet fire weather criteria**. It reproduces and productionizes the notebook logic from `notebooks/fire-weather-wind-mode-reprojected.ipynb`.
+The script `compute_fosberg_fire_weather_index.py` computes the Fosberg Fire Weather Index from CONUS404 hourly data, writes the base FFWI field to an Icechunk repo, and postprocesses quantiles and prevailing wind direction during high-FFWI periods. A utility command reprojects the mode product to the geobox of a catalog dataset.
 
-### What it does
+### What it does (FFWI)
 
-1. Starts (optionally) a Coiled cluster.
-2. Loads required CONUS404 hourly variables (Icechunk-backed) via `load_conus404`.
-3. Computes relative humidity from temperature & dewpoint.
-4. Rotates grid-relative winds (U10, V10) into earth-relative components using `SINALPHA` / `COSALPHA`.
-5. Derives wind speed and direction with `xclim`.
-6. Applies a gust factor (default 1.4×) before thresholding wind speed (mph) and relative humidity to build a fire weather mask.
-7. Classifies wind direction into 8 cardinal bins (N, NE, E, SE, S, SW, W, NW) for fire-weather hours only.
-8. Builds a per-pixel direction histogram and selects the argmax (modal direction) where at least one fire-weather hour exists.
-9. Writes a native-grid Zarr.
-10. Optionally reprojects to the geobox of the catalog dataset `USFS-wildfire-risk-communities-4326` and writes a second Zarr.
+- Loads CONUS404 with spatial constants via `load_conus404(add_spatial_constants=True)`.
+- Computes relative humidity from specific humidity and temperature.
+- Rotates grid-relative winds to earth-relative components and derives wind speed and direction.
+- Computes FFWI using `fosberg_fire_weather_index(hurs, T2, sfcWind)` and writes to Icechunk.
+- Saves the derived surface wind fields used in the computation.
+- Postprocesses: time-quantiles of FFWI and wind-direction distribution/mode where FFWI exceeds those quantiles.
+- Reprojects the mode dataset to the `USFS-wildfire-risk-communities-4326` geobox.
 
-### Cardinal direction encoding
+### Commands
 
-The resulting variable `wind_direction_mode` stores integers 0–7 mapping to:
+The module is a Typer app with three subcommands.
 
-| Code | Direction |
-| ---- | --------- |
-| 0    | N         |
-| 1    | NE        |
-| 2    | E         |
-| 3    | SE        |
-| 4    | S         |
-| 5    | SW        |
-| 6    | W         |
-| 7    | NW        |
-
-Cells with no hours meeting fire weather criteria are `NaN`.
-
-### CLI help
+1. Compute base FFWI and winds
 
 ```bash
-pixi run python input-data/tensor/conus404/compute_fire_weather_wind_mode.py --help
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute --help
 ```
 
-Expected options (summarized):
+Key options:
 
-| Option                         | Description                                           | Default                                                        |
-| ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------- |
-| `--hurs-threshold`             | Relative humidity threshold (%)                       | 15                                                             |
-| `--wind-threshold`             | Gust-like wind threshold (mph)                        | 35                                                             |
-| `--wind-gust-factor`           | Multiplier applied to sustained speed                 | 1.4                                                            |
-| `--output-base`                | Base S3 (or local) path for outputs                   | `s3://carbonplan-ocr/input-data/conus404-wind-direction-modes` |
-| `--target-dataset-name`        | Catalog dataset whose geobox is used for reprojection | `USFS-wildfire-risk-communities-4326`                          |
-| `--reproject / --no-reproject` | Toggle reprojection                                   | `True`                                                         |
-| `--cluster-name`               | Coiled cluster name                                   | `fire-weather-distribution`                                    |
-| `--min-workers`                | Min workers (Coiled autoscaling)                      | 4                                                              |
-| `--max-workers`                | Max workers                                           | 50                                                             |
-| `--worker-vm-types`            | Worker VM type                                        | `m8g.xlarge`                                                   |
-| `--scheduler-vm-types`         | Scheduler VM type                                     | `m8g.large`                                                    |
-| `--local`                      | Run locally (no Coiled cluster)                       | `False`                                                        |
+- `--dry-run`: Use a tiny spatial slice and skip cluster startup.
+- `--overwrite`: Overwrite existing Icechunk data.
+- `--output-base`: Base path for outputs (S3 or local). Default: `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`.
+- `--min-workers`, `--max-workers`, `--worker-vm-types`: Coiled autoscaling and instance types.
 
-### Example: run on Coiled (default thresholds)
+Example (Coiled):
 
 ```bash
-pixi run coiled batch run input-data/tensor/conus404/compute_fire_weather_wind_mode.py \
-    --hurs-threshold 15 \
-    --wind-threshold 35 \
-    --wind-gust-factor 1.4
+pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute \
+  --min-workers 10 --max-workers 70 --worker-vm-types m8g.2xlarge
 ```
 
-### Example: local dry run (small subset)
-
-If you only want to test logic locally (no cluster) you can optionally slice after loading (modify script or use a forked copy):
+1. Postprocess quantiles and mode
 
 ```bash
-pixi run python input-data/tensor/conus404/compute_fire_weather_wind_mode.py --local --reproject False
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess --help
 ```
 
-### Outputs
+Key options:
 
-Given thresholds H=15 (RH) and W=35 (wind), two Zarr stores are written by default:
+- `--quantiles`: List of quantiles to compute (default `[0.95, 0.99]`).
+- `--mode/--no-mode`: Compute prevailing wind direction for hours where FFWI exceeds the quantile.
+- Same cluster options as above.
 
+Example:
+
+```bash
+pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess \
+  --quantiles 0.95 0.99 --mode True
 ```
-s3://carbonplan-ocr/input/conus404-wind-direction-modes/
-    fire_weather_wind_mode-hurs15_wind35.zarr
-    fire_weather_wind_mode-hurs15_wind35-reprojected.zarr
+
+1. Reproject FFWI mode
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py reproject-mode --help
 ```
 
-The reprojected store matches the grid of the wildfire risk communities dataset. Disable via `--no-reproject`.
+Reprojects the mode dataset to the geobox for `USFS-wildfire-risk-communities-4326`.
 
-### Reading the output
+### Outputs (FFWI)
+
+Under the base `--output-base` (default `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`):
+
+- `fosberg-fire-weather-index.icechunk` — Base FFWI over time (x, y, time).
+- `winds.icechunk` — Derived surface wind speed and direction fields.
+- `fosberg-fire-weather-index_p95.icechunk`, `fosberg-fire-weather-index_p99.icechunk` — Time-quantiles of FFWI (x, y).
+- `fosberg-fire-weather-index_p95_wind_direction_distribution.icechunk` — Per-direction histogram for hours exceeding the quantile.
+- `fosberg-fire-weather-index_p95_mode.icechunk` — Mode of wind direction during high-FFWI hours.
+- `fosberg-fire-weather-index_p99_mode_reprojected.icechunk` — Mode reprojected to target geobox (when using `reproject-mode`).
+
+### Reading results
 
 ```python
 import xarray as xr
 
-path = 's3://carbonplan-ocr/input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr'
-mode = xr.open_zarr(path)
-mode.wind_direction_mode
+base = 's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi'
+ffwi = xr.open_zarr(f'{base}/fosberg-fire-weather-index.icechunk', consolidated=False)
+q99  = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99.icechunk', consolidated=False)
+mode = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99_mode.icechunk', consolidated=False)
 ```
-
-### Adjusting thresholds
-
-Simply change `--hurs-threshold`, `--wind-threshold`, and (optionally) `--wind-gust-factor`. The output filenames embed these values so multiple experimental runs can co-exist in the same prefix.
-
-### Notes / Future Enhancements
-
-- Add optional temperature threshold when/if needed (currently disabled like the notebook).
-- Option to emit the full directional histogram, not just the mode.
-- Potential integration tests on a spatial subset.
