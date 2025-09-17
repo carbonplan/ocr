@@ -181,7 +181,6 @@
     opencv                = ">=4.12.0,<5"
     opt-einsum            = ">=3.4.0,<4"
     pint-xarray           = ">=0.6.0,<0.7"
-    pyarrow               = ">=20.0.0,<21"
     pyarrow               = ">=21.0.0,<22"
     pydantic              = ">=2.11.9,<3"
     pydantic-extra-types  = ">=2.10.5,<3"

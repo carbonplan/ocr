@@ -82,7 +82,9 @@ def generate_wind_directional_kernels(
         weights_dict[direction] = rotated
 
     circ = generate_weights(
-        method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
+        method='circular_focal_mean',
+        kernel_size=kernel_size,
+        circle_diameter=circle_diameter,
     ).astype(np.float32)
     circ = np.clip(circ, 0, None)
 
@@ -97,7 +99,10 @@ def generate_wind_directional_kernels(
 
 
 def apply_wind_directional_convolution(
-    da: xr.DataArray, iterations: int = 3, kernel_size: float = 81.0, circle_diameter: float = 35.0
+    da: xr.DataArray,
+    iterations: int = 3,
+    kernel_size: float = 81.0,
+    circle_diameter: float = 35.0,
 ) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
@@ -308,7 +313,9 @@ def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset, direction_modes_sfc: xr.DataArray, rps_30_subset: xr.Dataset
+    climate_run_subset: xr.Dataset,
+    direction_modes_sfc: xr.DataArray,
+    rps_30_subset: xr.Dataset,
 ) -> xr.Dataset:
     from odc.geo.xr import assign_crs
 
@@ -563,7 +570,7 @@ def compute_wind_direction_distribution(
     wind_direction_hist.name = 'wind_direction_distribution'
     wind_direction_hist.attrs['long_name'] = 'Wind direction distribution during fire-weather hours'
     wind_direction_hist.attrs['description'] = (
-        'Fraction of hours in each of 8 cardinal directions during hours meeting fire weather criteria'
+        'Fraction of hours in each of 8 cardinal and ordinal directions during hours meeting fire weather criteria'
     )
 
     return wind_direction_hist.to_dataset()
@@ -586,6 +593,8 @@ def compute_modal_wind_direction(distribution: xr.DataArray):
     # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)
     any_fire_weather = distribution.sum(dim='wind_direction') > 0
 
+    # TODO: Handling ties.
+    # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html mentions that in case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence are returned.
     mode = (
         distribution.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
     )
