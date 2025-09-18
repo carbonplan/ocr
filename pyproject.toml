@@ -116,13 +116,12 @@
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
-    format         = { cmd = "ruff format" }
-    lint           = { cmd = "pre-commit run --all-files" }
-    run-ruff-check = { cmd = "ruff check" }
-    tests          = { cmd = "pytest" }
+    format                       = { cmd = "ruff format" }
+    lint                         = { cmd = "pre-commit run --all-files" }
+    run-ruff-check               = { cmd = "ruff check" }
     start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-
+    tests                        = { cmd = "pytest" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
@@ -133,13 +132,14 @@
 
 # Data management feature dependencies (conda-forge)
 [tool.pixi.feature.data-mgmt.dependencies]
-    awscli     = ">=2.30.2,<3"
-    boto3      = ">=1.40.18,<2"
-    patool     = ">=4.0.1,<5"
-    netcdf4    = ">=1.7.2,<2"
+    awscli  = ">=2.30.2,<3"
+    boto3   = ">=1.40.18,<2"
+    netcdf4 = ">=1.7.2,<2"
+    patool  = ">=4.0.1,<5"
 
 # Dev feature dependencies (conda-forge)
 [tool.pixi.feature.dev.dependencies]
+    jupyterlab = ">=4.4.7,<5"
     pre-commit = ">=4.3.0,<5"
     pytest     = ">=8.4.2,<9"
     pytest-cov = ">=7.0.0,<8"
@@ -163,8 +163,8 @@
 [tool.pixi.feature.coiled-deploy.dependencies]
     coiled               = ">=1.120.0,<2"
     jupyter-server-proxy = ">=4.4.0,<5"
-    jupyterlab           = ">=4.4.7,<5"
-    tippecanoe           = ">=2.78.0,<3"
+    semver               = ">=3.0.4,<4"
+
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
@@ -189,7 +189,7 @@
     rasterio              = ">=1.4.3,<2"
     rich                  = ">=14.1.0,<15"
     s3fs                  = ">=2025.9.0,<2026"
-    semver                = ">=3.0.4,<4"
+    tippecanoe            = ">=2.78.0,<3"
     tqdm                  = ">=4.67.1,<5"
     typer                 = ">=0.17.4,<0.18"
     universal-pathlib     = ">=0.2.6,<0.3"
