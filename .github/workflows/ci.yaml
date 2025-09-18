@@ -35,12 +35,13 @@ jobs:
           cache: false # no pixi.lock
           locked: false
           activate-environment: true
+          environments: dev
 
       - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list -e dev
+          pixi list --environment dev
 
       - name: Run tests
         run: |
-          pixi run tests
+          pixi run --environment dev tests
