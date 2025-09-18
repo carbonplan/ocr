@@ -112,7 +112,7 @@
     all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
     default  = ["coiled-deploy", "data-mgmt", "dev"]
     deploy   = ["coiled-deploy"]
-    dev      = ["data-mgmt", "dev"]
+    dev      = ["coiled-deploy", "data-mgmt", "dev"]
     docs     = ["coiled-deploy", "docs"]
 
 # Tasks grouped by features
@@ -159,9 +159,9 @@
     markdown-exec = ">=1.11.0, <2"
 
 [tool.pixi.feature.coiled-deploy.dependencies]
-    coiled               = ">=1.118.2,<2"
+    coiled               = ">=1.120.0,<2"
     jupyter-server-proxy = ">=4.4.0,<5"
-    jupyterlab           = ">=4.4.6,<5"
+    jupyterlab           = ">=4.4.7,<5"
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
