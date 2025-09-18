@@ -36,7 +36,7 @@ jobs:
 
       - name: Export pixi environment to .binder/environment.yaml
         run: |
-          pixi project export conda-environment deploy > .binder/environment.yaml
+          pixi project export conda-environment > .binder/environment.yaml
           ls -la .binder
           cat .binder/environment.yaml
 
