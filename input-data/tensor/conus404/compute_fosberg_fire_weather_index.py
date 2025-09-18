@@ -34,24 +34,24 @@ console = rich.console.Console()
 app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')
 
 
-def reproject_mode(
-    mode: xr.Dataset,
+def reproject(
+    wind_direction: xr.Dataset,
     src_crs_wkt: str,
     target_dataset_name: str,
     *,
     chunk_lat: int = 6000,
     chunk_lon: int = 4500,
 ) -> xr.Dataset:
-    """Reproject the modal wind direction to the geobox of a target dataset."""
+    """Reproject the wind direction to the geobox of a target dataset."""
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
     tgt = assign_crs(tgt, crs='EPSG:4326')
     geobox = tgt.odc.geobox
 
     src_crs = CRS(src_crs_wkt)
-    mode_src = assign_crs(mode, crs=src_crs)
+    wind_direction_src = assign_crs(wind_direction, crs=src_crs)
 
     result = (
-        mode_src.odc.reproject(geobox, resampling='nearest')
+        wind_direction_src.odc.reproject(geobox, resampling='nearest')
         .astype('float32')
         .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
     )
@@ -85,6 +85,7 @@ def setup_cluster(
         'worker_vm_types': worker_vm_types,
         'scheduler_vm_types': scheduler_vm_types,
         'spot_policy': 'spot_with_fallback',
+        'software': 'package-sync-28bde8ff0ddc16fa1a627e6e5dac3405',
     }
     console.log(f'Creating Coiled cluster with args: {args}')
     cluster = coiled.Cluster(**args)
@@ -352,7 +353,7 @@ def postprocess_ffwi(
             _write_icechunk_store(
                 out_path=path,
                 dataset=dask.base.optimize(distribution)[0],
-                commit_message=f'Add wind direction distribution for Fosberg Fire Weather Index > {quantile} quantile.',
+                commit_message=f'Add wind direction distribution for Fosberg Fire Weather Index (FFWI) > {quantile} quantile.',
                 overwrite=overwrite,
             )
 
@@ -375,15 +376,23 @@ def postprocess_ffwi(
     console.rule('Done')
 
 
-@app.command('reproject-mode')
-def reproject_ffwi_mode(
+@app.command('reproject')
+def reproject_ffwi(
     input_path: str = typer.Option(
         's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode.icechunk',
         help='Input path to the FFWI mode Icechunk repository.',
     ),
+    distribution_input_path: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_wind_direction_distribution.icechunk',
+        help='Input path to the wind direction distribution Icechunk repository (matching the mode).',
+    ),
     output_path: str = typer.Option(
         's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode_reprojected.icechunk',
         help='Output path for the reprojected FFWI mode Icechunk repository.',
+    ),
+    distribution_output_path: str = typer.Option(
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_wind_direction_distribution_reprojected.icechunk',
+        help='Output path for the reprojected wind direction distribution Icechunk repository.',
     ),
     overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
     dry_run: bool = typer.Option(
@@ -393,7 +402,13 @@ def reproject_ffwi_mode(
     max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
     worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
 ):
-    """Reproject the FFWI mode dataset to the geobox of a target dataset."""
+    """Reproject the FFWI mode and corresponding wind direction distribution datasets.
+
+    Both the modal wind direction (already summarized) and the full wind direction
+    distribution (used to derive the mode) are reprojected onto the geobox of the
+    target dataset, currently hard-coded to the catalog entry
+    'USFS-wildfire-risk-communities-4326'.
+    """
     start = time.time()
     cluster = None
     if not dry_run:
@@ -414,23 +429,40 @@ def reproject_ffwi_mode(
     ffwi_mode = _open_icechunk_dataset(input_path)
     console.log(f'Loaded FFWI mode: {ffwi_mode}')
 
+    console.log(f'Loading wind direction distribution from {distribution_input_path}...')
+    wind_dir_distribution = _open_icechunk_dataset(distribution_input_path)
+    console.log(f'Loaded wind direction distribution: {wind_dir_distribution}')
+
     conus404 = load_conus404(add_spatial_constants=True)
     src_crs_wkt = conus404['crs'].attrs['crs_wkt']
     console.log(f'CONUS404 CRS WKT: {src_crs_wkt}')
 
     target_dataset_name = 'USFS-wildfire-risk-communities-4326'
 
-    reprojected_mode = reproject_mode(
+    reprojected_mode = reproject(
         ffwi_mode,
         src_crs_wkt,
         target_dataset_name,
     )
     console.log(f'Reprojected FFWI mode: {reprojected_mode}')
 
+    reprojected_distribution = reproject(
+        wind_dir_distribution,
+        src_crs_wkt,
+        target_dataset_name,
+    )
+    console.log(f'Reprojected wind direction distribution: {reprojected_distribution}')
+
     _write_icechunk_store(
         out_path=output_path,
         dataset=reprojected_mode,
         commit_message=f'Reprojected FFWI mode to {target_dataset_name} geobox.',
+        overwrite=overwrite,
+    )
+    _write_icechunk_store(
+        out_path=distribution_output_path,
+        dataset=reprojected_distribution,
+        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox.',
         overwrite=overwrite,
     )
 
