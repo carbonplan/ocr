@@ -111,6 +111,7 @@
     # Map environments to features
     all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
     default  = ["coiled-deploy", "data-mgmt", "dev"]
+    deploy   = ["coiled-deploy"]
     dev      = ["data-mgmt", "dev"]
     docs     = ["coiled-deploy", "docs"]
 
