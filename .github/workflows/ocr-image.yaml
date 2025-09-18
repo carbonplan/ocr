@@ -1,0 +1,53 @@
+name: Build and push ocr image
+
+on:
+  push:
+    branches:
+      - main
+    # paths:
+    #   - ".github/workflows/ocr-image.yaml"
+    #   - ".binder/**"
+  pull_request:
+    branches:
+      - main
+    # paths:
+    #   - ".github/workflows/ocr-image.yaml"
+    #   - ".binder/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false # no pixi.lock
+          locked: false
+          environments: deploy
+          activate-environment: true
+
+      - name: Set Environment Variables
+        run: |
+          echo "DATE_TAG=$(TZ='America/Seattle' date +'%Y.%m.%d')" >> "$GITHUB_ENV"
+
+      - name: Export pixi environment to .binder/environment.yaml
+        run: |
+          pixi project export conda-environment deploy > .binder/environment.yaml
+          ls -la .binder
+          cat .binder/environment.yaml
+
+      - name: Build and push the image to quay.io ${{ matrix.environment }}
+        uses: jupyterhub/repo2docker-action@master
+        with:
+          # Make sure username & password/token pair matches your registry credentials
+          DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+          DOCKER_REGISTRY: "quay.io"
+          ADDITIONAL_TAG: ${{ env.DATE_TAG }}
+          # Disable pushing a 'latest' tag, as this often just causes confusion
+          # LATEST_TAG_OFF: true
+          IMAGE_NAME: "carbonplan/ocr"
