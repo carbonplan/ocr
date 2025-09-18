@@ -161,7 +161,7 @@
     coiled               = ">=1.120.0,<2"
     jupyter-server-proxy = ">=4.4.0,<5"
     jupyterlab           = ">=4.4.7,<5"
-    tippecanoe = ">=2.78.0,<3"
+    tippecanoe           = ">=2.78.0,<3"
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
