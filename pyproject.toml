@@ -110,7 +110,6 @@
 [tool.pixi.environments]
     # Map environments to features
     all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs"]
-    default  = ["coiled-deploy", "data-mgmt", "dev"]
     deploy   = ["coiled-deploy"]
     dev      = ["coiled-deploy", "data-mgmt", "dev"]
     docs     = ["coiled-deploy", "docs"]
@@ -121,6 +120,9 @@
     lint           = { cmd = "pre-commit run --all-files" }
     run-ruff-check = { cmd = "ruff check" }
     tests          = { cmd = "pytest" }
+    start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
@@ -194,8 +196,3 @@
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
-
-[tool.pixi.tasks]
-    export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
-    start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
