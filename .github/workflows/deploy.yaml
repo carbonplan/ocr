@@ -86,10 +86,12 @@ jobs:
           cache: false
           locked: false
           activate-environment: true
+          environments: deploy
+
       - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list
+          pixi list --environment deploy
 
       - name: Deploy (automatic QA PR)
         env:
@@ -98,7 +100,7 @@ jobs:
           echo "Starting automatic deploy to QA (PR to main)"
           REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5"
           ENV_FILE="ocr-coiled-s3.env"
-          pixi run ocr run \
+          pixi run --environment deploy ocr run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
