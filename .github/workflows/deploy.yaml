@@ -85,12 +85,11 @@ jobs:
           pixi-version: v0.43.3
           cache: false
           locked: false
-          activate-environment: true
           environments: deploy
 
-      - run: pixi info
       - name: List installed libraries/packages
         run: |
+          pixi install --environment deploy
           pixi list --environment deploy
 
       - name: Deploy (automatic QA PR)
@@ -129,11 +128,11 @@ jobs:
           pixi-version: v0.43.3
           cache: false
           locked: false
-          activate-environment: true
-      - run: pixi info
+          environments: deploy
       - name: List installed libraries/packages
         run: |
-          pixi list
+          pixi install --environment deploy
+          pixi list --environment deploy
 
       - name: Ensure OCR_ENVIRONMENT in env file (staging)
         env:
@@ -147,7 +146,7 @@ jobs:
           echo "Updating $ENV_FILE with OCR_ENVIRONMENT=staging"
           echo "Before update (matching lines):"
           grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
-          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT=staging
+          pixi run --environment deploy python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT=staging
           echo "After update (matching lines):"
           grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
 
@@ -162,7 +161,7 @@ jobs:
           --region-id y2_x23 --region-id y2_x24 --region-id y2_x25
           --region-id y8_x31 --region-id y8_x32 --region-id y9_x31 --region-id y9_x32"
           ENV_FILE="ocr-coiled-s3-staging.env"
-          pixi run ocr run \
+          pixi run ocr --environment deploy run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
@@ -191,12 +190,12 @@ jobs:
           pixi-version: v0.43.3
           cache: false
           locked: false
-          activate-environment: true
+          environments: deploy
 
-      - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list -e dev
+          pixi install --environment deploy
+          pixi list --environment deploy
 
       - name: Set OCR_ENVIRONMENT
         run: |
@@ -251,9 +250,9 @@ jobs:
           fi
           export ENV_FILE
 
-          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
+          pixi run --environment deploy python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
 
-          pixi run ocr run \
+          pixi run --environment deploy ocr run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             $WIPE_ARG \
@@ -282,12 +281,12 @@ jobs:
           pixi-version: v0.43.3
           cache: false
           locked: false
-          activate-environment: true
+          environments: deploy
 
-      - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list
+          pixi install --environment deploy
+          pixi list --environment deploy
 
       - name: Set OCR_VERSION from release tag
         id: set_version
@@ -325,7 +324,7 @@ jobs:
           echo "Before update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
-          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
+          pixi run --environment deploy python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
           echo "After update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
@@ -337,7 +336,7 @@ jobs:
           cat ocr-coiled-s3-production.env
           echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
           REGION_ARGS="--all-region-ids"
-          pixi run ocr run \
+          pixi run --environment deploy ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
             --write-region-files \
@@ -379,12 +378,12 @@ jobs:
           pixi-version: v0.43.3
           cache: false
           locked: false
-          activate-environment: true
+          environments: deploy
 
-      - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list
+          pixi install --environment deploy
+          pixi list --environment deploy
 
       - name: Derive & validate OCR_VERSION from input tag
         id: set_version
@@ -423,7 +422,7 @@ jobs:
           echo "Before update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
-          pixi run python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
+          pixi run --environment deploy python .github/scripts/update_env_file.py --env-file "$ENV_FILE" --set OCR_VERSION="$OCR_VERSION" --set OCR_ENVIRONMENT="$OCR_ENVIRONMENT"
           echo "After update (matching lines):"
           grep -E '^(OCR_VERSION|OCR_ENVIRONMENT)[[:space:]]*=' "$ENV_FILE" || true
 
@@ -434,7 +433,7 @@ jobs:
         run: |
           cat ocr-coiled-s3-production.env
           REGION_ARGS="--all-region-ids"
-          pixi run ocr run \
+          pixi run --environment deploy ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
             --write-region-files \

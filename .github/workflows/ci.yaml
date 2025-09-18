@@ -34,12 +34,12 @@ jobs:
           pixi-version: v0.43.3
           cache: false # no pixi.lock
           locked: false
-          activate-environment: true
           environments: dev
 
       - run: pixi info
       - name: List installed libraries/packages
         run: |
+          pixi install --environment dev
           pixi list --environment dev
 
       - name: Run tests

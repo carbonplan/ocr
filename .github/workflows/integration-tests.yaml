@@ -50,29 +50,29 @@ jobs:
           pixi-version: v0.43.3
           cache: false # no pixi.lock
           locked: false
-          activate-environment: true
+          environments: deploy
 
-      - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list -e dev
+          pixi install --environment deploy
+          pixi list --environment deploy
 
       - name: process-region
         run: |
-          pixi run ocr process-region y2_x4 --platform local --env-file ocr-local.env --init-repo
+          pixi run --environment deploy ocr process-region y2_x4 --platform local --env-file ocr-local.env --init-repo
       - name: aggregate geoparquet regions
         run: |
-          pixi run ocr aggregate --platform local --env-file ocr-local.env
+          pixi run --environment deploy ocr aggregate --platform local --env-file ocr-local.env
       - name: write regional analysis files
         run: |
-          pixi run ocr write-aggregated-region-analysis-files --platform local --env-file ocr-local.env
+          pixi run --environment deploy ocr write-aggregated-region-analysis-files --platform local --env-file ocr-local.env
       - name: aggregate region risk summary stats
         run: |
-          pixi run ocr aggregate-region-risk-summary-stats --platform local --env-file ocr-local.env
+          pixi run --environment deploy ocr aggregate-region-risk-summary-stats --platform local --env-file ocr-local.env
       - name: create regional pmtiles
         run: |
-          pixi run ocr create-regional-pmtiles --platform local --env-file ocr-local.env
+          pixi run --environment deploy ocr create-regional-pmtiles --platform local --env-file ocr-local.env
 
       - name: create pmtiles
         run: |
-          pixi run ocr create-pmtiles --platform local --env-file ocr-local.env
+          pixi run --environment deploy ocr create-pmtiles --platform local --env-file ocr-local.env
