@@ -134,7 +134,6 @@
     awscli     = ">=2.30.2,<3"
     boto3      = ">=1.40.18,<2"
     patool     = ">=4.0.1,<5"
-    tippecanoe = ">=2.78.0,<3"
 
 # Dev feature dependencies (conda-forge)
 [tool.pixi.feature.dev.dependencies]
@@ -162,6 +161,7 @@
     coiled               = ">=1.120.0,<2"
     jupyter-server-proxy = ">=4.4.0,<5"
     jupyterlab           = ">=4.4.7,<5"
+    tippecanoe = ">=2.78.0,<3"
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
