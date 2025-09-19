@@ -54,6 +54,86 @@ env:
   QA_URL: https://ocr.qa.carbonplan.org
 
 jobs:
+  ocr-image:
+    name: Build and push OCR image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.compute.outputs.image }}
+      tag: ${{ steps.compute.outputs.tag }}
+      name: ${{ steps.compute.outputs.name }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          # For releases and manual production re-run, build from the tagged ref
+          ref: ${{ github.event.inputs.production_tag || github.event.release.tag_name || github.sha }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Compute image name and primary tag
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_NAME="quay.io/carbonplan/ocr"
+          SHORT_SHA="${GITHUB_SHA::7}"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            TAG="pr-${PR_NUMBER}-${SHORT_SHA}"
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            RAW_TAG="${{ github.event.release.tag_name }}"
+            # Use the tag name as-is (e.g., v1.2.3)
+            TAG="${RAW_TAG#refs/tags/}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.production_tag }}" ]]; then
+            RAW_TAG="${{ github.event.inputs.production_tag }}"
+            TAG="${RAW_TAG#refs/tags/}"
+          else
+            # push to a branch
+            REF_NAME="${GITHUB_REF_NAME}"
+            # sanitize branch name for docker tag
+            SAFE_REF=$(echo "$REF_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g')
+            TAG="branch-${SAFE_REF}-${SHORT_SHA}"
+          fi
+
+          echo "name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE_NAME}:${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Primary image: ${IMAGE_NAME}:${TAG}"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.compute.outputs.name }}
+          tags: |
+            type=raw,value=${{ steps.compute.outputs.tag }}
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .binder/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   qa-pr:
     # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
     if: github.event_name == 'pull_request' &&  (
@@ -70,7 +150,10 @@ jobs:
       name: qa
       url: ${{ env.QA_URL }}
 
+    needs: [ocr-image]
     runs-on: ubuntu-latest
+    env:
+      COILED_CONTAINER_IMAGE: ${{ needs.ocr-image.outputs.image }}
     steps:
       - uses: actions/checkout@v5
       - name: configure aws credentials
@@ -92,9 +175,13 @@ jobs:
           pixi install --environment deploy
           pixi list --environment deploy
 
+      - name: Show selected image
+        run: echo "COILED_CONTAINER_IMAGE=${COILED_CONTAINER_IMAGE}"
+
       - name: Deploy (automatic QA PR)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          COILED_CONTAINER_IMAGE: ${{ env.COILED_CONTAINER_IMAGE }}
         run: |
           echo "Starting automatic deploy to QA (PR to main)"
           REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5"
@@ -113,7 +200,10 @@ jobs:
       name: staging
       url: ${{ env.STAGING_URL }}
 
+    needs: [ocr-image]
     runs-on: ubuntu-latest
+    env:
+      COILED_CONTAINER_IMAGE: ${{ needs.ocr-image.outputs.image }}
     steps:
       - uses: actions/checkout@v5
       - name: configure aws credentials
@@ -150,9 +240,13 @@ jobs:
           echo "After update (matching lines):"
           grep -E '^OCR_ENVIRONMENT[[:space:]]*=' "$ENV_FILE" || true
 
+      - name: Show selected image
+        run: echo "COILED_CONTAINER_IMAGE=${COILED_CONTAINER_IMAGE}"
+
       - name: Deploy (automatic staging main)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          COILED_CONTAINER_IMAGE: ${{ env.COILED_CONTAINER_IMAGE }}
         run: |
           echo "Starting automatic deploy to staging (main branch push)"
           REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5 --region-id y2_x6 --region-id y2_x7 --region-id y2_x8 --region-id y2_x9 --region-id y2_x10 --region-id y3_x3 --region-id y3_x4 --region-id y3_x5 --region-id y3_x6 --region-id y3_x7 --region-id y3_x8 --region-id y3_x9 --region-id y3_x10
@@ -174,7 +268,10 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
       url: ${{ github.event.inputs.environment == 'staging' && env.STAGING_URL || env.QA_URL }}
+    needs: [ocr-image]
     runs-on: ubuntu-latest
+    env:
+      COILED_CONTAINER_IMAGE: ${{ needs.ocr-image.outputs.image }}
     steps:
       - uses: actions/checkout@v5
 
@@ -211,11 +308,13 @@ jobs:
       - name: Show environment
         run: |
           echo "OCR_ENVIRONMENT is $OCR_ENVIRONMENT"
+          echo "COILED_CONTAINER_IMAGE is $COILED_CONTAINER_IMAGE"
 
       - name: Deploy (manual)
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
           OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+          COILED_CONTAINER_IMAGE: ${{ env.COILED_CONTAINER_IMAGE }}
         run: |
           echo "Starting manual deploy to environment: $OCR_ENVIRONMENT"
           REGION_ARGS=""
@@ -265,7 +364,10 @@ jobs:
     environment:
       name: production
       url: ${{ env.PRODUCTION_URL }}
+    needs: [ocr-image]
     runs-on: ubuntu-latest
+    env:
+      COILED_CONTAINER_IMAGE: ${{ needs.ocr-image.outputs.image }}
     steps:
       - uses: actions/checkout@v5
 
@@ -310,6 +412,7 @@ jobs:
         run: |
           echo "OCR_VERSION: $OCR_VERSION"
           echo "OCR_ENVIRONMENT: $OCR_ENVIRONMENT"
+          echo "COILED_CONTAINER_IMAGE: $COILED_CONTAINER_IMAGE"
 
       - name: Inject OCR_VERSION and OCR_ENVIRONMENT into env file (production)
         env:
@@ -332,6 +435,7 @@ jobs:
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
           OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+          COILED_CONTAINER_IMAGE: ${{ env.COILED_CONTAINER_IMAGE }}
         run: |
           cat ocr-coiled-s3-production.env
           echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
@@ -348,7 +452,10 @@ jobs:
     environment:
       name: production
       url: ${{ env.PRODUCTION_URL }}
+    needs: [ocr-image]
     runs-on: ubuntu-latest
+    env:
+      COILED_CONTAINER_IMAGE: ${{ needs.ocr-image.outputs.image }}
     steps:
       - name: Validate provided tag format (basic pre-check)
         id: validate_input
@@ -408,6 +515,7 @@ jobs:
         run: |
           echo "Redeploying production for OCR_VERSION=$OCR_VERSION (tag input=${{ github.event.inputs.production_tag }})"
           echo "OCR_ENVIRONMENT=$OCR_ENVIRONMENT"
+          echo "COILED_CONTAINER_IMAGE=$COILED_CONTAINER_IMAGE"
 
       - name: Inject OCR_VERSION and OCR_ENVIRONMENT into env file (production rerun)
         env:
@@ -430,6 +538,7 @@ jobs:
         env:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
           OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+          COILED_CONTAINER_IMAGE: ${{ env.COILED_CONTAINER_IMAGE }}
         run: |
           cat ocr-coiled-s3-production.env
           REGION_ARGS="--all-region-ids"
