@@ -27,8 +27,8 @@ jobs:
           pixi-version: v0.43.3
           cache: false # no pixi.lock
           locked: false
-          environments: deploy
-          activate-environment: true
+          # environments: deploy
+          # activate-environment: true
 
       - name: Set Environment Variables
         run: |
