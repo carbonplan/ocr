@@ -1,0 +1,65 @@
+# Reduce Docker build context by excluding files/folders not needed in the image
+
+# Version control
+.git
+
+# Editor/OS metadata
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Python caches and tooling
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and packaging artifacts
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+.eggs/
+*.egg-info/
+ocr.egg-info/
+
+# Node/npm
+node_modules/
+
+# Build artifacts
+build/
+dist/
+
+# Docs site output
+site/
+
+# Pixi (local caches and environment data)
+.pixi/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment files and secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Optional large/local data (uncomment if not needed in the image)
+# notebooks/
+# input-data/
+
+# NOTE: Do NOT ignore .binder/ since it's used as the Dockerfile location

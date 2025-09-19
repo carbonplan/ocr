@@ -22,23 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: prefix-dev/setup-pixi@v0.9.0
-        with:
-          pixi-version: v0.43.3
-          cache: false # no pixi.lock
-          locked: false
-          # environments: deploy
-          # activate-environment: true
-
       - name: Set Environment Variables
         run: |
           echo "DATE_TAG=$(TZ='America/Seattle' date +'%Y.%m.%d')" >> "$GITHUB_ENV"
-
-      - name: Export pixi environment to .binder/environment.yaml
-        run: |
-          pixi project export conda-environment --environment deploy > .binder/environment.yaml
-          ls -la .binder
-          cat .binder/environment.yaml
 
       # For biggish images, github actions runs out of disk space.
       # So we cleanup some unwanted things in the disk image, and reclaim that space for our docker use
@@ -50,14 +36,38 @@ jobs:
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
           df -h
 
-      - name: Build and push the image to quay.io ${{ matrix.environment }}
-        uses: jupyterhub/repo2docker-action@master
+      # Set up Docker Buildx for advanced builds (caching, multi-arch, etc.)
+      - name: Set up QEMU (for optional multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Quay.io
+        uses: docker/login-action@v3
         with:
-          # Make sure username & password/token pair matches your registry credentials
-          DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-          DOCKER_REGISTRY: "quay.io"
-          ADDITIONAL_TAG: ${{ env.DATE_TAG }}
-          # Disable pushing a 'latest' tag, as this often just causes confusion
-          # LATEST_TAG_OFF: true
-          IMAGE_NAME: "carbonplan/ocr"
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            quay.io/carbonplan/ocr
+          tags: |
+            type=raw,value=${{ env.DATE_TAG }}
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .binder/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
