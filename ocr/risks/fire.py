@@ -393,6 +393,9 @@ def calculate_wind_adjusted_risk(
     # trim values less then 0.01 to 0 to match binning.
     fire_risk = fire_risk.where(fire_risk >= 0.01, 0)
 
+    # round variables to two decimal places
+    fire_risk = fire_risk.round(decimals=2)
+
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
     for var in fire_risk.data_vars:
