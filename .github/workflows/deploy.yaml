@@ -130,10 +130,10 @@ jobs:
           # Make sure username & password/token pair matches your registry credentials
           DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-          DOCKER_REGISTRY: "quay.io"
           ADDITIONAL_TAG: ${{ steps.compute.outputs.tag }}
           # Disable pushing a 'latest' tag, as this often just causes confusion
           # LATEST_TAG_OFF: true
+          # IMAGE_NAME is already fully qualified (quay.io/carbonplan/ocr); omit DOCKER_REGISTRY to avoid duplication
           IMAGE_NAME: ${{ steps.compute.outputs.name }}
 
       # - name: Extract Docker metadata
