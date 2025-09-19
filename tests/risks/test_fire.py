@@ -435,10 +435,12 @@ def test_generate_weights_defaults():
     expected_shape = (81, 81)
     assert weights.shape == expected_shape
 
-    # Skewed default returns a binary mask, not normalized
+    # Now normalized
+    assert np.isclose(weights.sum(), 1.0)
+    # Should be two-level mask (0 outside, constant inside)
     unique_vals = np.unique(weights)
-    assert unique_vals.size <= 2
-    assert set(unique_vals.tolist()).issubset({0, 1, False, True})
+    assert unique_vals.size == 2
+    assert 0.0 in unique_vals
 
 
 def test_generate_weights_skewed():
@@ -448,10 +450,11 @@ def test_generate_weights_skewed():
     # Check shape
     assert weights.shape == (51, 51)
 
-    # Binary mask expected (not normalized)
+    # Normalized two-level mask expected
+    assert np.isclose(weights.sum(), 1.0)
     unique_vals = np.unique(weights)
-    assert unique_vals.size <= 2
-    assert set(unique_vals.tolist()).issubset({0, 1, False, True})
+    assert unique_vals.size == 2
+    assert 0.0 in unique_vals
 
     # Check that values are binary before normalization (0 outside circle, positive inside)
     unique_values = np.unique(weights * weights.sum())
@@ -512,11 +515,8 @@ def test_generate_weights_even_kernel_size():
     # Check shape
     # Current implementation for 'skewed' returns an array of shape (kernel_size, kernel_size)
     assert weights.shape == (40, 40)
-
-    # Binary mask expected
-    unique_vals = np.unique(weights)
-    assert unique_vals.size <= 2
-    assert set(unique_vals.tolist()).issubset({0, 1, False, True})
+    # Normalized
+    assert np.isclose(weights.sum(), 1.0)
 
 
 def test_generate_weights_small_circle():

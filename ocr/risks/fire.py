@@ -34,6 +34,11 @@ def generate_weights(
         ellipse = ((xx / a) ** 2 + (yy / b) ** 2) <= 10
 
         weights = np.roll(ellipse, -5)
+        # Normalize to sum to 1.0 if there are any non-zero entries
+        weights = weights.astype(np.float32)
+        s = float(weights.sum())
+        if s > 0:
+            weights = weights / s
 
     else:
         raise ValueError(f'Unknown method: {method}')
