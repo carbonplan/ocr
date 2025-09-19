@@ -54,7 +54,65 @@ env:
   QA_URL: https://ocr.qa.carbonplan.org
 
 jobs:
+  ocr-coiled-software:
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.compute.outputs.name }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          # For releases and manual production re-run, build from the tagged ref
+          ref: ${{ github.event.inputs.production_tag || github.event.release.tag_name || github.sha }}
+
+      - name: Setup Pixi (deploy env)
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.43.3
+          cache: false
+          locked: false
+          activate-environment: true
+          environments: deploy
+
+      - name: Compute Coiled software environment name
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENT='${{ github.event_name }}'
+          NAME_SRC=""
+          if [[ "$EVENT" == "release" ]]; then
+            NAME_SRC='${{ github.event.release.tag_name }}'
+          elif [[ "$EVENT" == "workflow_dispatch" && -n "${{ github.event.inputs.production_tag }}" ]]; then
+            NAME_SRC='${{ github.event.inputs.production_tag }}'
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            NAME_SRC='${{ github.event.pull_request.number }}'
+            if [[ -z "$NAME_SRC" ]]; then
+              NAME_SRC='${{ github.head_ref }}'
+            fi
+          else
+            NAME_SRC='${{ github.ref_name }}'
+          fi
+
+          # Lowercase and sanitize to coiled allowed charset [a-z0-9_-]
+          NAME_SAN=$(printf "%s" "$NAME_SRC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')
+          if [[ -z "$NAME_SAN" ]]; then
+            NAME_SAN="unnamed"
+          fi
+          FINAL_NAME="ocr-${NAME_SAN}"
+          echo "Resolved Coiled software env name: $FINAL_NAME"
+          echo "name=$FINAL_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Export cleaned env and create Coiled software environment
+        env:
+          DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
+          COILED_ENV_NAME: ${{ steps.compute.outputs.name }}
+        run: |
+          echo "Creating Coiled software environment: $COILED_ENV_NAME"
+          pixi run export-and-create-coiled
+
   qa-pr:
+    needs: ocr-coiled-software
     # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
     if: github.event_name == 'pull_request' &&  (
       (
@@ -71,6 +129,8 @@ jobs:
       url: ${{ env.QA_URL }}
 
     runs-on: ubuntu-latest
+    env:
+      COILED_SOFTWARE_ENV_NAME: ${{ needs.ocr-coiled-software.outputs.name }}
     steps:
       - uses: actions/checkout@v5
       - name: configure aws credentials
@@ -86,10 +146,12 @@ jobs:
           cache: false
           locked: false
           activate-environment: true
+          environments: deploy
+
       - run: pixi info
       - name: List installed libraries/packages
         run: |
-          pixi list
+          pixi list --environment deploy
 
       - name: Deploy (automatic QA PR)
         env:
@@ -98,7 +160,7 @@ jobs:
           echo "Starting automatic deploy to QA (PR to main)"
           REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5"
           ENV_FILE="ocr-coiled-s3.env"
-          pixi run ocr run \
+          pixi run --environment deploy ocr run \
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
@@ -106,6 +168,7 @@ jobs:
             --wipe
 
   staging-main:
+    needs: ocr-coiled-software
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
@@ -113,6 +176,8 @@ jobs:
       url: ${{ env.STAGING_URL }}
 
     runs-on: ubuntu-latest
+    env:
+      COILED_SOFTWARE_ENV_NAME: ${{ needs.ocr-coiled-software.outputs.name }}
     steps:
       - uses: actions/checkout@v5
       - name: configure aws credentials
@@ -168,12 +233,15 @@ jobs:
             --wipe
 
   manual:
+    needs: ocr-coiled-software
     # Regular manual (non-production) deploy path
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
     environment:
       name: ${{ github.event.inputs.environment }}
       url: ${{ github.event.inputs.environment == 'staging' && env.STAGING_URL || env.QA_URL }}
     runs-on: ubuntu-latest
+    env:
+      COILED_SOFTWARE_ENV_NAME: ${{ needs.ocr-coiled-software.outputs.name }}
     steps:
       - uses: actions/checkout@v5
 
@@ -259,12 +327,15 @@ jobs:
             --platform coiled
 
   production:
+    needs: ocr-coiled-software
     # Automatic production deploy on release publish
     if: github.event_name == 'release'
     environment:
       name: production
       url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
+    env:
+      COILED_SOFTWARE_ENV_NAME: ${{ needs.ocr-coiled-software.outputs.name }}
     steps:
       - uses: actions/checkout@v5
 
@@ -342,12 +413,15 @@ jobs:
             --platform coiled
 
   production-rerun:
+    needs: ocr-coiled-software
     # Manual production redeploy via workflow_dispatch + production_tag input
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag != ''
     environment:
       name: production
       url: ${{ env.PRODUCTION_URL }}
     runs-on: ubuntu-latest
+    env:
+      COILED_SOFTWARE_ENV_NAME: ${{ needs.ocr-coiled-software.outputs.name }}
     steps:
       - name: Validate provided tag format (basic pre-check)
         id: validate_input
