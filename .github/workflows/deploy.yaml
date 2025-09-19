@@ -86,7 +86,7 @@ jobs:
           elif [[ "$EVENT" == "workflow_dispatch" && -n "${{ github.event.inputs.production_tag }}" ]]; then
             NAME_SRC='${{ github.event.inputs.production_tag }}'
           elif [[ "$EVENT" == "pull_request" ]]; then
-            NAME_SRC='${{ github.event.pull_request.title }}'
+            NAME_SRC='${{ github.event.pull_request.number }}'
             if [[ -z "$NAME_SRC" ]]; then
               NAME_SRC='${{ github.head_ref }}'
             fi
