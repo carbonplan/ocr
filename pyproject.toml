@@ -133,7 +133,7 @@
 # Data management feature dependencies (conda-forge)
 [tool.pixi.feature.data-mgmt.dependencies]
     awscli  = ">=2.30.2,<3"
-    boto3   = ">=1.40.18,<2"
+    boto3   = ">=1.39.11,<2"
     netcdf4 = ">=1.7.2,<2"
     patool  = ">=4.0.1,<5"
 
