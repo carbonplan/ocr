@@ -340,10 +340,9 @@ def _bp_dataset_to_direction_da(bp: xr.Dataset) -> xr.DataArray:
 
 def create_weighted_composite_bp_map(
     bp: xr.Dataset,
-    distribution: xr.DataArray,
+    wind_direction_distribution: xr.DataArray,
     *,
     distribution_direction_dim: str = 'wind_direction',
-    renormalize: bool = True,
     weight_sum_tolerance: float = 1e-5,
 ) -> xr.DataArray:
     """Create a weighted composite burn probability map using wind direction distribution.
@@ -359,9 +358,13 @@ def create_weighted_composite_bp_map(
         'wind_direction' and length 8, matching direction labels:
         ['N','NE','E','SE','S','SW','W','NW'] (order must align). Values should
         sum to 1 where fire-weather hours exist; may be all 0 where none exist.
-    include_circular : bool, default False
-        If True, include the 'circular' kernel layer in the weighted sum. In that
-        case it is added with residual weight (1 - sum(probs)) clipped to [0,1].
+
+    distribution_direction_dim : str, optional
+        Name of the dimension in `wind_direction_distribution` that holds the
+        direction labels, by default 'wind_direction'.
+    weight_sum_tolerance : float, optional
+        Tolerance for deviation from 1.0 in the sum of weights, by default
+
 
     Returns
     -------
@@ -374,48 +377,55 @@ def create_weighted_composite_bp_map(
 
     # Prepare distribution: ensure a 'direction' coord with labels matching CARDINAL_8
     if distribution_direction_dim != 'direction':
-        distribution = distribution.rename({distribution_direction_dim: 'direction'})
-    if 'direction' not in distribution.dims:
+        wind_direction_distribution = wind_direction_distribution.rename(
+            {distribution_direction_dim: 'direction'}
+        )
+    if 'direction' not in wind_direction_distribution.dims:
         raise ValueError('Distribution must have a direction dimension after renaming.')
 
     # Attach labels if they are not present (numeric 0..7 assumed in correct order)
-    if 'direction' not in distribution.coords or len(distribution['direction']) != 8:
-        distribution = distribution.assign_coords(direction=CARDINAL_AND_ORDINAL)
+    if (
+        'direction' not in wind_direction_distribution.coords
+        or len(wind_direction_distribution['direction']) != 8
+    ):
+        wind_direction_distribution = wind_direction_distribution.assign_coords(
+            direction=CARDINAL_AND_ORDINAL
+        )
 
     # Sanity checks
-    if set(distribution['direction'].values) != set(CARDINAL_AND_ORDINAL):
+    if set(wind_direction_distribution['direction'].values) != set(CARDINAL_AND_ORDINAL):
         raise ValueError(
-            f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(distribution["direction"].values)}'
+            f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(wind_direction_distribution["direction"].values)}'
         )
 
     # distribution = distribution.interp_like(bp_da, method='nearest')
     # --- Interpolate (spatial dims only) BEFORE validity / renorm ---
     spatial_dims = [d for d in bp_da.dims if d != 'direction']
-    # Build a dict of target coords that actually appear in distribution
-    interp_targets = {d: bp_da[d] for d in spatial_dims if d in distribution.dims}
+    # Build a dict of target coords that actually appear in wind_direction_distribution
+    interp_targets = {d: bp_da[d] for d in spatial_dims if d in wind_direction_distribution.dims}
     if interp_targets:
-        distribution = distribution.interp(interp_targets, method='nearest')
+        wind_direction_distribution = wind_direction_distribution.interp(
+            interp_targets, method='nearest'
+        )
 
     # Identify invalid / missing rows
-    any_nan_row = distribution.isnull().any(dim='direction')
-    negative_weights = (distribution < 0).any()
+    any_nan_row = wind_direction_distribution.isnull().any(dim='direction')
+    negative_weights = (wind_direction_distribution < 0).any()
     if bool(negative_weights):
         raise ValueError('Distribution contains negative probabilities.')
 
-    row_sum = distribution.sum(dim='direction')
+    row_sum = wind_direction_distribution.sum(dim='direction')
 
     has_fire_weather = row_sum > 0
     valid_rows = has_fire_weather & (~any_nan_row)
 
-    # Renormalize if requested (only valid rows)
-    if renormalize:
-        distribution = xr.where(
-            valid_rows,
-            distribution / row_sum.where(valid_rows),
-            distribution,
-        )
+    normalized_distribution = xr.where(
+        valid_rows,
+        wind_direction_distribution / row_sum.where(valid_rows),
+        wind_direction_distribution,
+    )
 
-    post_sum = distribution.sum(dim='direction').where(valid_rows)
+    post_sum = normalized_distribution.sum(dim='direction').where(valid_rows)
     off = (np.abs(post_sum - 1) > weight_sum_tolerance).sum()
     if int(off) > 0:
         warnings.warn(
@@ -425,18 +435,18 @@ def create_weighted_composite_bp_map(
         )
 
     cardinal_and_ordinal_bp = bp_da.sel(direction=CARDINAL_AND_ORDINAL)
-    weighted = (cardinal_and_ordinal_bp * distribution).sum(dim='direction')
+    weighted = (cardinal_and_ordinal_bp * normalized_distribution).sum(dim='direction')
 
     weighted = weighted.where(valid_rows)
 
-    weighted.name = 'bp_composite'
+    weighted.name = 'wind_weighted_bp'
     weighted.attrs.update(
         {
             'composition': 'weighted',
             'long_name': 'Weighted composite BP map using wind direction distribution',
             'direction_labels': CARDINAL_AND_ORDINAL,
-            'weights_source': distribution.name or 'wind_direction_distribution',
-            'note': ('Rows with no fire-weather hours or NaNs are NaN'),
+            'weights_source': wind_direction_distribution.name or 'wind_direction_distribution',
+            'note': 'Rows with no fire-weather hours or NaNs are NaN',
         }
     )
 
@@ -452,16 +462,7 @@ def classify_wind(
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
-
     blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
-    # Switched to xarray interp_like to since both datasets have matching EPSG codes.
-    # wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
-    #     blurred_bp, resampling=Resampling.nearest
-    # ).rename({'y': 'latitude', 'x': 'longitude'})
-    # wind_direction_reprojected = assign_crs(wind_direction_reprojected, crs='EPSG:4326')
-    # import xarray.testing as xrt
-    # xrt.assert_equal(wind_direction_reprojected, wind_direction_reprojected_xr)
-
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
     # Fix tiny FP misalignment in .sel of lat/lon between two datasets.
     wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
@@ -491,7 +492,7 @@ def calculate_wind_adjusted_risk(
         {'latitude': 6000, 'longitude': 4500}
     )
 
-    distribution = (
+    wind_direction_distribution = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
         .to_xarray()
         .wind_direction_distribution.sel(latitude=y_slice, longitude=x_slice)
@@ -500,12 +501,12 @@ def calculate_wind_adjusted_risk(
 
     wind_informed_bp_float_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
-        wind_direction_distribution=distribution,
+        wind_direction_distribution=wind_direction_distribution,
         rps_30_subset=rps_30_subset,
     )
     wind_informed_bp_float_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
-        wind_direction_distribution=distribution,
+        wind_direction_distribution=wind_direction_distribution,
         rps_30_subset=rps_30_subset,
     )
 

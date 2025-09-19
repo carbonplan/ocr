@@ -685,7 +685,7 @@ def test_create_weighted_composite_bp_map_basic():
     lon = np.linspace(10, 11, nx)
     bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
 
-    # Distribution over 8 directions (no circular). Let it vary spatially a bit.
+    # Distribution over 8 directions. Let it vary spatially a bit.
     probs = np.array(
         [0.10, 0.05, 0.15, 0.20, 0.05, 0.10, 0.25, 0.10], dtype=np.float32
     )  # sums to 1.0
@@ -730,10 +730,10 @@ def test_create_weighted_composite_bp_map_zero_distribution():
     assert np.isnan(weighted.values).all()
 
 
-def test_create_weighted_composite_bp_map_include_circular():
-    """Residual probability should weight circular layer when include_circular=True."""
+def test_create_weighted_composite_bp_map_all_one_distribution():
+    """All-one distributions should yield the mean of all directional layers."""
     direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
-    ny, nx = 2, 3
+    ny, nx = 2, 2
     data_vars = {
         lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
         for i, lab in enumerate(direction_labels)
@@ -742,19 +742,17 @@ def test_create_weighted_composite_bp_map_include_circular():
     lon = np.linspace(10, 11, nx)
     bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
 
-    # Probabilities sum to 0.85 leaving residual 0.15 for circular
-    probs = np.array([0.05, 0.10, 0.05, 0.10, 0.15, 0.20, 0.05, 0.15], dtype=np.float32)
-    assert probs.sum() == pytest.approx(0.85)
+    ones = np.ones((8, ny, nx), dtype=np.float32)
     dist = xr.DataArray(
-        np.tile(probs[:, None, None], (1, ny, nx)),
+        ones,
         dims=['wind_direction', 'latitude', 'longitude'],
         coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
         name='wind_direction_distribution',
     )
 
-    weighted = create_weighted_composite_bp_map(bp, dist, include_circular=True)
+    weighted = create_weighted_composite_bp_map(bp, dist)
 
-    # Expected = sum(i*prob[i]) + residual * circular_index(=8)
-    expected_scalar = float(sum(i * p for i, p in enumerate(probs)) + (1 - probs.sum()) * 8)
-    np.testing.assert_allclose(weighted.values, expected_scalar)
-    assert weighted.attrs['include_circular'] is True
+    # Expected value is mean of indices 0..7
+    expected_scalar = float(sum(range(8)) / 8.0)
+    expected = np.full((ny, nx), expected_scalar, dtype=np.float32)
+    np.testing.assert_allclose(weighted.values, expected)
