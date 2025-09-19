@@ -1,4 +1,4 @@
-FROM ghcr.io/prefix-dev/pixi:0.40.0 AS build
+FROM ghcr.io/prefix-dev/pixi:latest AS build
 
 # Copy the entire repository (build context) into /app
 # Note: build with context at repo root, e.g.:
