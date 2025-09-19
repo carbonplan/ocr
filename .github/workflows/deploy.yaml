@@ -55,7 +55,7 @@ env:
 
 jobs:
   ocr-coiled-software:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     outputs:
       name: ${{ steps.compute.outputs.name }}
     steps:
