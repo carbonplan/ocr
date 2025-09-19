@@ -23,6 +23,13 @@ FROM ubuntu:24.04 AS production
 COPY --from=build /app/.pixi/envs/deploy /app/.pixi/envs/deploy
 COPY --from=build /shell-hook.sh /shell-hook.sh
 
+# also copy the package source so editable install works in production
+# the editable install inside the env points to /app, so we must provide the source there
+COPY --from=build /app/ocr /app/ocr
+
+# set a working directory for convenience
+WORKDIR /app
+
 # set the entrypoint to the shell-hook script (activate the environment and run the command)
 # no more pixi needed in the prod container
 ENTRYPOINT ["/bin/bash", "/shell-hook.sh"]

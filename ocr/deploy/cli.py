@@ -162,6 +162,11 @@ def run(
         # ------------- 01 AU ---------------
 
         # --- 01 Process Regions (with optional retries) ---
+        container = os.environ.get('COILED_CONTAINER_IMAGE')
+        if container is None:
+            console.log(
+                '[red]Error: COILED_CONTAINER environment variable is not set. Cannot proceed.[/red]'
+            )
 
         attempt = 0
         while True:
@@ -183,6 +188,7 @@ def run(
                 kwargs={
                     **kwargs,
                     'map_over_values': remaining_to_process,
+                    'container': container,
                 },
             )
             completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
