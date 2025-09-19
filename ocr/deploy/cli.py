@@ -165,7 +165,7 @@ def run(
         container = os.environ.get('COILED_CONTAINER_IMAGE')
         if container is None:
             console.log(
-                '[red]Error: COILED_CONTAINER environment variable is not set. Cannot proceed.[/red]'
+                '[red]Warning: COILED_CONTAINER_IMAGE environment variable is not set. Proceeding with package sync.[/red]'
             )
 
         attempt = 0
@@ -218,6 +218,7 @@ def run(
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
+                'container': container,
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -233,6 +234,7 @@ def run(
                 kwargs={
                     **_coiled_kwargs(config, env_file),
                     'vm_type': 'm8g.2xlarge',
+                    'container': container,
                 },
             )
 
@@ -244,6 +246,7 @@ def run(
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
+                'container': container,
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -258,6 +261,7 @@ def run(
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
                 'disk_size': 250,
+                'container': container,
             },
         )
 
@@ -272,6 +276,7 @@ def run(
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
                 'disk_size': 250,
+                'container': container,
             },  # PMTiles creation needs more disk space
         )
 
