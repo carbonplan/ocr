@@ -23,16 +23,17 @@ def generate_weights(
         weights = inside / inside.sum()
 
     elif method == 'skewed':
-        x, y = np.meshgrid(
-            np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
-            np.arange(-(kernel_size // 2), kernel_size // 2 + 1),
-        )
-        distortion_x = 1.5
-        distortion_y = 1 / distortion_x
-        distances = np.sqrt((x / distortion_x) ** 2 + (y / distortion_y) ** 2)
-        inside = distances <= circle_diameter // 2
-        weights = inside / inside.sum()
-        weights = np.roll(weights, -14)
+        # elliptical kernel
+        a = 4  # semi-major axis
+        b = 2  # semi-minor axis
+        x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, kernel_size)
+        y = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, kernel_size)
+        xx, yy = np.meshgrid(x, y)
+
+        # Ellipse equation
+        ellipse = ((xx / a) ** 2 + (yy / b) ** 2) <= 10
+
+        weights = np.roll(ellipse, -5)
 
     else:
         raise ValueError(f'Unknown method: {method}')
