@@ -26,8 +26,8 @@ def generate_weights(
         # elliptical kernel
         a = 4  # semi-major axis
         b = 2  # semi-minor axis
-        x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, kernel_size)
-        y = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, kernel_size)
+        x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+        y = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
         xx, yy = np.meshgrid(x, y)
 
         # Ellipse equation
