@@ -162,6 +162,12 @@ def run(
         # ------------- 01 AU ---------------
 
         # --- 01 Process Regions (with optional retries) ---
+        COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+        if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+            console.log(
+                '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+            )
 
         attempt = 0
         while True:
@@ -183,6 +189,7 @@ def run(
                 kwargs={
                     **kwargs,
                     'map_over_values': remaining_to_process,
+                    'software': COILED_SOFTWARE,
                 },
             )
             completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
@@ -212,6 +219,7 @@ def run(
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
+                'software': COILED_SOFTWARE,
             },
         )
         batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
@@ -227,6 +235,7 @@ def run(
                 kwargs={
                     **_coiled_kwargs(config, env_file),
                     'vm_type': 'm8g.2xlarge',
+                    'software': COILED_SOFTWARE,
                 },
             )
 
@@ -238,6 +247,7 @@ def run(
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
+                'software': COILED_SOFTWARE,
             },
         )
         batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
@@ -252,6 +262,7 @@ def run(
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
                 'disk_size': 250,
+                'software': COILED_SOFTWARE,
             },
         )
 
@@ -266,6 +277,7 @@ def run(
                 'vm_type': 'c8g.8xlarge',
                 'scheduler_vm_type': 'c8g.8xlarge',
                 'disk_size': 250,
+                'software': COILED_SOFTWARE,
             },  # PMTiles creation needs more disk space
         )
 

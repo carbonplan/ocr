@@ -391,6 +391,9 @@ def calculate_wind_adjusted_risk(
     fire_risk['wind_risk_2011'] = wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
 
+    # trim values less then 0.01 to 0 to match binning.
+    fire_risk = fire_risk.where(fire_risk >= 0.01, 0)
+
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
     for var in fire_risk.data_vars:
