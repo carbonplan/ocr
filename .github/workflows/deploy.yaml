@@ -68,11 +68,11 @@ jobs:
           # For releases and manual production re-run, build from the tagged ref
           ref: ${{ github.event.inputs.production_tag || github.event.release.tag_name || github.sha }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
 
       - name: Log in to Quay.io
         uses: docker/login-action@v3
@@ -111,28 +111,52 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "image=${IMAGE_NAME}:${TAG}" >> "$GITHUB_OUTPUT"
           echo "Primary image: ${IMAGE_NAME}:${TAG}"
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          images: |
-            ${{ steps.compute.outputs.name }}
-          tags: |
-            type=raw,value=${{ steps.compute.outputs.tag }}
-            type=sha,format=short,prefix=sha-
+          cache: false # no pixi.lock
+          locked: false
+          environments: deploy
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - name: Export pixi environment to .binder/environment.yaml
+        run: |
+          mkdir -p .binder
+          pixi project export conda-environment > .binder/environment.yaml
+          ls -la .binder
+          cat .binder/environment.yaml
+
+      - name: Build and push the image to quay.io ${{ matrix.environment }}
+        uses: jupyterhub/repo2docker-action@master
         with:
-          context: .
-          file: .binder/Dockerfile
-          platforms: linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
+          # Make sure username & password/token pair matches your registry credentials
+          DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+          DOCKER_REGISTRY: "quay.io"
+          ADDITIONAL_TAG: ${{ steps.compute.outputs.tag }}
+          # Disable pushing a 'latest' tag, as this often just causes confusion
+          # LATEST_TAG_OFF: true
+          IMAGE_NAME: ${{ steps.compute.outputs.name }}
+
+      # - name: Extract Docker metadata
+      #   id: meta
+      #   uses: docker/metadata-action@v5
+      #   with:
+      #     images: |
+      #       ${{ steps.compute.outputs.name }}
+      #     tags: |
+      #       type=raw,value=${{ steps.compute.outputs.tag }}
+      #       type=sha,format=short,prefix=sha-
+
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: .binder/Dockerfile
+      #     platforms: linux/arm64
+      #     push: true
+      #     tags: ${{ steps.meta.outputs.tags }}
+      #     labels: ${{ steps.meta.outputs.labels }}
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=min
 
   qa-pr:
     # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
