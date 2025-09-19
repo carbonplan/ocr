@@ -86,7 +86,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          IMAGE_NAME="quay.io/carbonplan/ocr"
+          REGISTRY="quay.io"
+          REPO="carbonplan/ocr"
+          IMAGE_NAME="${REGISTRY}/${REPO}"
           SHORT_SHA="${GITHUB_SHA::7}"
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -106,7 +108,8 @@ jobs:
             SAFE_REF=$(echo "$REF_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g')
             TAG="branch-${SAFE_REF}"
           fi
-
+          echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
           echo "name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "image=${IMAGE_NAME}:${TAG}" >> "$GITHUB_OUTPUT"
@@ -124,17 +127,17 @@ jobs:
           ls -la .binder
           cat .binder/environment.yaml
 
-      - name: Build and push the image to quay.io ${{ matrix.environment }}
+      - name: Build and push the image to quay.io
         uses: jupyterhub/repo2docker-action@master
         with:
           # Make sure username & password/token pair matches your registry credentials
           DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+          DOCKER_REGISTRY: ${{ steps.compute.outputs.registry }}
+          IMAGE_NAME: ${{ steps.compute.outputs.repo }}
           ADDITIONAL_TAG: ${{ steps.compute.outputs.tag }}
           # Disable pushing a 'latest' tag, as this often just causes confusion
           # LATEST_TAG_OFF: true
-          # IMAGE_NAME is already fully qualified (quay.io/carbonplan/ocr); omit DOCKER_REGISTRY to avoid duplication
-          IMAGE_NAME: ${{ steps.compute.outputs.name }}
 
       # - name: Extract Docker metadata
       #   id: meta
