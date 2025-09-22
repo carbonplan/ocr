@@ -11,7 +11,7 @@ on:
       region_id:
         description: "Region ID (ignored if all_region_ids is true; for non-production/manual deploy)"
         required: false
-        default: ""
+        default: "y2_x5"
         type: string
       all_region_ids:
         description: "Process all region IDs (passes --all-region-ids) for non-production/manual deploy"
@@ -156,7 +156,7 @@ jobs:
           DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
         run: |
           echo "Starting automatic deploy to QA (PR to main)"
-          REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5"
+          REGION_ARGS="--region-id y2_x5 --region-id y2_x6 --region-id y2_x7"
           ENV_FILE="ocr-coiled-s3.env"
           pixi run --environment deploy ocr run \
             $REGION_ARGS \
