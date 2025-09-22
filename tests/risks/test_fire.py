@@ -8,7 +8,6 @@ from ocr.risks.fire import (
     apply_wind_directional_convolution,
     classify_wind_directions,
     compute_mode_along_time,
-    create_composite_bp_map,
     create_weighted_composite_bp_map,
     generate_weights,
     generate_wind_directional_kernels,
@@ -590,57 +589,6 @@ def test_classify_wind_directions_output_domain():
     assert domain_vals.min() >= 0
     assert domain_vals.max() <= 7
     assert -1 not in domain_vals
-
-
-def test_create_composite_bp_map_nan_and_invalid_handling():
-    """Invalid indices (<0 or >8) and NaNs should produce NaNs; valid 0-8 indices (including 8 'circular') select correct layer."""
-    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
-    # Build a tiny synthetic bp dataset with distinct constant planes per direction
-    ny, nx = 4, 5
-    data_vars = {}
-    for i, lab in enumerate(direction_labels):
-        data_vars[lab] = (('latitude', 'longitude'), np.full((ny, nx), fill_value=float(i)))
-    lat = np.linspace(0, 1, ny)
-    lon = np.linspace(10, 11, nx)
-    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
-
-    # Wind directions: include valid, NaN, -1, 9 (invalid high), 3.0 (float), 7 (edge)
-    wind_vals = np.array(
-        [
-            [0, 1, 2, np.nan, -1],
-            [3, 4, 5, 6, 7],
-            [9, np.nan, 2, -5, 7],
-            [
-                np.nan,
-                3.0,
-                1.0,
-                8,
-                0,
-            ],  # 8 is the 'circular' direction index and SHOULD be treated as valid
-        ],
-        dtype=float,
-    )
-    wind = xr.DataArray(
-        wind_vals, dims=('latitude', 'longitude'), coords={'latitude': lat, 'longitude': lon}
-    )
-
-    composite = create_composite_bp_map(bp, wind)
-
-    # Check shape
-    assert composite.shape == (ny, nx)
-
-    # Positions with invalid / NaN indices should be NaN
-    def is_invalid(v):
-        # Treat 8 (circular) as a valid direction; invalidate only values >8 or <0 or NaN
-        return (np.isnan(v)) or (v < 0) or (v > 8)
-
-    expected_nan_mask = np.vectorize(is_invalid)(wind_vals)
-    np.testing.assert_array_equal(np.isnan(composite.values), expected_nan_mask)
-    # Valid positions should pull the layer value equal to the index
-    valid_mask = ~expected_nan_mask
-    selected_vals = composite.values[valid_mask]
-    expected_vals = wind_vals[valid_mask]
-    np.testing.assert_array_equal(selected_vals, expected_vals)
 
 
 def test_apply_wind_directional_convolution_non_negative_output():
