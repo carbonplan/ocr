@@ -6,6 +6,8 @@ import xarray as xr
 
 from ocr import catalog
 
+CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
 
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
@@ -297,54 +299,147 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr.DataArray:
-    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
-    # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
-    bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
-    # select the entry that corresponds to the wind direction index
-    # Preserve NaNs & truly invalid indices ( <0 or >8 ) as missing.
-    # Indices 0-7 correspond to cardinal directions; 8 is the explicit 'circular' direction
-    missing = wind_directions.isnull() | (wind_directions < 0) | (wind_directions > 8)
-    # if missing.sum() > 0. let's warn
-    if missing.sum() > 0:
+def _bp_dataset_to_direction_da(bp: xr.Dataset) -> xr.DataArray:
+    """
+    Convert a Dataset with variables named after the 8 directions + 'circular'
+    into a single DataArray with a 'direction' dimension.
+    """
+
+    missing = [d for d in CARDINAL_AND_ORDINAL if d not in bp]
+    if missing:
+        raise KeyError(f'bp dataset is missing expected direction variable(s): {missing}')
+    bp_da = (
+        bp[CARDINAL_AND_ORDINAL]
+        .to_array(dim='direction')
+        .assign_coords(direction=CARDINAL_AND_ORDINAL)
+    )
+    return bp_da
+
+
+def create_weighted_composite_bp_map(
+    bp: xr.Dataset,
+    wind_direction_distribution: xr.DataArray,
+    *,
+    distribution_direction_dim: str = 'wind_direction',
+    weight_sum_tolerance: float = 1e-5,
+) -> xr.DataArray:
+    """Create a weighted composite burn probability map using wind direction distribution.
+
+    Parameters
+    ----------
+    bp : xr.Dataset
+        Dataset containing 9 directional burn probability layers with variables
+        named ['N','NE','E','SE','S','SW','W','NW','circular'] produced by
+        `apply_wind_directional_convolution`.
+    wind_direction_distribution : xr.DataArray
+        Probability distribution over 8 cardinal directions with dimension
+        'wind_direction' and length 8, matching direction labels:
+        ['N','NE','E','SE','S','SW','W','NW'] (order must align). Values should
+        sum to 1 where fire-weather hours exist; may be all 0 where none exist.
+    distribution_direction_dim : str, optional
+        Name of the dimension in `wind_direction_distribution` that holds the
+        direction labels, by default 'wind_direction'.
+    weight_sum_tolerance : float, optional
+        Tolerance for deviation from 1.0 in the sum of weights, by default
+
+
+    Returns
+    -------
+    xr.DataArray
+        Weighted composite burn probability with same spatial dims as inputs.
+        Name: 'wind_weighted_bp'. Missing (all-zero) distributions yield NaN.
+    """
+
+    bp_da = _bp_dataset_to_direction_da(bp)
+
+    # Prepare distribution: ensure a 'direction' coord with labels matching CARDINAL_8
+    if distribution_direction_dim != 'direction':
+        wind_direction_distribution = wind_direction_distribution.rename(
+            {distribution_direction_dim: 'direction'}
+        )
+    if 'direction' not in wind_direction_distribution.dims:
+        raise ValueError('Distribution must have a direction dimension after renaming.')
+
+    # Attach labels if they are not present (numeric 0..7 assumed in correct order)
+    if (
+        'direction' not in wind_direction_distribution.coords
+        or len(wind_direction_distribution['direction']) != 8
+    ):
+        wind_direction_distribution = wind_direction_distribution.assign_coords(
+            direction=CARDINAL_AND_ORDINAL
+        )
+
+    # Sanity checks
+    if set(wind_direction_distribution['direction'].values) != set(CARDINAL_AND_ORDINAL):
+        raise ValueError(
+            f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(wind_direction_distribution["direction"].values)}'
+        )
+
+    # --- Interpolate (spatial dims only) BEFORE validity / renorm ---
+    spatial_dims = [d for d in bp_da.dims if d != 'direction']
+    # Build a dict of target coords that actually appear in wind_direction_distribution
+    interp_targets = {d: bp_da[d] for d in spatial_dims if d in wind_direction_distribution.dims}
+    if interp_targets:
+        wind_direction_distribution = wind_direction_distribution.interp(
+            interp_targets, method='nearest'
+        )
+
+    # Identify invalid / missing rows
+    any_nan_row = wind_direction_distribution.isnull().any(dim='direction')
+    negative_weights = (wind_direction_distribution < 0).any()
+    if bool(negative_weights):
+        raise ValueError('Distribution contains negative probabilities.')
+
+    row_sum = wind_direction_distribution.sum(dim='direction')
+
+    has_fire_weather = row_sum > 0
+    valid_rows = has_fire_weather & (~any_nan_row)
+
+    normalized_distribution = xr.where(
+        valid_rows,
+        wind_direction_distribution / row_sum.where(valid_rows),
+        wind_direction_distribution,
+    )
+
+    post_sum = normalized_distribution.sum(dim='direction').where(valid_rows)
+    off = (np.abs(post_sum - 1) > weight_sum_tolerance).sum()
+    if int(off) > 0:
         warnings.warn(
-            f'Missing and/or invalid wind direction data for {missing.sum().data!r} points.',
+            f'{int(off)} valid pixel(s) have weight sums outside tolerance {weight_sum_tolerance}.',
             UserWarning,
             stacklevel=2,
         )
-    # For valid positions (including 8) we can index directly
-    safe_indexer = wind_directions.where(~missing, 0).astype(np.int16)
-    out = bp_da.isel(direction=safe_indexer).where(~missing)
-    return out
+
+    cardinal_and_ordinal_bp = bp_da.sel(direction=CARDINAL_AND_ORDINAL)
+    weighted = (cardinal_and_ordinal_bp * normalized_distribution).sum(dim='direction')
+
+    weighted = weighted.where(valid_rows)
+
+    weighted.name = 'wind_weighted_bp'
+    weighted.attrs.update(
+        {
+            'composition': 'weighted',
+            'long_name': 'Weighted composite BP map using wind direction distribution',
+            'direction_labels': CARDINAL_AND_ORDINAL,
+            'weights_source': wind_direction_distribution.name or 'wind_direction_distribution',
+            'note': 'Rows with no fire-weather hours or NaNs are NaN',
+        }
+    )
+
+    return weighted
 
 
 def classify_wind(
     climate_run_subset: xr.Dataset,
-    direction_modes_sfc: xr.DataArray,
+    wind_direction_distribution: xr.DataArray,
     rps_30_subset: xr.Dataset,
-) -> xr.Dataset:
+) -> xr.DataArray:
     from odc.geo.xr import assign_crs
 
     # Build and apply wind adjustment
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
-
     blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
-    # Switched to xarray interp_like to since both datasets have matching EPSG codes.
-    # wind_direction_reprojected = direction_modes_sfc.rio.reproject_match(
-    #     blurred_bp, resampling=Resampling.nearest
-    # ).rename({'y': 'latitude', 'x': 'longitude'})
-    # wind_direction_reprojected = assign_crs(wind_direction_reprojected, crs='EPSG:4326')
-    # import xarray.testing as xrt
-    # xrt.assert_equal(wind_direction_reprojected, wind_direction_reprojected_xr)
-
-    # Adding int coercion because rasterio outputs ints, while scipy/xarray outputs floats.
-    wind_direction_reprojected = direction_modes_sfc.interp_like(
-        blurred_bp, method='nearest'
-    ).astype(int)
-
-    wind_informed_bp = create_composite_bp_map(blurred_bp, wind_direction_reprojected).drop_vars(
-        'direction'
-    )
+    wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
     # Fix tiny FP misalignment in .sel of lat/lon between two datasets.
     wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
         latitude=rps_30_subset.latitude, longitude=rps_30_subset.longitude
@@ -373,21 +468,21 @@ def calculate_wind_adjusted_risk(
         {'latitude': 6000, 'longitude': 4500}
     )
 
-    direction_modes_sfc = (
-        catalog.get_dataset('conus404-ffwi-p99-mode-reprojected')
+    wind_direction_distribution = (
+        catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
         .to_xarray()
-        .wind_direction_mode.sel(latitude=y_slice, longitude=x_slice)
+        .wind_direction_distribution.sel(latitude=y_slice, longitude=x_slice)
         .load()
     )
 
     wind_informed_bp_float_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
-        direction_modes_sfc=direction_modes_sfc,
+        wind_direction_distribution=wind_direction_distribution,
         rps_30_subset=rps_30_subset,
     )
     wind_informed_bp_float_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
-        direction_modes_sfc=direction_modes_sfc,
+        wind_direction_distribution=wind_direction_distribution,
         rps_30_subset=rps_30_subset,
     )
 
@@ -410,37 +505,6 @@ def calculate_wind_adjusted_risk(
         fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
-
-
-def nws_fire_weather(
-    hurs: xr.DataArray,
-    hurs_threshold: float,
-    sfcWind: xr.DataArray,
-    wind_threshold: float,
-    tas: xr.DataArray | None = None,
-    tas_threshold: float | None = None,
-) -> xr.DataArray:
-    """
-    calculation of whether or not a day counts as fire weather
-    based upon relative humidity, windspeed, temperature and thresholds associated
-    with each
-    """
-    # TODO: use pint-xarray?
-    # relative_humidity < 25%
-    mask_hurs = hurs < hurs_threshold
-    # windspeed > 15 mph
-    mps_to_mph_conversion = (
-        1000 * 3600 / (25.4 * 12 * 5280)
-    )  # convert m/s to mph and then double to account for sustained winds
-    mask_sfcWind = (sfcWind * mps_to_mph_conversion) > wind_threshold
-    # temperature > 75 deg F
-    mask_tas = None  # Initialize with default value
-    if tas is not None and tas_threshold is not None:
-        mask_tas = ((tas - 273.15) * 9 / 5 + 32) > tas_threshold  # convert K to deg F
-    fire_weather_mask = mask_hurs & mask_sfcWind
-    if tas is not None and mask_tas is not None:
-        fire_weather_mask = fire_weather_mask & mask_tas
-    return fire_weather_mask
 
 
 def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
@@ -585,7 +649,7 @@ def compute_wind_direction_distribution(
         'Fraction of hours in each of 8 cardinal and ordinal directions during hours meeting fire weather criteria'
     )
 
-    return wind_direction_hist.to_dataset()
+    return wind_direction_hist.to_dataset().chunk({'x': -1, 'y': -1})
 
 
 def compute_modal_wind_direction(distribution: xr.DataArray):
@@ -607,9 +671,17 @@ def compute_modal_wind_direction(distribution: xr.DataArray):
 
     # TODO: Handling ties.
     # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html mentions that in case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence are returned.
-    mode = (
-        distribution.argmax(dim='wind_direction').where(any_fire_weather).chunk({'x': -1, 'y': -1})
-    )
+    # Defensive: ensure we actually have a DataArray (helpful for static type checkers)
+    assert isinstance(distribution, xr.DataArray)
+    dist_da: xr.DataArray = distribution  # explicit alias for type checkers
+    idx = dist_da.argmax(dim='wind_direction')
+    # Cast for static type checkers that may not follow xarray's dynamic return
+    from typing import cast as _cast
+
+    idx_da = _cast(xr.DataArray, idx)
+    mode = idx_da.where(any_fire_weather)  # type: ignore[attr-defined]
+    if {'x', 'y'}.issubset(mode.dims):
+        mode = mode.chunk({'x': -1, 'y': -1})
     mode.name = 'wind_direction_mode'
     mode.attrs.update(
         {

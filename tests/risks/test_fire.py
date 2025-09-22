@@ -8,7 +8,7 @@ from ocr.risks.fire import (
     apply_wind_directional_convolution,
     classify_wind_directions,
     compute_mode_along_time,
-    create_composite_bp_map,
+    create_weighted_composite_bp_map,
     generate_weights,
     generate_wind_directional_kernels,
 )
@@ -591,57 +591,6 @@ def test_classify_wind_directions_output_domain():
     assert -1 not in domain_vals
 
 
-def test_create_composite_bp_map_nan_and_invalid_handling():
-    """Invalid indices (<0 or >8) and NaNs should produce NaNs; valid 0-8 indices (including 8 'circular') select correct layer."""
-    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
-    # Build a tiny synthetic bp dataset with distinct constant planes per direction
-    ny, nx = 4, 5
-    data_vars = {}
-    for i, lab in enumerate(direction_labels):
-        data_vars[lab] = (('latitude', 'longitude'), np.full((ny, nx), fill_value=float(i)))
-    lat = np.linspace(0, 1, ny)
-    lon = np.linspace(10, 11, nx)
-    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
-
-    # Wind directions: include valid, NaN, -1, 9 (invalid high), 3.0 (float), 7 (edge)
-    wind_vals = np.array(
-        [
-            [0, 1, 2, np.nan, -1],
-            [3, 4, 5, 6, 7],
-            [9, np.nan, 2, -5, 7],
-            [
-                np.nan,
-                3.0,
-                1.0,
-                8,
-                0,
-            ],  # 8 is the 'circular' direction index and SHOULD be treated as valid
-        ],
-        dtype=float,
-    )
-    wind = xr.DataArray(
-        wind_vals, dims=('latitude', 'longitude'), coords={'latitude': lat, 'longitude': lon}
-    )
-
-    composite = create_composite_bp_map(bp, wind)
-
-    # Check shape
-    assert composite.shape == (ny, nx)
-
-    # Positions with invalid / NaN indices should be NaN
-    def is_invalid(v):
-        # Treat 8 (circular) as a valid direction; invalidate only values >8 or <0 or NaN
-        return (np.isnan(v)) or (v < 0) or (v > 8)
-
-    expected_nan_mask = np.vectorize(is_invalid)(wind_vals)
-    np.testing.assert_array_equal(np.isnan(composite.values), expected_nan_mask)
-    # Valid positions should pull the layer value equal to the index
-    valid_mask = ~expected_nan_mask
-    selected_vals = composite.values[valid_mask]
-    expected_vals = wind_vals[valid_mask]
-    np.testing.assert_array_equal(selected_vals, expected_vals)
-
-
 def test_apply_wind_directional_convolution_non_negative_output():
     """After convolution and clipping, outputs should have no negative values."""
     data = np.zeros((41, 41), dtype=np.float32)
@@ -669,3 +618,89 @@ def test_compute_mode_along_time_no_negative_modes(make_mode_array):
     da = make_mode_array(data)
     result = compute_mode_along_time(da)
     assert not np.any(result.values == -1), 'Found -1 placeholder in mode output'
+
+
+def test_create_weighted_composite_bp_map_basic():
+    """Weighted composite should equal manual dot product across directional layers."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 3, 4
+    # Each direction layer is a constant equal to its index so dot product is easy
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    # Distribution over 8 directions. Let it vary spatially a bit.
+    probs = np.array(
+        [0.10, 0.05, 0.15, 0.20, 0.05, 0.10, 0.25, 0.10], dtype=np.float32
+    )  # sums to 1.0
+    dist = xr.DataArray(
+        np.tile(probs[:, None, None], (1, ny, nx)),
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+
+    # Manual expected value = sum(i * probs[i]) for i=0..7
+    expected_scalar = float(sum(i * p for i, p in enumerate(probs)))
+    expected = np.full((ny, nx), expected_scalar, dtype=np.float32)
+    np.testing.assert_allclose(weighted.values, expected)
+    assert weighted.name == 'wind_weighted_bp'
+    assert 'long_name' in weighted.attrs
+
+
+def test_create_weighted_composite_bp_map_zero_distribution():
+    """All-zero distributions should yield NaNs (no valid fire-weather hours)."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 2, 2
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    zeros = np.zeros((8, ny, nx), dtype=np.float32)
+    dist = xr.DataArray(
+        zeros,
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+    assert np.isnan(weighted.values).all()
+
+
+def test_create_weighted_composite_bp_map_all_one_distribution():
+    """All-one distributions should yield the mean of all directional layers."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 2, 2
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    ones = np.ones((8, ny, nx), dtype=np.float32)
+    dist = xr.DataArray(
+        ones,
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+
+    # Expected value is mean of indices 0..7
+    expected_scalar = float(sum(range(8)) / 8.0)
+    expected = np.full((ny, nx), expected_scalar, dtype=np.float32)
+    np.testing.assert_allclose(weighted.values, expected)
