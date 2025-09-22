@@ -6,6 +6,8 @@ import xarray as xr
 
 from ocr import catalog
 
+CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
 
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
@@ -297,30 +299,6 @@ def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def create_composite_bp_map(bp: xr.Dataset, wind_directions: xr.DataArray) -> xr.DataArray:
-    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
-    # reorder the differently blurred BP and then turn it into a DataArray and assign the coords
-    bp_da = bp[direction_labels].to_array(dim='direction').assign_coords(direction=direction_labels)
-    # select the entry that corresponds to the wind direction index
-    # Preserve NaNs & truly invalid indices ( <0 or >8 ) as missing.
-    # Indices 0-7 correspond to cardinal directions; 8 is the explicit 'circular' direction
-    missing = wind_directions.isnull() | (wind_directions < 0) | (wind_directions > 8)
-    # if missing.sum() > 0. let's warn
-    if missing.sum() > 0:
-        warnings.warn(
-            f'Missing and/or invalid wind direction data for {missing.sum().data!r} points.',
-            UserWarning,
-            stacklevel=2,
-        )
-    # For valid positions (including 8) we can index directly
-    safe_indexer = wind_directions.where(~missing, 0).astype(np.int16)
-    out = bp_da.isel(direction=safe_indexer).where(~missing)
-    return out
-
-
-CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-
-
 def _bp_dataset_to_direction_da(bp: xr.Dataset) -> xr.DataArray:
     """
     Convert a Dataset with variables named after the 8 directions + 'circular'
@@ -358,7 +336,6 @@ def create_weighted_composite_bp_map(
         'wind_direction' and length 8, matching direction labels:
         ['N','NE','E','SE','S','SW','W','NW'] (order must align). Values should
         sum to 1 where fire-weather hours exist; may be all 0 where none exist.
-
     distribution_direction_dim : str, optional
         Name of the dimension in `wind_direction_distribution` that holds the
         direction labels, by default 'wind_direction'.
@@ -398,7 +375,6 @@ def create_weighted_composite_bp_map(
             f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(wind_direction_distribution["direction"].values)}'
         )
 
-    # distribution = distribution.interp_like(bp_da, method='nearest')
     # --- Interpolate (spatial dims only) BEFORE validity / renorm ---
     spatial_dims = [d for d in bp_da.dims if d != 'direction']
     # Build a dict of target coords that actually appear in wind_direction_distribution
