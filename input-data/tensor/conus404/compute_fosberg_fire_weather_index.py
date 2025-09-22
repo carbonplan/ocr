@@ -35,23 +35,23 @@ app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')
 
 
 def reproject(
-    wind_direction: xr.Dataset,
+    src_dataset: xr.Dataset,
     src_crs_wkt: str,
     target_dataset_name: str,
     *,
     chunk_lat: int = 6000,
     chunk_lon: int = 4500,
 ) -> xr.Dataset:
-    """Reproject the wind direction to the geobox of a target dataset."""
+    """Reproject the wind direction distributions to the geobox of a target dataset."""
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
     tgt = assign_crs(tgt, crs='EPSG:4326')
     geobox = tgt.odc.geobox
 
     src_crs = CRS(src_crs_wkt)
-    wind_direction_src = assign_crs(wind_direction, crs=src_crs)
+    src_dataset = assign_crs(src_dataset, crs=src_crs)
 
     result = (
-        wind_direction_src.odc.reproject(geobox, resampling='nearest')
+        src_dataset.odc.reproject(geobox, resampling='nearest')
         .astype('float32')
         .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
     )
@@ -323,7 +323,7 @@ def postprocess_ffwi(
     # Quantiles and optional mode
     console.log(f'Postprocessing FFWI: {ffwi}')
     for quantile in quantiles:
-        q_out_path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}.icechunk'
+        q_out_path = f'{output_base}/p{int(quantile * 100)}.icechunk'
         console.log(f'Computing and saving {quantile} quantile to {q_out_path}...')
         ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1})
         ffwi_quantile = dask.base.optimize(ffwi_quantile)[0]
@@ -349,7 +349,7 @@ def postprocess_ffwi(
             console.log(
                 f'Computed wind direction distribution for FFWI > {quantile} quantile: {distribution}'
             )
-            path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_wind_direction_distribution.icechunk'
+            path = f'{output_base}/p{int(quantile * 100)}-wind-direction-distribution.icechunk'
             _write_icechunk_store(
                 out_path=path,
                 dataset=dask.base.optimize(distribution)[0],
@@ -359,7 +359,7 @@ def postprocess_ffwi(
 
             console.log(f'Saved wind direction distribution to {path}.')
             ffwi_mode = compute_modal_wind_direction(distribution.wind_direction_distribution)
-            path = f'{output_base}/fosberg-fire-weather-index_p{int(quantile * 100)}_mode.icechunk'
+            path = f'{output_base}/p{int(quantile * 100)}-wind-direction-mode.icechunk'
             _write_icechunk_store(
                 out_path=path,
                 dataset=dask.base.optimize(ffwi_mode.chunk({'x': -1, 'y': -1}))[0],
@@ -379,19 +379,19 @@ def postprocess_ffwi(
 @app.command('reproject')
 def reproject_ffwi(
     input_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode.icechunk',
-        help='Input path to the FFWI mode Icechunk repository.',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-mode.icechunk',
+        help='Input path to the wind direction mode Icechunk repository.',
     ),
     distribution_input_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_wind_direction_distribution.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-distribution.icechunk',
         help='Input path to the wind direction distribution Icechunk repository (matching the mode).',
     ),
     output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_mode_reprojected.icechunk',
-        help='Output path for the reprojected FFWI mode Icechunk repository.',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-mode-reprojected.icechunk',
+        help='Output path for the reprojected wind direction mode Icechunk repository.',
     ),
     distribution_output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index_p99_wind_direction_distribution_reprojected.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-distribution-reprojected.icechunk',
         help='Output path for the reprojected wind direction distribution Icechunk repository.',
     ),
     overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
@@ -444,7 +444,7 @@ def reproject_ffwi(
         src_crs_wkt,
         target_dataset_name,
     )
-    console.log(f'Reprojected FFWI mode: {reprojected_mode}')
+    console.log(f'Reprojected wind direction mode: {reprojected_mode}')
 
     reprojected_distribution = reproject(
         wind_dir_distribution,
@@ -456,7 +456,7 @@ def reproject_ffwi(
     _write_icechunk_store(
         out_path=output_path,
         dataset=reprojected_mode,
-        commit_message=f'Reprojected FFWI mode to {target_dataset_name} geobox.',
+        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox.',
         overwrite=overwrite,
     )
     _write_icechunk_store(
