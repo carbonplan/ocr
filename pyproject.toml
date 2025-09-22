@@ -199,5 +199,5 @@
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
     export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
-    start-coiled-notebook        = { cmd = "SOFTWARE=$(pixi run export-and-create-coiled | tail -n1) && coiled notebook start --software \"$SOFTWARE\" --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-bigger = { cmd = "SOFTWARE=$(pixi run export-and-create-coiled | tail -n1) && coiled notebook start --software \"$SOFTWARE\" --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook        = { cmd = "STAMP=$(date +%Y%m%d-%H%M%S); NAME=\"ocr-${STAMP}\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook-bigger = { cmd = "STAMP=$(date +%Y%m%d-%H%M%S); NAME=\"ocr-${STAMP}\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
