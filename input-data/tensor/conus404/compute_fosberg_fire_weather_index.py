@@ -63,6 +63,7 @@ def reproject(
 def setup_cluster(
     name: str,
     region: str = 'us-west-2',
+    software: str | None = None,
     min_workers: int = 2,
     max_workers: int = 50,
     worker_vm_types: str = 'm8g.2xlarge',
@@ -85,7 +86,7 @@ def setup_cluster(
         'worker_vm_types': worker_vm_types,
         'scheduler_vm_types': scheduler_vm_types,
         'spot_policy': 'spot_with_fallback',
-        'software': 'package-sync-28bde8ff0ddc16fa1a627e6e5dac3405',
+        'software': software,
     }
     console.log(f'Creating Coiled cluster with args: {args}')
     cluster = coiled.Cluster(**args)
@@ -206,6 +207,7 @@ def compute_ffwi(
     min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
     max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
     worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
+    software: str | None = typer.Option(None, help='Coiled software environment ID'),
 ):
     """Compute and save the Fosberg Fire Weather Index (FFWI) from CONUS404 data.
 
@@ -222,6 +224,7 @@ def compute_ffwi(
             max_workers=max_workers,
             worker_vm_types=worker_vm_types,
             scheduler_vm_types='m8g.large',
+            software=software,
         )
         if cluster is None:
             raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
@@ -289,6 +292,7 @@ def postprocess_ffwi(
     min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
     max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
     worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
+    software: str | None = typer.Option(None, help='Coiled software environment ID'),
 ):
     """Compute quantiles and wind-direction mode using a precomputed FFWI store.
 
@@ -304,6 +308,7 @@ def postprocess_ffwi(
             max_workers=max_workers,
             worker_vm_types=worker_vm_types,
             scheduler_vm_types='m8g.large',
+            software=software,
         )
         if cluster is None:
             raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
@@ -323,7 +328,7 @@ def postprocess_ffwi(
     # Quantiles and optional mode
     console.log(f'Postprocessing FFWI: {ffwi}')
     for quantile in quantiles:
-        q_out_path = f'{output_base}/p{int(quantile * 100)}.icechunk'
+        q_out_path = f'{output_base}/fosberg-fire-weather-index-p{int(quantile * 100)}.icechunk'
         console.log(f'Computing and saving {quantile} quantile to {q_out_path}...')
         ffwi_quantile = ffwi.quantile(quantile, dim='time').chunk({'x': -1, 'y': -1})
         ffwi_quantile = dask.base.optimize(ffwi_quantile)[0]
@@ -349,7 +354,7 @@ def postprocess_ffwi(
             console.log(
                 f'Computed wind direction distribution for FFWI > {quantile} quantile: {distribution}'
             )
-            path = f'{output_base}/p{int(quantile * 100)}-wind-direction-distribution.icechunk'
+            path = f'{output_base}/fosberg-fire-weather-index-p{int(quantile * 100)}-wind-direction-distribution.icechunk'
             _write_icechunk_store(
                 out_path=path,
                 dataset=dask.base.optimize(distribution)[0],
@@ -359,7 +364,7 @@ def postprocess_ffwi(
 
             console.log(f'Saved wind direction distribution to {path}.')
             ffwi_mode = compute_modal_wind_direction(distribution.wind_direction_distribution)
-            path = f'{output_base}/p{int(quantile * 100)}-wind-direction-mode.icechunk'
+            path = f'{output_base}/fosberg-fire-weather-index-p{int(quantile * 100)}-wind-direction-mode.icechunk'
             _write_icechunk_store(
                 out_path=path,
                 dataset=dask.base.optimize(ffwi_mode.chunk({'x': -1, 'y': -1}))[0],
@@ -379,19 +384,19 @@ def postprocess_ffwi(
 @app.command('reproject')
 def reproject_ffwi(
     input_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-mode.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode.icechunk',
         help='Input path to the wind direction mode Icechunk repository.',
     ),
     distribution_input_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-distribution.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
         help='Input path to the wind direction distribution Icechunk repository (matching the mode).',
     ),
     output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-mode-reprojected.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode-reprojected.icechunk',
         help='Output path for the reprojected wind direction mode Icechunk repository.',
     ),
     distribution_output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/p99-wind-direction-distribution-reprojected.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-reprojected.icechunk',
         help='Output path for the reprojected wind direction distribution Icechunk repository.',
     ),
     overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
@@ -401,6 +406,7 @@ def reproject_ffwi(
     min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
     max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
     worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
+    software: str | None = typer.Option(None, help='Coiled software environment ID'),
 ):
     """Reproject the FFWI mode and corresponding wind direction distribution datasets.
 
@@ -418,6 +424,7 @@ def reproject_ffwi(
             max_workers=max_workers,
             worker_vm_types=worker_vm_types,
             scheduler_vm_types='m8g.large',
+            software=software,
         )
         if cluster is None:
             raise RuntimeError('Cluster setup failed or was skipped (min_workers <= 0).')
