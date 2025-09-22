@@ -182,3 +182,4 @@ pixi.lock
 .vscode/
 pixi.lock
 uv.lock
+environment.yaml

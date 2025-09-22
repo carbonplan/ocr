@@ -199,5 +199,5 @@
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
     export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
-    start-coiled-notebook        = { cmd = "coiled notebook start --sync --vm-type m5.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-bigger = { cmd = "coiled notebook start --sync --vm-type m5.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook        = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook-bigger = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
