@@ -465,6 +465,13 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='RDS-2016-0032-3',
+        description='Spatial datasets of probabilistic wildfire risk components for the United States (270m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/RDS-2016-0034-3-epsg_4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
         bucket='carbonplan-ocr',
@@ -591,7 +598,7 @@ datasets = [
         name='us-census-counties',
         description='US Census Counties',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/aggregated_regions/counties.parquet',
+        prefix='input/fire-risk/vector/aggregated_regions/counties/counties.parquet',
         data_format='geoparquet',
     ),
     # CONUS404 Fosberg Fire Weather Index (FFWI) datasets
