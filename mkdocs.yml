@@ -7,6 +7,33 @@ site_author: CarbonPlan
 # site_url: TODO
 docs_dir: docs
 
+extra:
+  analytics:
+    provider: plausible
+    domain: ocr.docs.carbonplan.org #TODO: change this when we have a domain
+    enabled: false # uncomment to disable analytics in dev builds
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: good
+          note: Thanks for your feedback!
+
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: bad
+          note: Thanks for your feedback!
+  social:
+    - icon: "fontawesome/brands/github"
+      link: "https://github.com/carbonplan"
+    - icon: "fontawesome/brands/bluesky"
+      link: "https://bsky.app/profile/carbonplan.org"
+    - icon: "fontawesome/brands/linkedin"
+      link: "https://www.linkedin.com/company/carbonplan"
+  version:
+    provider: mike
+
 nav:
   - Home: index.md
   - Getting Started:
@@ -56,6 +83,15 @@ theme:
 plugins:
   - search
   - markdown-exec
+  - social
+  - material-plausible
+  - mike:
+      alias_type: "copy"
+      canonical_version: "latest"
+  - mkdocs-jupyter:
+      include_source: true
+      ignore: ["*.py", "**/.ipynb_checkpoints/*.ipynb"]
+      enabled: true
   - mkdocstrings:
       enable_inventory: true
       handlers:
@@ -63,7 +99,6 @@ plugins:
           paths: [ocr]
           options:
             show_if_no_docstring: false
-
             show_root_members_full_path: false
             merge_init_into_class: true
             show_labels: true
@@ -80,19 +115,41 @@ plugins:
             group_by_category: true
             show_category_heading: true
             heading_level: 2
+            extensions:
+              - griffe_inherited_docstrings
 
           inventories:
             - https://docs.python.org/3/objects.inv
 
 markdown_extensions:
+  - admonition
+  - attr_list
   - mkdocs-click
+  - codehilite:
+      guess_lang: false
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.arithmatex
+  - pymdownx.betterem
+  - pymdownx.caret:
+      insert: false
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.escapeall:
+      hardbreak: true
+      nbsp: true
+  - pymdownx.magiclink:
+      hide_protocol: true
+      repo_url_shortener: true
+  - pymdownx.smartsymbols
   - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
   - toc:
       permalink: true
