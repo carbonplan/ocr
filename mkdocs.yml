@@ -36,17 +36,28 @@ extra:
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - How-to: how-to/installation.md
+  - How-to Guides:
+      - Getting Started: how-to/getting-started.md
+      - Installation: how-to/installation.md
+      - Working with Data: how-to/work-with-data.ipynb
+
+  - Methods:
+      - Fire Risk:
+          - Overview: methods/fire-risk/overview.md
+          - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
+          - Implementation: methods/fire-risk/implementation.ipynb
+          - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
+          - Caveats & Limitations: methods/fire-risk/limitations.md
+          - Region Atomization: methods/fire-risk/region-atomization.md
+
   - Tutorials:
       - Data Pipeline: tutorials/data-pipeline.md
   - Reference:
       - API: reference/api.md
       - Project Structure: reference/project-structure.md
       - Deployment: reference/deployment.md
-  - Explanations:
-      - Input Datasets: explanations/input-datasets.md
-      - Fire Risk: explanations/fire-risk.md
+      - Data Schema: reference/data-schema.md
+      - Data Downloads: reference/data-downloads.md
 
 theme:
   language: en
@@ -92,6 +103,7 @@ plugins:
       include_source: true
       ignore: ["*.py", "**/.ipynb_checkpoints/*.ipynb"]
       enabled: true
+      execute: true
   - mkdocstrings:
       enable_inventory: true
       handlers:
@@ -120,6 +132,11 @@ plugins:
 
           inventories:
             - https://docs.python.org/3/objects.inv
+            - https://geopandas.org/en/stable/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+            - https://pandas.pydata.org/pandas-docs/stable/objects.inv
+            - https://docs.xarray.dev/en/stable/objects.inv
+            - https://icechunk.io/en/stable/objects.inv
 
 markdown_extensions:
   - admonition

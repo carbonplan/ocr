@@ -1,3 +1,7 @@
+TODO
+
+- Mermaid diagram → FigJam
+
 # GitHub Actions Deployment Workflow Visualization
 
 This document visualizes the deployment workflow logic you described, including triggers, input-based branching, and environment variable assignments.
