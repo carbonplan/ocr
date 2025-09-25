@@ -1,4 +1,7 @@
-# Fire risk methodology
+# TODO
+
+- Qualitative description of methods
+- Link out to more detailed pages (data sources, region atomization, etc.)
 
 This page explains the high-level method used to compute building-level fire risk scores. It is an explanation-oriented document (conceptual + references) rather than a step-by-step tutorial.
 

@@ -1,3 +1,7 @@
+TODO
+
+- Diagram of project directory with descriptions
+
 # Project layout
 
 This page documents the repository layout at a glance and explains the purpose of the main top-level directories and files. Use this as a technical reference when adding modules, data ingestion scripts, docs or tests.
