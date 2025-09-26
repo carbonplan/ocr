@@ -96,6 +96,7 @@ plugins:
   - markdown-exec
   - social
   - material-plausible
+  - mermaid2
   - mike:
       alias_type: "copy"
       canonical_version: "latest"
@@ -163,7 +164,11 @@ markdown_extensions:
       hide_protocol: true
       repo_url_shortener: true
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde

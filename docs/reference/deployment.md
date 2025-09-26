@@ -1,150 +1,73 @@
-TODO
-
-- Mermaid diagram → FigJam
-
 # GitHub Actions Deployment Workflow Visualization
 
-This document visualizes the deployment workflow logic you described, including triggers, input-based branching, and environment variable assignments.
+This document visualizes the deployment workflow logic used to deploy OCR including triggers, input-based branching, and environment variable assignments.
 
 ## Mermaid Diagram
 
-```
-                          +------------------------+
-                          |  Workflow Event Fired  |
-                          +-----------+------------+
-                                      |
-                    +-----------------+------------------+
-                    |                                    |
-             (release: published)               (workflow_dispatch)
-                    |                                    |
-                    v                                    v
-         +-------------------------+          +---------------------------+
-         | deploy-production job   |          | Evaluate inputs           |
-         | (automatic prod deploy) |          | (production_tag? etc.)    |
-         +------------+------------+          +-------------+-------------+
-                      |                                     |
-                      |                                     |
-                      |                             production_tag provided?
-                      |                                     |
-                      |                    +----------------+----------------+
-                      |                    |                                 |
-                      |                   YES                               NO
-                      |                    |                                 |
-                      |                    v                                 v
-                      |        +---------------------------+      +---------------------------+
-                      |        | production-rerun job      |      | deploy job (non-prod)     |
-                      |        | manual prod redeploy      |      | qa or staging             |
-                      |        +-------------+-------------+      +--------------+------------+
-                      |                      |                                |
-                      |                      |                                |
-                      |                Checkout tag                            |
-                      |                (actions/checkout@v5)                  |
-                      |                      |                                |
-                      |                Derive OCR_VERSION                     |
-                      |                - RAW_TAG from                         |
-                      |                  github.event.inputs.production_tag   |
-                      |                - Strip refs/tags/ and leading v       |
-                      |                - Validate SemVer                      |
-                      |                Set:                                   |
-                      |                  OCR_VERSION                          |
-                      |                  OCR_ENVIRONMENT=production           |
-                      |                      |                                |
-                      |                      v                                v
-                      |               Run deploy (prod)          Set OCR_ENVIRONMENT=qa|staging
-                      |               - REGION_ARGS="--all..."                |
-                      |               - env-file: prod                       |
-                      |                                                     Build region args:
-                      |                                               IF all_region_ids == true
-                      |                                                 -> --all-region-ids
-                      |                                                   (ignore region_id)
-                      |                                               ELSE IF region_id non-empty
-                      |                                                 -> --region-id <value>
-                      |                                               ELSE -> FAIL (exit 1)
-                      |                                                     |
-                      |                                                     v
-                      |                                              Optional wipe:
-                      |                                                if wipe == true -> --wipe
-                      |                                                     |
-                      |                                                     v
-                      |                                              Run deploy (qa/staging)
-                      |                                              - env-file: ocr-coiled-s3.env
-                      |                                              - OCR_VERSION NOT set here
-                      |                                                     |
-                      |                                                     v
-                      |                                             (End non-prod job)
-                      |
-                      v
-   +----------------------------------+
-   | deploy-production job (release) |
-   +-----------------+---------------+
-                     |
-              actions/checkout
-                     |
-              Derive OCR_VERSION
-              - RAW_TAG from github.event.release.tag_name
-              - Strip refs/tags/ and leading v
-              - Validate SemVer
-              Set:
-                OCR_VERSION
-                OCR_ENVIRONMENT=production
-                     |
-                     v
-              Run production deploy
-              - REGION_ARGS="--all-region-ids"
-              - env-file: ocr-coiled-s3-production.env
-                     |
-                     v
-              (End production deploy)
+```mermaid
+graph TB
+    %% Trigger Events
+    Start([Workflow Triggers])
+    Push[Push to main]
+    PR[Pull Request to main]
+    Release[Release Published]
+    Manual[Manual Workflow Dispatch]
 
-FAIL CONDITIONS:
-  - Non-prod deploy: neither all_region_ids nor region_id provided
-  - SemVer validation fails for production_tag or release tag
+    Start --> Push
+    Start --> PR
+    Start --> Release
+    Start --> Manual
 
-SUMMARY OF VARIABLES:
-  - OCR_ENVIRONMENT:
-       deploy (manual): qa | staging
-       deploy-production (release): production
-       production-rerun: production
-  - OCR_VERSION:
-       Only set in production jobs (release / production-rerun)
+    %% Coiled Software Environment Job
+    CoiledSoftware[["ocr-coiled-software<br/>Create Coiled Environment<br/>Output: name"]]
 
-REGION ARG LOGIC (non-prod):
-  all_region_ids == true  -> use --all-region-ids (ignore region_id if given)
-  else if region_id set   -> use --region-id <region_id>
-  else                    -> fail
+    Push --> CoiledSoftware
+    PR --> CoiledSoftware
+    Release --> CoiledSoftware
+    Manual --> CoiledSoftware
 
-PRODUCTION ALWAYS:
-  --all-region-ids
+    %% Conditional Jobs
+    QA_PR{{"qa-pr<br/>IF: PR with e2e/QA labels<br/>Environment: qa"}}
+    Staging_Main{{"staging-main<br/>IF: Push to main<br/>Environment: staging"}}
+    Manual_Deploy{{"manual<br/>IF: Manual & no prod tag<br/>Environment: qa/staging"}}
+    Production{{"production<br/>IF: Release published<br/>Environment: production"}}
+    Production_Rerun{{"production-rerun<br/>IF: Manual & prod tag<br/>Environment: production"}}
+
+    %% Job Dependencies and Conditions
+    CoiledSoftware --> QA_PR
+    CoiledSoftware --> Staging_Main
+    CoiledSoftware --> Manual_Deploy
+    CoiledSoftware --> Production
+    CoiledSoftware --> Production_Rerun
+
+    PR --> |"Has e2e or QA/QC label"| QA_PR
+    Push --> |"Branch = main"| Staging_Main
+    Manual --> |"production_tag = empty"| Manual_Deploy
+    Release --> Production
+    Manual --> |"production_tag != empty"| Production_Rerun
+
+    %% Job Details
+    QA_PR_Details[["QA Deploy<br/>• Regions: y2_x5-x7<br/>• Wipe: true<br/>• URL: ocr.qa.carbonplan.org"]]
+    Staging_Main_Details[["Staging Deploy<br/>• Regions: Multiple specified<br/>• Wipe: true<br/>• URL: ocr.staging.carbonplan.org"]]
+    Manual_Deploy_Details[["Manual Deploy<br/>• Regions: User choice<br/>• Wipe: User choice<br/>• URL: Based on environment"]]
+    Production_Details[["Production Deploy<br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
+    Production_Rerun_Details[["Production Redeploy<br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
+
+    QA_PR --> QA_PR_Details
+    Staging_Main --> Staging_Main_Details
+    Manual_Deploy --> Manual_Deploy_Details
+    Production --> Production_Details
+    Production_Rerun --> Production_Rerun_Details
+
+    %% Styling
+    classDef trigger fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef job fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef conditional fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef deploy fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class Start,Push,PR,Release,Manual trigger
+    class CoiledSoftware job
+    class QA_PR,Staging_Main,Manual_Deploy,Production,Production_Rerun conditional
+    class QA_PR_Details,Staging_Main_Details,Manual_Deploy_Details,Production_Details,Production_Rerun_Details deploy
 
 ```
-
-## Logical Summary
-
-- Triggers:
-
-  - release (published) -> production deploy (deploy-production job)
-  - workflow_dispatch -> either:
-    - production rerun if production_tag is provided
-    - non-prod deploy (qa or staging) if production_tag is empty
-
-- workflow_dispatch inputs:
-
-  - environment (qa | staging) — ignored if production_tag is provided
-  - production_tag — SemVer tag (with or without leading v); if set, triggers production rerun
-  - region_id — used only when all_region_ids == false
-  - all_region_ids — boolean toggle for region fan-out
-  - wipe — boolean (assumed to influence job behavior, not branching)
-
-- Environment variables:
-
-  - Production (release or rerun):
-    - OCR_VERSION = normalized SemVer (strip leading v)
-    - OCR_ENVIRONMENT = production
-  - Non-prod:
-    - OCR_ENVIRONMENT = qa or staging
-
-- Branching:
-  1. Event == release -> deploy-production
-  2. Event == workflow_dispatch:
-     a. production_tag set -> production-rerun
-     b. production_tag not set -> deploy (qa or staging) + region logic
