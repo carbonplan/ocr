@@ -30,15 +30,6 @@ pixi shell
 ```bash
 # Process fire risk for a single region locally
 ocr run --region-id y10_x2 --platform local --risk-type fire
-
-# Process multiple regions on Coiled cloud infrastructure
-ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled
-
-# Process and write regional geospatial files
-ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --write-region-files
-
-# Process all available regions
-ocr run --all-region-ids --platform coiled
 ```
 
 ## Architecture
@@ -60,15 +51,6 @@ flowchart LR
     C --> E[Regional Stats]
     E --> D
 ```
-
-## Command Reference
-
-### Main Commands
-
-- `ocr run` - Full pipeline orchestration
-- `ocr process-region` - Process a single region
-- `ocr aggregate` - Combine regional data
-- `ocr create-pmtiles` - Generate visualization tiles
 
 ## Development
 
@@ -99,7 +81,7 @@ The project uses dotenv-style env files. Example files in the repo include [`ocr
 Important environment variables:
 
 - `OCR_STORAGE_ROOT`: S3 path or local path where output is written (e.g. `s3://your-bucket/`).
-- `OCR_ENVIRONMENT`: name of the environment (e.g. `qa`, `staging`, `prod`).
+- `OCR_ENVIRONMENT`: name of the environment (e.g. `qa`, `staging`, `production`).
 - `OCR_DEBUG`: set to `1` to enable more verbose logging for local troubleshooting.
 
 Start a dev shell with the project environment (we use `pixi`):
@@ -117,26 +99,6 @@ ocr run --region-id y10_x2 --platform local --env-file .env
 
 # 3. Generate tiles from existing data
 ocr create-pmtiles --env-file .env
-```
-
-## Deployment
-
-### GitHub Actions
-
-The repository includes automated workflows for:
-
-- **CI/CD** - Run tests and quality checks on every PR
-- **Deployment** - Process regions via manual workflow dispatch
-- **Integration Tests** - End-to-end pipeline validation
-
-### Manual Deployment
-
-```bash
-# Production deployment
-ocr run
-  --all-region-ids
-  --platform local
-  --env-file production.env
 ```
 
 ## Data Products

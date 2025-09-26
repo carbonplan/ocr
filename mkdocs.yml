@@ -4,7 +4,7 @@ repo_name: carbonplan/ocr
 repo_url: https://github.com/carbonplan/ocr
 site_description: CarbonPlan's Open Climate Risk platform
 site_author: CarbonPlan
-# site_url: TODO
+site_url: https://carbonplan.github.io/ocr/
 docs_dir: docs
 
 extra:
@@ -96,6 +96,10 @@ plugins:
   - markdown-exec
   - social
   - material-plausible
+  - mermaid2
+  - panzoom:
+      always_show_hint: true
+      full_screen: True
   - mike:
       alias_type: "copy"
       canonical_version: "latest"
@@ -163,7 +167,11 @@ markdown_extensions:
       hide_protocol: true
       repo_url_shortener: true
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
