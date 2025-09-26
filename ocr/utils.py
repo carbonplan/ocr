@@ -6,7 +6,7 @@ import xarray as xr
 from upath import UPath
 
 
-def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None):
+def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None) -> None:
     """Register AWS credentials as a DuckDB SECRET on the given connection.
 
     Parameters
@@ -46,7 +46,7 @@ def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None):
 
 def install_load_extensions(
     aws: bool = True, spatial: bool = True, httpfs: bool = True, con: Any | None = None
-):
+) -> None:
     """
     Installs and applies duckdb extensions.
 
@@ -75,27 +75,6 @@ def install_load_extensions(
         duckdb.sql(ext_str)
     else:
         con.execute(ext_str)
-
-
-def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
-    """
-    Convert longitude values from 0-360 to -180-180.
-
-    Note: `longitude` is required dim/coord.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Input Xarray dataset
-
-    Returns
-    -------
-    xr.Dataset
-        Dataset with longitude coordinates converted to -180-180 range
-    """
-    lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
-    ds = ds.assign_coords(longitude=lon)
-    return ds
 
 
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
@@ -136,7 +115,9 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     return nearest_pixels.values
 
 
-def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y') -> tuple:
+def bbox_tuple_from_xarray_extent(
+    ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y'
+) -> tuple[float, float, float, float]:
     """
     Creates a bounding box from an Xarray Dataset extent.
 
@@ -163,7 +144,7 @@ def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str
 
 def copy_or_upload(
     src: UPath, dest: UPath, overwrite: bool = True, chunk_size: int = 16 * 1024 * 1024
-):
+) -> None:
     """
     Copy a single file from src to dest using UPath/fsspec.
     - Uses server-side copy if available on the same filesystem (e.g., s3->s3).

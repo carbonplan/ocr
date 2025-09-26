@@ -17,7 +17,7 @@ def load_conus404(add_spatial_constants: bool = True) -> xr.Dataset:
 
     Returns
     -------
-    xr.Dataset
+    ds : xr.Dataset
         The CONUS 404 dataset.
     """
 
@@ -70,7 +70,7 @@ def compute_relative_humidity(ds: xr.Dataset) -> xr.DataArray:
 
     Returns
     -------
-    xr.DataArray
+    hurs : xr.DataArray
         Relative humidity as a percentage.
     """
     with xr.set_options(keep_attrs=True):
@@ -82,8 +82,20 @@ def compute_relative_humidity(ds: xr.Dataset) -> xr.DataArray:
 
 def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
     """Rotate grid-relative 10 m winds (U10,V10) to earth-relative components.
+    Uses SINALPHA / COSALPHA convention from WRF.
 
-    Uses SINALPHA / COSALPHA convention from WRF (same as notebook).
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Input dataset containing 'U10', 'V10', 'SINALPHA', and 'COSALPHA'.
+
+    Returns
+    -------
+    earth_u : xr.DataArray
+        Earth-relative U component of wind at 10 m.
+    earth_v : xr.DataArray
+        Earth-relative V component of wind at 10 m.
+
 
     """
     # rotate the grid-relative winds to earth-relative winds: https://forum.mmm.ucar.edu/threads/rotating-wrf-u-and-v-winds-before-and-after-reprojection.11788/
@@ -98,7 +110,20 @@ def rotate_winds_to_earth(ds: xr.Dataset) -> tuple[xr.DataArray, xr.DataArray]:
 
 
 def compute_wind_speed_and_direction(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
-    """Derive hourly wind speed (m/s) and direction (degrees from) using xclim."""
+    """Derive hourly wind speed (m/s) and direction (degrees from) using xclim.
+
+    Parameters
+    ----------
+    u10 : xr.DataArray
+        U component of wind at 10 m (m/s).
+    v10 : xr.DataArray
+        V component of wind at 10 m (m/s).
+
+    Returns
+    -------
+    wind_ds : xr.Dataset
+        Dataset containing wind speed ('sfcWind') and wind direction ('sfcWindfromdir').
+    """
     winds = convert.wind_speed_from_vector(uas=u10, vas=v10)
     winds = cast(tuple[xr.DataArray, xr.DataArray], winds)
     # xclim returns a tuple-like (speed, direction). Merge keeps names (sfcWind, sfcWindfromdir)
@@ -130,6 +155,21 @@ def geo_sel(
       - (lon AND lat)
       - (lons AND lats)
       - bbox=(west, south, east, north)
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+      Input dataset with x, y coordinates and a valid 'crs' variable with WKT
+    lon : float, optional
+      Longitude of point to select, by default None
+    lat : float, optional
+      Latitude of point to select, by default None
+    bbox : tuple, optional
+      Bounding box to select (west, south, east, north), by default None
+    method : str, optional
+      Method to use for point selection, by default 'nearest'
+    tolerance : float, optional
+      Tolerance (in units of the dataset's CRS) for point selection, by default None
 
     Returns
     -------
