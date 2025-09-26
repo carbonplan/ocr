@@ -95,7 +95,7 @@ def test_fire_wind_risk_regional_aggregator(tmp_path, region_risk_parquet):
         assert building_count == len(b_gdf), 'Building count mismatch'
 
         # Validate a representative histogram column
-        hist_col = 'risk_2011_horizon_1'
+        hist_col = 'wind_risk_2011_horizon_1'
         assert hist_col in df.columns, f'Missing histogram column {hist_col}'
         # Extract histogram values robustly (duckdb list column, possible scalar, or stringified list)
         import ast
@@ -132,7 +132,7 @@ def test_fire_wind_risk_regional_aggregator(tmp_path, region_risk_parquet):
         assert inferred_zero >= 0, 'Inferred zero bucket negative'
 
         # Validate averages within [0,100]
-        avg_col = 'avg_risk_2011_horizon_1'
+        avg_col = 'avg_USFS_RPS_horizon_1'
         avg_raw = df[avg_col].iloc[0]
 
         avg_val = float(avg_raw)
