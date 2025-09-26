@@ -94,6 +94,10 @@
         "--verbose",
     ]
     console_output_style = "count"
+    markers = [
+        "integration: marks tests that require external resources or complex setups",
+        "unit: marks tests that are fast and isolated from external systems",
+    ]
 
 [tool.uv.sources]
     ocr = { workspace = true }
@@ -117,10 +121,11 @@
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
-    format         = { cmd = "ruff format" }
-    lint           = { cmd = "pre-commit run --all-files" }
-    run-ruff-check = { cmd = "ruff check" }
-    tests          = { cmd = "pytest" }
+    format            = { cmd = "ruff format" }
+    lint              = { cmd = "pre-commit run --all-files" }
+    run-ruff-check    = { cmd = "ruff check" }
+    tests             = { cmd = "pytest -m 'not integration'" }
+    tests-integration = { cmd = "pytest -m 'integration'" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }

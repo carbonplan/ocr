@@ -2,13 +2,12 @@ import geopandas as gpd
 import xarray as xr
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
 from ocr.datasets import catalog
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
-
-from ..config import OCRConfig
 
 
 def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
@@ -65,6 +64,10 @@ def calculate_risk(
     )
 
     dset = ds.sel(latitude=y_slice, longitude=x_slice)
+    if config.debug:
+        console.log(
+            f'Selected data for region {region_id} with x_slice: {x_slice} and y_slice: {y_slice}. Sampling buildings...'
+        )
 
     buildings_gdf = sample_risk_to_buildings(ds=dset)
 

@@ -1,8 +1,8 @@
 # OCR - Open Climate Risk Platform
 
-| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![E2E Tests][github-e2e-badge]][github-e2e-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
-| :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| **License** |                                                                                                                                [![License][license-badge]][repo-link]                                                                                                                                |
+| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
+| :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| **License** |                                                                                                       [![License][license-badge]][repo-link]                                                                                                       |
 
 A scalable pipeline for calculating climate risk assessments at building-level resolution across the continental United States. OCR processes wildfire and wind risk data through a distributed processing system that can run locally or on cloud infrastructure.
 
@@ -171,8 +171,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [github-ci-link]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml
 [github-deploy-badge]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml/badge.svg
 [github-deploy-link]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml
-[github-e2e-badge]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml/badge.svg
-[github-e2e-link]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml
 [codecov-badge]: https://img.shields.io/codecov/c/github/carbonplan/ocr.svg?logo=codecov
 [codecov-link]: https://codecov.io/gh/carbonplan/ocr
 [license-badge]: https://img.shields.io/github/license/carbonplan/ocr
