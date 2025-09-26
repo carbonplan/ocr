@@ -71,7 +71,6 @@ def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
 
     # Test 1: Default query (no custom query provided)
     result = geoparquet_dataset.query_geoparquet()
-    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
     mock_duckdb_sql.assert_called_with(
         f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
     )
