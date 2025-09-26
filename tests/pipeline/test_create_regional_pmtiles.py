@@ -93,9 +93,8 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
         SELECT json_object(
             'tract_geoid', NAME,
             'building_count', building_count,
-            'avg_risk_2011_horizon_1', avg_risk_2011_horizon_1,
-            'risk_2011_horizon_1', risk_2011_horizon_1,
-            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1
+            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
+            'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1
         ) AS props
         FROM read_parquet('{cfg.vector.tracts_summary_stats_uri}')
         LIMIT 1
@@ -104,9 +103,8 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
         SELECT json_object(
             'county_name', NAME,
             'building_count', building_count,
-            'avg_risk_2011_horizon_1', avg_risk_2011_horizon_1,
-            'risk_2011_horizon_1', risk_2011_horizon_1,
-            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1
+            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
+            'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1
         ) AS props
         FROM read_parquet('{cfg.vector.counties_summary_stats_uri}')
         LIMIT 1
@@ -121,17 +119,15 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
     for k in [
         'tract_geoid',
         'building_count',
-        'avg_risk_2011_horizon_1',
-        'risk_2011_horizon_1',
         'wind_risk_2011_horizon_1',
+        'wind_risk_2047_horizon_1',
     ]:
         assert k in tract_props, f'Missing key {k} in tract properties JSON'
     for k in [
         'county_name',
         'building_count',
-        'avg_risk_2011_horizon_1',
-        'risk_2011_horizon_1',
         'wind_risk_2011_horizon_1',
+        'wind_risk_2047_horizon_1',
     ]:
         assert k in county_props, f'Missing key {k} in county properties JSON'
     assert tract_props['tract_geoid'] == '000000000000000'
