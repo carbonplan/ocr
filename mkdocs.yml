@@ -97,6 +97,8 @@ plugins:
   - social
   - material-plausible
   - mermaid2
+  - panzoom:
+      always_show_hint: true
   - mike:
       alias_type: "copy"
       canonical_version: "latest"

@@ -170,6 +170,7 @@
     markdown-exec             = ">=1.11.0, <2"
     material-plausible-plugin = ">=0.3.0,<0.4"
     mkdocs-mermaid2-plugin    = ">=1.2.2,<2"
+    mkdocs-panzoom-plugin     = ">=0.4.2,<0.5"
 
 [tool.pixi.feature.coiled-deploy.dependencies]
     coiled               = ">=1.120.0,<2"
