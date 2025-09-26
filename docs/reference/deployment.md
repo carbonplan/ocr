@@ -1,13 +1,152 @@
-# GitHub Actions Deployment Workflow Visualization
+# OCR Deployment Reference
 
-This document visualizes the deployment workflow logic used to deploy OCR including triggers, input-based branching, and environment variable assignments.
+This document provides a comprehensive reference for the OCR deployment workflow, detailing the complete pipeline from data processing through deployment automation.
 
-## Mermaid Diagram
+## Overview
+
+The OCR project uses a multi-stage pipeline that processes regional data, aggregates results, and generates visualization tiles. The entire workflow is orchestrated through GitHub Actions with automatic deployments to multiple environments (QA, staging, and production).
+
+## Processing Pipeline Architecture
+
+The OCR processing pipeline consists of three main phases, each with specific computational requirements and error handling mechanisms. The pipeline leverages Coiled for distributed computing and includes automatic retry logic for resilient processing.
+
+### Pipeline Phases
+
+1. **Region Processing (Phase 01)**: Distributed processing of geographic regions with automatic retry capabilities
+2. **Aggregation (Phase 02)**: Data consolidation and statistical summary generation
+3. **Tile Generation (Phase 03)**: Creation of PMTiles for efficient map visualization
+
+### Pipeline Visualization
 
 ```mermaid
+%%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
+graph TB
+    %% Start and Configuration
+    Start([Start OCR Pipeline])
+    CheckEnv{COILED_SOFTWARE_ENV_NAME<br/>Set?}
+    Start --> CheckEnv
+
+    CheckEnv -->|No| LogError[Log Error:<br/>Package sync warning]
+    CheckEnv -->|Yes| ConfigRegions[Configure Regions<br/>select_region_ids]
+    LogError --> ConfigRegions
+
+    %% Section 01: Process Regions with Retry Logic
+    subgraph Section01["<b>Phase 01 - Process Regions</b>"]
+        InitAttempt[Initialize Attempt = 1]
+        ConfigRegions --> InitAttempt
+
+        ProcessRegions[["🔄 <b>process-region</b><br/>Command: ocr process-region<br/>Platform: COILED<br/>Map over: remaining regions<br/>Risk Type: specified"]]
+
+        InitAttempt --> ProcessRegions
+
+        CheckFailed{Any Failures?}
+        ProcessRegions --> CheckFailed
+
+        CheckRetries{Attempt ≤<br/>process_retries?}
+        CheckFailed -->|Yes| CheckRetries
+
+        IncrementAttempt[Increment Attempt<br/>Sleep: 5 * attempt seconds]
+        CheckRetries -->|Yes| IncrementAttempt
+        IncrementAttempt --> ProcessRegions
+
+        RetryError[RuntimeError:<br/>Failed after max retries]
+        CheckRetries -->|No| RetryError
+    end
+
+    %% Section 02: Aggregation
+    subgraph Section02["<b>Phase 02 - Aggregation</b>"]
+        AggregateGeo[["📊 <b>aggregate</b><br/>Command: ocr aggregate<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Creates GeoParquet"]]
+
+        CheckFailed -->|No| AggregateGeo
+
+        CheckWriteRegion{write_region_files?}
+        AggregateGeo --> CheckWriteRegion
+
+        WriteRegionFiles[["📝 <b>write-aggregated-region-analysis-files</b><br/>Command: ocr write-aggregated-<br/>region-analysis-files<br/>VM: m8g.2xlarge"]]
+        CheckWriteRegion -->|Yes| WriteRegionFiles
+
+        RegionSummaryStats[["📈 <b>aggregate-region-risk-summary-stats</b><br/>Command: ocr aggregate-region-<br/>risk-summary-stats<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge"]]
+        CheckWriteRegion -->|No| RegionSummaryStats
+        WriteRegionFiles --> RegionSummaryStats
+
+        RegionalPMTiles[["🗺️ <b>create-regional-pmtiles</b><br/>Command: ocr create-regional-pmtiles<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Disk: 250 GB"]]
+        RegionSummaryStats --> RegionalPMTiles
+    end
+
+    %% Section 03: Tiles Creation
+    subgraph Section03["<b>Phase 03 - Tile Generation</b>"]
+        CreatePMTiles[["🌍 <b>create-pmtiles</b><br/>Command: ocr create-pmtiles<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Disk: 250 GB"]]
+        RegionalPMTiles --> CreatePMTiles
+    end
+
+    %% End States
+    Success([Pipeline Complete ✓])
+    CreatePMTiles --> Success
+
+    Failure([Pipeline Failed ✗])
+    RetryError --> Failure
+
+    %% Job Manager Labels
+    Manager1[batch_manager_01]
+    Manager2[batch_manager_aggregate_02]
+    Manager3[batch_manager_write_aggregated_<br/>region_analysis_files_01]
+    Manager4[batch_manager_county_<br/>aggregation_01]
+    Manager5[batch_manager_county_<br/>tiles_02]
+    Manager6[batch_manager_03]
+
+    %% Connect managers to their jobs (dotted lines for reference)
+    Manager1 -.-> ProcessRegions
+    Manager2 -.-> AggregateGeo
+    Manager3 -.-> WriteRegionFiles
+    Manager4 -.-> RegionSummaryStats
+    Manager5 -.-> RegionalPMTiles
+    Manager6 -.-> CreatePMTiles
+
+    %% Styling with theme-neutral colors
+    classDef process fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    classDef aggregate fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6
+    classDef tiles fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#047857
+    classDef decision fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#9a3412
+    classDef error fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b
+    classDef manager fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,stroke-dasharray: 5 5,color:#4b5563
+    classDef success fill:#bbf7d0,stroke:#16a34a,stroke-width:3px,color:#14532d
+
+    class ProcessRegions process
+    class AggregateGeo,WriteRegionFiles,RegionSummaryStats aggregate
+    class RegionalPMTiles,CreatePMTiles tiles
+    class CheckEnv,CheckFailed,CheckRetries,CheckWriteRegion decision
+    class RetryError,LogError,Failure error
+    class Manager1,Manager2,Manager3,Manager4,Manager5,Manager6 manager
+    class Success success
+    class Start process
+```
+
+### Key Pipeline Features
+
+- **Automatic Retry Logic**: Failed region processing attempts are automatically retried with exponential backoff (5 seconds × attempt number)
+- **Distributed Processing**: Leverages Coiled for parallel processing across multiple regions
+- **Resource Optimization**: Each job is configured with specific VM types and disk requirements optimized for its workload
+- **Conditional Branching**: Optional region file writing based on deployment configuration
+
+## Deployment Automation via GitHub Actions
+
+The deployment workflow automates the entire release process from development through production, with built-in safeguards and environment-specific configurations.
+
+### Deployment Environments
+
+| Environment    | Trigger                         | Purpose                     | URL                          |
+| -------------- | ------------------------------- | --------------------------- | ---------------------------- |
+| **QA**         | PR with `e2e` or `QA/QC` labels | Testing and validation      | `ocr.qa.carbonplan.org`      |
+| **Staging**    | Push to `main` branch           | Pre-production verification | `ocr.staging.carbonplan.org` |
+| **Production** | Release publication             | Live system                 | `ocr.carbonplan.org`         |
+
+### Deployment Workflow Visualization
+
+```mermaid
+%%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
 graph TB
     %% Trigger Events
-    Start([Workflow Triggers])
+    Start([<b>Workflow Triggers</b>])
     Push[Push to main]
     PR[Pull Request to main]
     Release[Release Published]
@@ -19,7 +158,7 @@ graph TB
     Start --> Manual
 
     %% Coiled Software Environment Job
-    CoiledSoftware[["ocr-coiled-software<br/>Create Coiled Environment<br/>Output: name"]]
+    CoiledSoftware[["<b>ocr-coiled-software</b><br/>Create Coiled Environment<br/>Output: name"]]
 
     Push --> CoiledSoftware
     PR --> CoiledSoftware
@@ -27,11 +166,11 @@ graph TB
     Manual --> CoiledSoftware
 
     %% Conditional Jobs
-    QA_PR{{"qa-pr<br/>IF: PR with e2e/QA labels<br/>Environment: qa"}}
-    Staging_Main{{"staging-main<br/>IF: Push to main<br/>Environment: staging"}}
-    Manual_Deploy{{"manual<br/>IF: Manual & no prod tag<br/>Environment: qa/staging"}}
-    Production{{"production<br/>IF: Release published<br/>Environment: production"}}
-    Production_Rerun{{"production-rerun<br/>IF: Manual & prod tag<br/>Environment: production"}}
+    QA_PR{{"<b>qa-pr</b><br/>IF: PR with e2e/QA labels<br/>Environment: qa"}}
+    Staging_Main{{"<b>staging-main</b><br/>IF: Push to main<br/>Environment: staging"}}
+    Manual_Deploy{{"<b>manual</b><br/>IF: Manual & no prod tag<br/>Environment: qa/staging"}}
+    Production{{"<b>production</b><br/>IF: Release published<br/>Environment: production"}}
+    Production_Rerun{{"<b>production-rerun</b><br/>IF: Manual & prod tag<br/>Environment: production"}}
 
     %% Job Dependencies and Conditions
     CoiledSoftware --> QA_PR
@@ -47,11 +186,11 @@ graph TB
     Manual --> |"production_tag != empty"| Production_Rerun
 
     %% Job Details
-    QA_PR_Details[["QA Deploy<br/>• Regions: y2_x5-x7<br/>• Wipe: true<br/>• URL: ocr.qa.carbonplan.org"]]
-    Staging_Main_Details[["Staging Deploy<br/>• Regions: Multiple specified<br/>• Wipe: true<br/>• URL: ocr.staging.carbonplan.org"]]
-    Manual_Deploy_Details[["Manual Deploy<br/>• Regions: User choice<br/>• Wipe: User choice<br/>• URL: Based on environment"]]
-    Production_Details[["Production Deploy<br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
-    Production_Rerun_Details[["Production Redeploy<br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
+    QA_PR_Details[["<b>QA Deploy</b><br/>• Regions: y2_x5-x7<br/>• Wipe: true<br/>• URL: ocr.qa.carbonplan.org"]]
+    Staging_Main_Details[["<b>Staging Deploy</b><br/>• Regions: Multiple specified<br/>• Wipe: true<br/>• URL: ocr.staging.carbonplan.org"]]
+    Manual_Deploy_Details[["<b>Manual Deploy</b><br/>• Regions: User choice<br/>• Wipe: User choice<br/>• URL: Based on environment"]]
+    Production_Details[["<b>Production Deploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
+    Production_Rerun_Details[["<b>Production Redeploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
 
     QA_PR --> QA_PR_Details
     Staging_Main --> Staging_Main_Details
@@ -59,15 +198,79 @@ graph TB
     Production --> Production_Details
     Production_Rerun --> Production_Rerun_Details
 
-    %% Styling
-    classDef trigger fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef job fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef conditional fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef deploy fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    %% Styling with theme-neutral colors
+    classDef trigger fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985
+    classDef job fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+    classDef conditional fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    classDef deploy fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534
+    classDef rerun fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#9f1239
 
     class Start,Push,PR,Release,Manual trigger
     class CoiledSoftware job
-    class QA_PR,Staging_Main,Manual_Deploy,Production,Production_Rerun conditional
+    class QA_PR,Staging_Main,Manual_Deploy conditional
+    class Production,Production_Rerun rerun
     class QA_PR_Details,Staging_Main_Details,Manual_Deploy_Details,Production_Details,Production_Rerun_Details deploy
-
 ```
+
+### Workflow Features
+
+#### Automatic Deployments
+
+- **QA**: Triggered automatically when PRs to main include `e2e` or `QA/QC` labels
+- **Staging**: Deployed automatically on every push to the main branch
+- **Production**: Released automatically when a new version is published
+
+#### Manual Controls
+
+- **Environment Selection**: Choose between QA and staging for manual deployments
+- **Region Selection**: Deploy specific regions or all regions
+- **Data Management**: Option to wipe existing data before deployment
+- **Production Redeployment**: Redeploy specific versions to production using semantic version tags
+
+#### Safety Features
+
+- **Environment Isolation**: Each environment uses separate configuration files
+- **Version Tracking**: Production deployments are tagged with semantic versions
+- **Concurrency Control**: Prevents simultaneous deployments to the same environment
+- **Rollback Capability**: Production can be redeployed to any previous version
+
+## Configuration Management
+
+### Environment Variables
+
+Each environment maintains its own configuration file:
+
+- **QA**: `ocr-coiled-s3.env`
+- **Staging**: `ocr-coiled-s3-staging.env`
+- **Production**: `ocr-coiled-s3-production.env`
+
+### Key Configuration Parameters
+
+| Parameter                  | Description                        | Example                       |
+| -------------------------- | ---------------------------------- | ----------------------------- |
+| `OCR_ENVIRONMENT`          | Target deployment environment      | `qa`, `staging`, `production` |
+| `OCR_VERSION`              | Semantic version (production only) | `1.2.3`                       |
+| `COILED_SOFTWARE_ENV_NAME` | Coiled environment identifier      | `ocr-main`, `ocr-v1-2-3`      |
+
+## Best Practices
+
+1. **Testing**: Always test changes in QA before merging to main
+2. **Labeling**: Use appropriate labels (`e2e`, `QA/QC`) for automatic QA deployments
+3. **Versioning**: Follow semantic versioning for production releases
+4. **Monitoring**: Check deployment URLs after each deployment to verify success
+5. **Documentation**: Update this reference when workflow changes are made
+
+## Troubleshooting
+
+### Common Issues
+
+- **Region Processing Failures**: Check retry logs; system automatically retries up to the configured limit
+- **Environment Variable Missing**: Ensure `COILED_SOFTWARE_ENV_NAME` is set in GitHub Actions
+- **Deployment Conflicts**: Wait for current deployment to complete; concurrency controls prevent overlaps
+- **Version Mismatch**: Verify semantic version format when redeploying to production
+
+### Support Resources
+
+- Check deployment status at the environment URLs listed above
+- Review GitHub Actions logs for detailed error messages
+- Consult Coiled dashboard for distributed job execution details
