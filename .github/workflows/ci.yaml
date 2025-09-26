@@ -48,7 +48,7 @@ jobs:
       - name: Set Codecov env vars
         run: |
           echo "OS=${{ runner.os }}" >> $GITHUB_ENV
-          echo "PYTHON=3.13" >> $GITHUB_ENV
+          echo "PYTHON=$(pixi run --environment dev python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" >> $GITHUB_ENV
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v5.4.3
@@ -104,7 +104,7 @@ jobs:
         if: success() # only attempt upload if tests ran
         run: |
           echo "OS=${{ runner.os }}" >> $GITHUB_ENV
-          echo "PYTHON=3.13" >> $GITHUB_ENV
+          echo "PYTHON=$(pixi run --environment dev python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" >> $GITHUB_ENV
 
       - name: Upload code coverage to Codecov (integration)
         uses: codecov/codecov-action@v5.4.3
