@@ -17,7 +17,7 @@ permissions:
   contents: read # This is required for actions/checkout
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -62,7 +62,7 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
-  integration-test:
+  integration-tests:
     runs-on: ubuntu-latest
     if: |
       github.event_name != 'pull_request' ||
