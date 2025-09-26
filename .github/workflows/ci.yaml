@@ -61,3 +61,59 @@ jobs:
           name: codecov-unit
           fail_ci_if_error: false
           verbose: true
+
+  integration-test:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        (
+          contains(github.event.pull_request.labels.*.name, 'e2e')
+        ) ||
+        (
+          contains(github.event.pull_request.title, '[e2e]') ||
+          contains(github.event.pull_request.body, '[e2e]')
+        )
+      )
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          cache: false # no pixi.lock
+          locked: false
+          activate-environment: true
+
+      - run: pixi info
+      - name: List installed libraries/packages
+        run: |
+          pixi list -e dev
+
+      - name: Running Integration Tests
+        run: |
+          pixi run -e dev tests-integration -s
+
+      - name: Set Codecov env vars
+        if: success() # only attempt upload if tests ran
+        run: |
+          echo "OS=${{ runner.os }}" >> $GITHUB_ENV
+          echo "PYTHON=3.13" >> $GITHUB_ENV
+
+      - name: Upload code coverage to Codecov (integration)
+        uses: codecov/codecov-action@v5.4.3
+        if: success()
+        with:
+          # token: ${{ secrets.CODECOV_TOKEN }}  # uncomment if repository is private
+          files: ./coverage.xml
+          flags: integration
+          env_vars: OS,PYTHON
+          name: codecov-integration
+          fail_ci_if_error: false # don't fail whole job on coverage upload issues for integration
+          verbose: true
