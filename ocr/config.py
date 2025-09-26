@@ -8,6 +8,7 @@ from pathlib import Path
 import dotenv
 import icechunk
 import numpy as np
+import odc.geo.xr  # noqa
 import pydantic
 import pydantic_settings
 import xarray as xr
@@ -78,8 +79,6 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def ds(self):
-        import odc.geo.xr  # noqa
-
         dataset = (
             catalog.get_dataset('USFS-wildfire-risk-communities-4326')
             .to_xarray()
@@ -90,8 +89,6 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def transform(self):
-        import odc.geo.xr  # noqa
-
         return self.ds.odc.geobox.transform
 
     @functools.cached_property
@@ -551,23 +548,69 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     #         else:
     #             empty_region_ids.append(region_id)
 
-    def index_to_coords(self, x_idx, y_idx):
-        """Convert array indices to EPSG:4326 coordinates"""
+    def index_to_coords(self, x_idx: int, y_idx: int) -> tuple[float, float]:
+        """Convert array indices to EPSG:4326 coordinates
+
+        Parameters
+        ----------
+        x_idx : int
+            Index along the x-dimension (longitude)
+        y_idx : int
+            Index along the y-dimension (latitude)
+
+        Returns
+        -------
+        x, y : tuple[float, float]
+            Corresponding EPSG:4326 coordinates (longitude, latitude)
+        """
         x, y = self.transform * (x_idx, y_idx)
         return x, y
 
     def chunks_to_slices(self, chunks: dict) -> dict:
-        """Create a dict of chunk_ids and slices from input chunk dict"""
+        """Create a dict of chunk_ids and slices from input chunk dict
+
+        Parameters
+        ----------
+        chunks : dict
+            Dictionary with chunk sizes for 'longitude' and 'latitude'
+
+        Returns
+        -------
+        dict
+            Dictionary with chunk IDs as keys and corresponding slices as values
+        """
         return {key: self.chunk_id_to_slice(value) for key, value in chunks.items()}
 
     def region_id_chunk_lookup(self, region_id: str) -> tuple:
-        """given a region_id, ex: 'y5_x14, returns the corresponding chunk (5, 14)"""
+        """given a region_id, ex: 'y5_x14, returns the corresponding chunk (5, 14)
+
+        Parameters
+        ----------
+        region_id : str
+            The region_id for chunk_id lookup.
+
+        Returns
+        -------
+        index : tuple[int, int]
+            The corresponding chunk (iy, ix) for the given region_id.
+        """
         return self.get_chunk_mapping()[region_id]
 
     def region_id_slice_lookup(self, region_id: str) -> tuple:
         """given a region_id, ex: 'y5_x14, returns the corresponding x,y slices. ex:
         (slice(np.int64(30000), np.int64(36000), None),
-        slice(np.int64(85500), np.int64(90000), None))"""
+        slice(np.int64(85500), np.int64(90000), None))
+
+        Parameters
+        ----------
+        region_id : str
+            The region_id for chunk_id lookup.
+
+        Returns
+        -------
+        indexer : tuple[slice]
+            The corresponding slices (y_slice, x_slice) for the given region_id.
+        """
         return self.chunk_id_to_slice(self.region_id_chunk_lookup(region_id))
 
     def chunk_id_to_slice(self, chunk_id: tuple) -> tuple:
@@ -583,7 +626,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
         Returns
         -------
-        tuple[slice]
+        chunk_slices : tuple[slice]
             A tuple of slices (y_slice, x_slice) to extract data for this chunk
         """
         iy, ix = chunk_id
@@ -624,7 +667,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
 
         Returns
         -------
-        tuple
+        latlon_slices : tuple
             (lat_slice, lon_slice)
         """
         chunk_id = self.region_id_chunk_lookup(region_id)
@@ -642,7 +685,13 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         return (y_slice, x_slice)
 
     def get_chunk_mapping(self) -> dict[str, tuple[int, int]]:
-        """Returns a dict of region_ids and their corresponding chunk_indexes."""
+        """Returns a dict of region_ids and their corresponding chunk_indexes.
+
+        Returns
+        -------
+        chunk_mapping : dict
+            Dictionary with region IDs as keys and corresponding chunk indexes (iy, ix) as values
+        """
         chunk_info = self.chunk_info
         y_starts = chunk_info['y_starts']
         x_starts = chunk_info['x_starts']
@@ -910,8 +959,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
         geo_table_name = 'counties'
         return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
-    def upath_delete(self, path):
-        # Use UPath to handle deletion in a cloud-agnostic way
+    def upath_delete(self, path: UPath) -> None:
+        """Use UPath to handle deletion in a cloud-agnostic way"""
         # First, get a list of all files in the region geoparquet prefix
         if path.exists():
             for file in path.rglob('*'):
@@ -1070,7 +1119,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                 console.log('No template found in icechunk store. Creating a new template dataset.')
             self.create_template()
 
-    def repo_and_session(self, readonly: bool = False, branch: str = 'main'):
+    def repo_and_session(self, readonly: bool = False, branch: str = 'main') -> dict:
         """Open an icechunk repository and return the session."""
         storage = self.storage
         repo = icechunk.Repository.open(storage)
@@ -1191,7 +1240,18 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     def insert_region_uncooperative(
         self, subset_ds: xr.Dataset, *, region_id: str, branch: str = 'main'
     ):
-        """Insert region into Icechunk store"""
+        """Insert region into Icechunk store
+
+        Parameters
+        ----------
+        subset_ds : xr.Dataset
+            The subset dataset to insert into the Icechunk store.
+        region_id : str
+            The region ID corresponding to the subset dataset.
+        branch : str, optional
+            The branch to use in the Icechunk repository, by default 'main'.
+
+        """
 
         if self.debug:
             console.log(f'Inserting region: {region_id} into Icechunk store: ')

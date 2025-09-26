@@ -3,6 +3,8 @@ import warnings
 
 import numpy as np
 import xarray as xr
+from odc.geo.xr import assign_crs
+from scipy.ndimage import rotate
 
 from ocr import catalog
 
@@ -14,7 +16,24 @@ def generate_weights(
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
 ) -> np.ndarray:
-    """Generate a 2D array of weights for a circular kernel."""
+    """Generate a 2D array of weights for a circular kernel.
+
+    Parameters
+    ----------
+    method : str, optional
+        The method to use for generating weights. Options are 'skewed' or 'circular_focal_mean'.
+        'skewed' generates an elliptical kernel to simulate wind directionality.
+        'circular_focal_mean' generates a circular kernel, by default 'skewed'
+    kernel_size : float, optional
+        The size of the kernel, by default 81.0
+    circle_diameter : float, optional
+        The diameter of the circle, by default 35.0
+
+    Returns
+    -------
+    weights : np.ndarray
+        A 2D array of weights for the circular kernel.
+    """
     if method == 'circular_focal_mean':
         x, y = np.meshgrid(
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
@@ -51,18 +70,18 @@ def generate_weights(
 def generate_wind_directional_kernels(
     kernel_size: float = 81.0, circle_diameter: float = 35.0
 ) -> dict[str, np.ndarray]:
-    from scipy.ndimage import rotate
-
     """Generate a dictionary of 2D arrays of weights for circular kernels oriented in different directions.
+
     Parameters
     ----------
     kernel_size : float, optional
         The size of the kernel, by default 81.0
     circle_diameter : float, optional
         The diameter of the circle, by default 35.0
+
     Returns
     -------
-    dict[str, np.ndarray]
+    kernels : dict[str, np.ndarray]
         A dictionary of 2D arrays of weights for circular kernels oriented in different directions.
     """
     weights_dict = {}
@@ -127,8 +146,8 @@ def apply_wind_directional_convolution(
 
     Returns
     -------
-    xr.DataArray
-        The DataArray with the directional convolution applied
+    ds : xr.Dataset
+        The Dataset with the directional convolution applied
     """
     import cv2 as cv
 
@@ -223,82 +242,6 @@ def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
     return result
 
 
-def compute_mode_along_time(direction_indices_ds: xr.DataArray) -> xr.DataArray:
-    """
-    Compute the most common wind direction at each location over time.
-    Uses map_blocks instead of apply_ufunc for better performance.
-
-    Parameters:
-    -----------
-    direction_indices_ds : xarray.DataArray
-        DataArray with dimensions (time, latitude, longitude) containing wind direction indices
-
-    Returns:
-    --------
-    xarray.DataArray
-        DataArray with dimensions (latitude, longitude) containing the most common wind direction
-    """
-
-    # Define the function to compute mode on each block
-    def _compute_mode_block(block):
-        # For each lat/lon point, compute mode along time dimension
-        result = np.zeros(block.shape[1:], dtype=np.float32)
-
-        # Iterate over each lat/lon point
-        # We could vectorize this, but explicit iteration makes the axis handling clearer
-        for i in np.ndindex(block.shape[1:]):
-            # Extract the time series for this lat/lon point
-            time_series = block[:, *i]
-
-            # Remove NaNs and placeholders
-            valid_values = time_series[~np.isnan(time_series)]
-
-            if len(valid_values) == 0:
-                result[i] = np.nan  # Return NaN if no valid values
-            else:
-                # Find the mode
-                values, counts = np.unique(valid_values, return_counts=True)
-                result[i] = values[np.argmax(counts)]
-
-        return result
-
-    if hasattr(direction_indices_ds.data, 'map_blocks'):
-        # Use map_blocks to apply our function
-        # The input array shape is (time, lat, lon)
-        # We want to drop the time dimension, so output will be (lat, lon)
-        result_data = direction_indices_ds.data.map_blocks(
-            _compute_mode_block,
-            dtype=np.float32,
-            drop_axis=0,  # Drop the time dimension (axis 0)
-            chunks=direction_indices_ds.data.chunks[1:],  # Output chunks match lat/lon chunks
-        )
-    else:
-        # Fall back for non-dask arrays
-        result_data = _compute_mode_block(direction_indices_ds.data)
-
-    result = xr.DataArray(
-        result_data,
-        dims=direction_indices_ds.dims[1:],  # Use lat/lon dimensions
-        coords={
-            dim: direction_indices_ds[dim] for dim in direction_indices_ds.dims[1:]
-        },  # Copy coordinates
-        name='modal_wind_direction',
-    )
-
-    # Copy attributes from the original DataArray
-    if hasattr(direction_indices_ds, 'attrs'):
-        result.attrs = direction_indices_ds.attrs.copy()
-
-    result.attrs.update(
-        {
-            'long_name': 'Most common wind direction',
-            'description': 'Modal wind direction over the time period',
-        }
-    )
-
-    return result
-
-
 def _bp_dataset_to_direction_da(bp: xr.Dataset) -> xr.DataArray:
     """
     Convert a Dataset with variables named after the 8 directions + 'circular'
@@ -345,7 +288,7 @@ def create_weighted_composite_bp_map(
 
     Returns
     -------
-    xr.DataArray
+    weighted : xr.DataArray
         Weighted composite burn probability with same spatial dims as inputs.
         Name: 'wind_weighted_bp'. Missing (all-zero) distributions yield NaN.
     """
@@ -434,9 +377,21 @@ def classify_wind(
     wind_direction_distribution: xr.DataArray,
     rps_30_subset: xr.Dataset,
 ) -> xr.DataArray:
-    from odc.geo.xr import assign_crs
+    """Classify wind by applying directional convolution and creating a weighted composite burn probability map.
 
-    # Build and apply wind adjustment
+    Parameters
+    ----------
+    climate_run_subset : xr.Dataset
+        Subset of the climate run dataset containing burn probability ('BP') data.
+    wind_direction_distribution : xr.DataArray
+        Wind direction distribution data array.
+    rps_30_subset : xr.Dataset
+        Subset of the USFS wildfire risk communities dataset.
+
+    Returns
+    -------
+    wind_informed_bp_float_corrected : xr.DataArray
+        Wind-informed burn probability data array with corrected coordinates."""
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
@@ -452,6 +407,19 @@ def calculate_wind_adjusted_risk(
     x_slice: slice,
     y_slice: slice,
 ) -> xr.Dataset:
+    """Calculate wind-adjusted fire risk using climate run and wildfire risk datasets.
+
+    Parameters
+    ----------
+    x_slice : slice
+        Slice object for selecting longitude range.
+    y_slice : slice
+        Slice object for selecting latitude range.
+
+    Returns
+    -------
+    fire_risk : xr.Dataset
+        Dataset containing wind-adjusted fire risk variables."""
     # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
@@ -560,7 +528,9 @@ def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
     return fraction
 
 
-def fosberg_fire_weather_index(hurs: xr.DataArray, T2: xr.DataArray, sfcWind: xr.DataArray):
+def fosberg_fire_weather_index(
+    hurs: xr.DataArray, T2: xr.DataArray, sfcWind: xr.DataArray
+) -> xr.DataArray:
     """
     Calculate the Fosberg Fire Weather Index (FFWI) based on relative humidity, temperature, and wind speed.
     taken from https://wikifire.wsl.ch/tiki-indexb1d5.html?page=Fosberg+fire+weather+index&structure=Fire
@@ -631,7 +601,7 @@ def compute_wind_direction_distribution(
 
     Returns
     -------
-    xr.Dataset
+    wind_direction_hist : xr.Dataset
         Wind direction histogram during fire weather conditions.
     """
     # Classify wind directions into 8 cardinal directions
@@ -652,7 +622,7 @@ def compute_wind_direction_distribution(
     return wind_direction_hist.to_dataset().chunk({'x': -1, 'y': -1})
 
 
-def compute_modal_wind_direction(distribution: xr.DataArray):
+def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
     """
     Compute the modal wind direction from the wind direction distribution.
 
@@ -663,7 +633,7 @@ def compute_modal_wind_direction(distribution: xr.DataArray):
 
     Returns
     -------
-    xr.Dataset
+    mode : xr.Dataset
         Modal wind direction.
     """
     # Identify pixels with any fire-weather hours (probabilities sum to 1 else 0)

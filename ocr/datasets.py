@@ -151,11 +151,13 @@ class Dataset(pydantic.BaseModel):
         ... \"\"\")
 
         """
+        from ocr.utils import install_load_extensions
+
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
 
         if install_extensions:
-            duckdb.sql('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+            install_load_extensions()
 
         s3_path = f's3://{self.bucket}/{self.prefix}'
 
