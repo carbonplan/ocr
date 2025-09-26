@@ -1,3 +1,8 @@
+# TODO
+
+- What transformations we did
+- Where it came from
+
 # Input datasets (technical reference + how-to)
 
 This page documents the main input datasets used by OCR and shows how to access them programmatically via the `ocr` dataset catalog. Treat this as a technical reference for dataset names, example usage, and ingestion notes.

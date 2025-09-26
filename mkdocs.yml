@@ -7,18 +7,57 @@ site_author: CarbonPlan
 # site_url: TODO
 docs_dir: docs
 
+extra:
+  analytics:
+    provider: plausible
+    domain: ocr.docs.carbonplan.org #TODO: change this when we have a domain
+    enabled: false # uncomment to disable analytics in dev builds
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: good
+          note: Thanks for your feedback!
+
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: bad
+          note: Thanks for your feedback!
+  social:
+    - icon: "fontawesome/brands/github"
+      link: "https://github.com/carbonplan"
+    - icon: "fontawesome/brands/bluesky"
+      link: "https://bsky.app/profile/carbonplan.org"
+    - icon: "fontawesome/brands/linkedin"
+      link: "https://www.linkedin.com/company/carbonplan"
+  version:
+    provider: mike
+
 nav:
   - Home: index.md
-  - Getting Started:
-      - How-to: how-to/installation.md
+  - How-to Guides:
+      - Getting Started: how-to/getting-started.md
+      - Installation: how-to/installation.md
+      - Working with Data: how-to/work-with-data.ipynb
+
+  - Methods:
+      - Fire Risk:
+          - Overview: methods/fire-risk/overview.md
+          - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
+          - Implementation: methods/fire-risk/implementation.ipynb
+          - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
+          - Caveats & Limitations: methods/fire-risk/limitations.md
+          - Region Atomization: methods/fire-risk/region-atomization.md
+
   - Tutorials:
       - Data Pipeline: tutorials/data-pipeline.md
   - Reference:
       - API: reference/api.md
       - Project Structure: reference/project-structure.md
-  - Explanations:
-      - Input Datasets: explanations/input-datasets.md
-      - Fire Risk: explanations/fire-risk.md
+      - Deployment: reference/deployment.md
+      - Data Schema: reference/data-schema.md
+      - Data Downloads: reference/data-downloads.md
 
 theme:
   language: en
@@ -55,6 +94,16 @@ theme:
 plugins:
   - search
   - markdown-exec
+  - social
+  - material-plausible
+  - mike:
+      alias_type: "copy"
+      canonical_version: "latest"
+  - mkdocs-jupyter:
+      include_source: true
+      ignore: ["*.py", "**/.ipynb_checkpoints/*.ipynb"]
+      enabled: true
+      execute: true
   - mkdocstrings:
       enable_inventory: true
       handlers:
@@ -62,7 +111,6 @@ plugins:
           paths: [ocr]
           options:
             show_if_no_docstring: false
-
             show_root_members_full_path: false
             merge_init_into_class: true
             show_labels: true
@@ -79,19 +127,46 @@ plugins:
             group_by_category: true
             show_category_heading: true
             heading_level: 2
+            extensions:
+              - griffe_inherited_docstrings
 
           inventories:
             - https://docs.python.org/3/objects.inv
+            - https://geopandas.org/en/stable/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+            - https://pandas.pydata.org/pandas-docs/stable/objects.inv
+            - https://docs.xarray.dev/en/stable/objects.inv
+            - https://icechunk.io/en/stable/objects.inv
 
 markdown_extensions:
+  - admonition
+  - attr_list
   - mkdocs-click
+  - codehilite:
+      guess_lang: false
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.arithmatex
+  - pymdownx.betterem
+  - pymdownx.caret:
+      insert: false
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.escapeall:
+      hardbreak: true
+      nbsp: true
+  - pymdownx.magiclink:
+      hide_protocol: true
+      repo_url_shortener: true
+  - pymdownx.smartsymbols
   - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
   - toc:
       permalink: true

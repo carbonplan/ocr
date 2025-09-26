@@ -1,33 +1,52 @@
 import shutil
+from typing import Any
 
 import geopandas as gpd
 import xarray as xr
 from upath import UPath
 
 
-def apply_s3_creds(region: str = 'us-west-2') -> None:
-    """
-    Applies duckdb region and access credentials to session.
+def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None) -> None:
+    """Register AWS credentials as a DuckDB SECRET on the given connection.
 
     Parameters
     ----------
-    region : str, optional
-        AWS Region, by default 'us-west-2'
-
+    region : str
+        AWS region used for S3 access.
+    con : duckdb.DuckDBPyConnection | None
+        Connection to apply credentials to. If None, uses duckdb's default
+        connection (duckdb.sql), preserving prior behavior.
     """
     import boto3
     import duckdb
 
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    return duckdb.sql(f"""CREATE SECRET (
-    TYPE s3,
-    KEY_ID '{credentials.access_key}',
-    SECRET '{credentials.secret_key}',
-    REGION '{region}');""")
+    sess = boto3.Session()
+    creds = sess.get_credentials()
+    if creds is None:
+        raise RuntimeError('No AWS credentials found by boto3.')
+    frozen = creds.get_frozen_credentials()
+
+    parts = [
+        'CREATE OR REPLACE SECRET s3_default (',
+        '  TYPE S3,',
+        f"  KEY_ID '{frozen.access_key}',",
+        f"  SECRET '{frozen.secret_key}',",
+        f"  REGION '{region}'",
+    ]
+    if frozen.token:
+        parts.append(f",  SESSION_TOKEN '{frozen.token}'")
+    parts.append(');')
+    sql = '\n'.join(parts)
+
+    if con is None:
+        duckdb.sql(sql)
+    else:
+        con.execute(sql)
 
 
-def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool = True):
+def install_load_extensions(
+    aws: bool = True, spatial: bool = True, httpfs: bool = True, con: Any | None = None
+) -> None:
     """
     Installs and applies duckdb extensions.
 
@@ -39,6 +58,8 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
         Install and load SPATIAL extension, by default True
     httpfs : bool, optional
         Install and load HTTPFS extension, by default True
+    con : duckdb.DuckDBPyConnection | None
+        Connection to apply extensions to. If None, uses duckdb's default
 
     """
     import duckdb
@@ -50,28 +71,10 @@ def install_load_extensions(aws: bool = True, spatial: bool = True, httpfs: bool
         ext_str += """INSTALL SPATIAL; LOAD SPATIAL;"""
     if httpfs:
         ext_str += """INSTALL httpfs; LOAD httpfs"""
-    return duckdb.sql(ext_str)
-
-
-def lon_to_180(ds: xr.Dataset) -> xr.Dataset:
-    """
-    Convert longitude values from 0-360 to -180-180.
-
-    Note: `longitude` is required dim/coord.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Input Xarray dataset
-
-    Returns
-    -------
-    xr.Dataset
-        Dataset with longitude coordinates converted to -180-180 range
-    """
-    lon = ds['longitude'].where(ds['longitude'] < 180, ds['longitude'] - 360)
-    ds = ds.assign_coords(longitude=lon)
-    return ds
+    if con is None:
+        duckdb.sql(ext_str)
+    else:
+        con.execute(ext_str)
 
 
 def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
@@ -101,7 +104,6 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
 
     TODO: Should/can this be a DataArray for typing
     """
-    import xarray as xr
 
     x_coords, y_coords = gdf.geometry.centroid.x, gdf.geometry.centroid.y
 
@@ -113,7 +115,9 @@ def extract_points(gdf: gpd.GeoDataFrame, da: xr.DataArray) -> xr.DataArray:
     return nearest_pixels.values
 
 
-def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y') -> tuple:
+def bbox_tuple_from_xarray_extent(
+    ds: xr.Dataset, x_name: str = 'x', y_name: str = 'y'
+) -> tuple[float, float, float, float]:
     """
     Creates a bounding box from an Xarray Dataset extent.
 
@@ -140,7 +144,7 @@ def bbox_tuple_from_xarray_extent(ds: xr.Dataset, x_name: str = 'x', y_name: str
 
 def copy_or_upload(
     src: UPath, dest: UPath, overwrite: bool = True, chunk_size: int = 16 * 1024 * 1024
-):
+) -> None:
     """
     Copy a single file from src to dest using UPath/fsspec.
     - Uses server-side copy if available on the same filesystem (e.g., s3->s3).

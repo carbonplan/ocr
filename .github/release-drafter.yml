@@ -1,0 +1,108 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+categories:
+  - title: "⚠️ Breaking Changes"
+    labels:
+      - "major"
+      - "breaking"
+  - title: "✨ Features"
+    labels:
+      - "feature"
+      - "enhancement"
+  - title: "🚀 Improvements"
+    labels:
+      - "improvement"
+      - "optimization"
+      - "ux"
+  - title: "⚡ Performance"
+    labels:
+      - "performance"
+      - "scaling"
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "bug"
+      - "regression"
+  - title: "🧪 Testing & QA"
+    labels:
+      - "test"
+      - "testing"
+      - "QA/QC"
+  - title: "🔁 CI / Automation"
+    labels:
+      - "ci"
+      - "github_actions"
+      - "linting"
+  - title: "🛠️ Refactoring"
+    labels:
+      - "refactor"
+      - "cleanup"
+  - title: "🧹 Code Quality"
+    labels:
+      - "lint"
+      - "code-quality"
+  - title: "📦 Dependencies"
+    labels:
+      - "dependencies"
+      - "deps"
+      - "build"
+  - title: "🌱 Environment & Infrastructure"
+    labels:
+      - "environment"
+      - "infrastructure"
+      - "infra"
+  - title: "🧰 Maintenance"
+    labels:
+      - "maintenance"
+      - "chore"
+      - "repo design"
+  - title: "📚 Documentation"
+    labels:
+      - "documentation"
+      - "docs"
+  - title: "🔐 Security"
+    labels:
+      - "security"
+  - title: "🗂️ Data & Datasets"
+    labels:
+      - "data"
+      - "dataset"
+      - "datasets"
+      - "ingestion"
+      - "cataloging"
+      - "input-data"
+  - title: "🗺️ Geospatial"
+    labels:
+      - "geospatial"
+  - title: "🧮 Modeling / Risk"
+    labels:
+      - "model"
+      - "risk"
+      - "risk-model"
+  - title: "🌀 Pipeline"
+    labels:
+      - "pipeline"
+      - "workflow"
+  - title: "📊 Visualization"
+    labels:
+      - "viz"
+  - title: "📦 Release"
+    labels:
+      - "release"
+      - "packaging"
+change-template: "- $TITLE @$AUTHOR ([#$NUMBER]($URL))"
+change-title-escapes: '\<*_&#@'
+version-resolver:
+  major:
+    labels:
+      - "major"
+  minor:
+    labels:
+      - "feature"
+      - "enhancement"
+  default: patch
+exclude-labels:
+  - "skip-changelog"
+template: |
+  ## Release v$RESOLVED_VERSION (20YY/MM/DD)
+
+  $CHANGES

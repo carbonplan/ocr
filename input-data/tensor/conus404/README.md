@@ -24,9 +24,8 @@ pixi run python input-data/tensor/conus404/subset_conus404_from_osn.py --help   
 │ --spatial-tile-size         INTEGER  Size of spatial tiles for chunking [default: 10]                                                                                                 │
 │ --install-completion                 Install completion for the current shell.                                                                                                        │
 │ --show-completion                    Show completion for the current shell, to copy it or customize the installation.                                                                 │
-│ --help                               Show this message and exit.                                                                                                                      │
+│ --help                               Show this message and exit.                                                                                                                      |
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
 ```
 
 You can run it on coiled with the following command to process a specific variable, for example `U10`:
@@ -97,4 +96,91 @@ Attributes: (12/148)
     YSU_TOPDOWN_PBLMIX:              0
     history:                         Tue Mar 29 16:35:22 2022: ncrcat -A -vW ...
 
+```
+
+## Fosberg Fire Weather Index (FFWI)
+
+The script `compute_fosberg_fire_weather_index.py` computes the Fosberg Fire Weather Index from CONUS404 hourly data, writes the base FFWI field to an Icechunk repo, and postprocesses quantiles and prevailing wind direction during high-FFWI periods. A utility command reprojects the mode product to the geobox of a catalog dataset.
+
+### What it does (FFWI)
+
+- Loads CONUS404 with spatial constants via `load_conus404(add_spatial_constants=True)`.
+- Computes relative humidity from specific humidity and temperature.
+- Rotates grid-relative winds to earth-relative components and derives wind speed and direction.
+- Computes FFWI using `fosberg_fire_weather_index(hurs, T2, sfcWind)` and writes to Icechunk.
+- Saves the derived surface wind fields used in the computation.
+- Postprocesses: time-quantiles of FFWI and wind-direction distribution/mode where FFWI exceeds those quantiles.
+- Reprojects the mode dataset to the `USFS-wildfire-risk-communities-4326` geobox.
+
+### Commands
+
+The module is a Typer app with three subcommands.
+
+1. Compute base FFWI and winds
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute --help
+```
+
+Key options:
+
+- `--dry-run`: Use a tiny spatial slice and skip cluster startup.
+- `--overwrite`: Overwrite existing Icechunk data.
+- `--output-base`: Base path for outputs (S3 or local). Default: `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`.
+- `--min-workers`, `--max-workers`, `--worker-vm-types`: Coiled autoscaling and instance types.
+
+Example (Coiled):
+
+```bash
+pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute \
+  --min-workers 10 --max-workers 70 --worker-vm-types m8g.2xlarge
+```
+
+1. Postprocess quantiles and mode
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess --help
+```
+
+Key options:
+
+- `--quantiles`: List of quantiles to compute (default `[0.95, 0.99]`).
+- `--mode/--no-mode`: Compute prevailing wind direction for hours where FFWI exceeds the quantile.
+- Same cluster options as above.
+
+Example:
+
+```bash
+pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess \
+  --quantiles 0.95 0.99 --mode True
+```
+
+1. Reproject FFWI mode
+
+```bash
+pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py reproject-mode --help
+```
+
+Reprojects the mode dataset to the geobox for `USFS-wildfire-risk-communities-4326`.
+
+### Outputs (FFWI)
+
+Under the base `--output-base` (default `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`):
+
+- `fosberg-fire-weather-index.icechunk` — Base FFWI over time (x, y, time).
+- `winds.icechunk` — Derived surface wind speed and direction fields.
+- `fosberg-fire-weather-index_p95.icechunk`, `fosberg-fire-weather-index_p99.icechunk` — Time-quantiles of FFWI (x, y).
+- `fosberg-fire-weather-index_p95_wind_direction_distribution.icechunk` — Per-direction histogram for hours exceeding the quantile.
+- `fosberg-fire-weather-index_p95_mode.icechunk` — Mode of wind direction during high-FFWI hours.
+- `fosberg-fire-weather-index_p99_mode_reprojected.icechunk` — Mode reprojected to target geobox (when using `reproject-mode`).
+
+### Reading results
+
+```python
+import xarray as xr
+
+base = 's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi'
+ffwi = xr.open_zarr(f'{base}/fosberg-fire-weather-index.icechunk', consolidated=False)
+q99  = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99.icechunk', consolidated=False)
+mode = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99_mode.icechunk', consolidated=False)
 ```

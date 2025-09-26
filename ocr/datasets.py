@@ -151,11 +151,13 @@ class Dataset(pydantic.BaseModel):
         ... \"\"\")
 
         """
+        from ocr.utils import install_load_extensions
+
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
 
         if install_extensions:
-            duckdb.sql('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
+            install_load_extensions()
 
         s3_path = f's3://{self.bucket}/{self.prefix}'
 
@@ -465,6 +467,13 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='RDS-2016-0032-3',
+        description='Spatial datasets of probabilistic wildfire risk components for the United States (270m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/RDS-2016-0034-3-epsg_4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
         bucket='carbonplan-ocr',
@@ -509,14 +518,6 @@ datasets = [
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.parquet',
         data_format='geoparquet',
-    ),
-    Dataset(
-        name='era5-fire-weather-days',
-        description='ERA5 Fire Weather Days',
-        bucket='carbonplan-risks',
-        prefix='era5/fire_weather_days_v2.zarr',
-        data_format='zarr',
-        version='v2',
     ),
     Dataset(
         name='USFS-wildfire-risk-communities',
@@ -575,6 +576,20 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) on native CONUS404 grid',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-fire-weather-wind-mode-hurs15-wind35-reprojected',
+        description='Modal wind direction (0-7 cardinal) during fire-weather hours (RH<15%, gust-like wind>35 mph) reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35-reprojected.zarr',
+        data_format='zarr',
+    ),
+    Dataset(
         name='us-census-tracts',
         description='US Census Tracts',
         bucket='carbonplan-ocr',
@@ -585,8 +600,79 @@ datasets = [
         name='us-census-counties',
         description='US Census Counties',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/aggregated_regions/counties.parquet',
+        prefix='input/fire-risk/vector/aggregated_regions/counties/counties.parquet',
         data_format='geoparquet',
+    ),
+    # CONUS404 Fosberg Fire Weather Index (FFWI) datasets
+    Dataset(
+        name='conus404-ffwi',
+        description='Fosberg Fire Weather Index (FFWI) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95',
+        description='FFWI p95 (95th percentile) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p95.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95-wind-direction-mode',
+        description='Modal wind direction during FFWI p95 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p95-wind-direction-mode.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p95-wind-direction-distribution',
+        description='Wind direction distribution during FFWI p95 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p95-wind-direction-distribution.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99',
+        description='FFWI p99 (99th percentile) on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-wind-direction-mode',
+        description='Modal wind direction during FFWI p99 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-wind-direction-distribution',
+        description='Wind direction distribution during FFWI p99 conditions on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-winds',
+        description='Wind variables associated with FFWI computations on CONUS404 native grid',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/winds.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-wind-direction-mode-reprojected',
+        description='Modal wind direction during FFWI p99 conditions reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode-reprojected.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='conus404-ffwi-p99-wind-direction-distribution-reprojected',
+        description='Wind direction distribution during FFWI p99 conditions reprojected to USFS wildfire risk geobox (EPSG:4326)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-reprojected.icechunk',
+        data_format='zarr',
     ),
 ]
 
