@@ -72,6 +72,13 @@ def run(
         help='Writes region aggregated geospatial analysis files (geoparquet, geojson, csv etc.)',
         show_default=True,
     ),
+    write_per_region: bool = typer.Option(
+        False,
+        '-w',
+        '--write-per-region',
+        help='Writes per region split analysis files (geoparquet, geojson, csv etc.)',
+        show_default=True,
+    ),
     platform: Platform = typer.Option(
         Platform.LOCAL,
         '-p',
@@ -119,6 +126,8 @@ def run(
         parts += ['--platform', platform.value]
         if write_region_files:
             parts += ['--write-region-files']
+        if write_region_files:
+            parts += ['--write_per_region']
         if wipe:
             parts += ['--wipe']
 
@@ -176,12 +185,12 @@ def run(
             region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
             remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-            batch_manager_01 = _get_manager(Platform.COILED, config.debug)
+            manager = _get_manager(Platform.COILED, config.debug)
 
             kwargs = _coiled_kwargs(config, env_file)
             # remove ntasks so we use map semantics
             kwargs.pop('ntasks', None)
-            batch_manager_01.submit_job(
+            manager.submit_job(
                 command=(
                     f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
                 ),
@@ -192,7 +201,7 @@ def run(
                     'software': COILED_SOFTWARE,
                 },
             )
-            completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
+            completed, failed = manager.wait_for_completion(exit_on_failure=False)
 
             if not failed:
                 break
@@ -211,8 +220,8 @@ def run(
             time.sleep(5 * attempt)
 
         # ----------- 02 Aggregate -------------
-        batch_manager_aggregate_02 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_aggregate_02.submit_job(
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr aggregate',
             name=f'aggregate-geoparquet-{config.environment.value}',
             kwargs={
@@ -222,14 +231,12 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
         if write_region_files:
-            batch_manager_write_aggregated_region_analysis_files_01 = _get_manager(
-                Platform.COILED, config.debug
-            )
+            manager = _get_manager(Platform.COILED, config.debug)
 
-            batch_manager_write_aggregated_region_analysis_files_01.submit_job(
+            manager.submit_job(
                 command='ocr write-aggregated-region-analysis-files',
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
                 kwargs={
@@ -238,9 +245,21 @@ def run(
                     'software': COILED_SOFTWARE,
                 },
             )
+        if write_per_region:
+            batch_manager = _get_manager(Platform.COILED, config.debug)
 
-        batch_manager_county_aggregation_01 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_county_aggregation_01.submit_job(
+            batch_manager.submit_job(
+                command='ocr write-per-region-analysis-files',
+                name=f'write-per-region-analysis-files-{config.environment.value}',
+                kwargs={
+                    **_coiled_kwargs(config, env_file),
+                    'vm_type': 'm8g.2xlarge',
+                    'software': COILED_SOFTWARE,
+                },
+            )
+
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr aggregate-region-risk-summary-stats',
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
@@ -250,11 +269,11 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
         # create summary stats PMTiles layer
-        batch_manager_county_tiles_02 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_county_tiles_02.submit_job(
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr create-regional-pmtiles',
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
@@ -268,8 +287,8 @@ def run(
 
         # ------------- 03  Tiles ---------------
 
-        batch_manager_03 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_03.submit_job(
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr create-pmtiles',
             name=f'create-pmtiles-{config.environment.value}',
             kwargs={
@@ -281,7 +300,7 @@ def run(
             },  # PMTiles creation needs more disk space
         )
 
-        batch_manager_03.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
     elif platform == Platform.LOCAL:
         manager = _get_manager(Platform.LOCAL, config.debug)
@@ -317,6 +336,17 @@ def run(
             manager.submit_job(
                 command='ocr write-aggregated-region-analysis-files',
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
+                kwargs={
+                    **_local_kwargs(),
+                },
+            )
+
+        if write_per_region:
+            manager = _get_manager(Platform.LOCAL, config.debug)
+
+            manager.submit_job(
+                command='ocr write-per-region-analysis-files',
+                name=f'write-per-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_local_kwargs(),
                 },
@@ -637,6 +667,60 @@ def write_aggregated_region_analysis_files(
     config = load_config(env_file)
 
     write_aggregated_region_analysis_files(config=config)
+
+
+@app.command()
+def write_per_region_analysis_files(
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
+        show_default=True,
+        exists=True,
+        file_okay=True,
+        resolve_path=True,
+    ),
+    platform: Platform | None = typer.Option(
+        None,
+        '-p',
+        '--platform',
+        help='If set, schedule this command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+    ),
+):
+    """
+    For each region (tract, county) group data and write to multiple geospatial file formats (geoparquet, geojson, csv).
+    """
+
+    # Schedule if requested and not already inside a batch task
+    if platform is not None and not _in_batch():
+        config = load_config(env_file)
+        manager = _get_manager(platform, config.debug)
+        command = 'ocr write-per-region-analysis-files'
+        name = f'write-per-region-analysis-files-{config.environment.value}'
+
+        if platform == Platform.COILED:
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            if vm_type:
+                kwargs['vm_type'] = vm_type
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        manager.wait_for_completion(exit_on_failure=True)
+        return
+
+    from ocr.pipeline.write_per_region_analysis_files import (
+        write_per_region_analysis_files,
+    )
+
+    config = load_config(env_file)
+
+    write_per_region_analysis_files(config=config)
 
 
 @app.command()

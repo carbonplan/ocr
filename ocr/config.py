@@ -942,6 +942,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
+    def per_region_analysis_prefix(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.output_prefix}/per-region-analysis/')
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
         path.mkdir(parents=True, exist_ok=True)
@@ -969,6 +975,15 @@ class VectorConfig(pydantic_settings.BaseSettings):
         else:
             if self.debug:
                 console.log('No files found to delete.')
+
+    def delete_per_region_files(self):
+        """Deletes the per region analysis files"""
+        if self.debug:
+            console.log(
+                f'Deleting per region  analysis files from {self.per_region_analysis_prefix}'
+            )
+        per_region_path = UPath(self.per_region_analysis_prefix)
+        self.upath_delete(per_region_path)
 
     def delete_region_analysis_files(self):
         """Deletes the region aggregated analysis files"""
