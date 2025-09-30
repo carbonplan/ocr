@@ -27,27 +27,33 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
     region_path = UPath(f's3://{region_ds.bucket}/{region_ds.prefix}')
 
     # create joined temp table
-    con.execute(f""" CREATE TEMP TABLE region_grouped_risk AS SELECT  b.NAME, b.GEOID, a.USFS_RPS, a.wind_risk_2011, a.wind_risk_2047,  ST_X(ST_Centroid(b.geometry)) AS longitude,
+    con.execute(f""" CREATE TEMP TABLE {region_type}_grouped_risk AS SELECT  b.NAME, b.GEOID, a.USFS_RPS, a.wind_risk_2011, a.wind_risk_2047,  ST_X(ST_Centroid(b.geometry)) AS longitude,
     ST_Y(ST_Centroid(b.geometry)) AS latitude, a.geometry from read_parquet('{consolidated_buildings_uri.as_uri()}') a
     JOIN read_parquet('{region_path}') b ON ST_Intersects(a.geometry, b.geometry) """)
 
-    geoid_list = con.sql("""SELECT DISTINCT(GEOID) from region_grouped_risk""").fetchnumpy()[
-        'GEOID'
-    ]  # np array
+    geoid_list = con.sql(
+        f"""SELECT DISTINCT(GEOID) from {region_type}_grouped_risk"""
+    ).fetchnumpy()['GEOID']  # np array
 
+    parquet_path = per_region_output_prefix / region_type / 'parquet'
+    parquet_path.mkdir(parents=True, exist_ok=True)
     # write geoparuqet
     for geoid in geoid_list:
-        con.execute(f"""COPY (SELECT * EXCLUDE latitude, longitude FROM region_grouped_risk WHERE GEOID = '{geoid}') TO '{per_region_output_prefix}/{region_type}/parquet/{geoid}.parquet'
+        con.execute(f"""COPY (SELECT * EXCLUDE latitude, longitude FROM {region_type}_grouped_risk WHERE GEOID = '{geoid}') TO '{parquet_path}/{geoid}.parquet'
         (FORMAT parquet,  COMPRESSION 'zstd', OVERWRITE_OR_IGNORE);""")
 
     # write csv
+    csv_path = per_region_output_prefix / region_type / 'csv'
+    csv_path.mkdir(parents=True, exist_ok=True)
     for geoid in geoid_list:
-        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM region_grouped_risk WHERE GEOID = '{geoid}') TO '{per_region_output_prefix}/{region_type}/csv/{geoid}.csv'
+        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM {region_type}_grouped_risk WHERE GEOID = '{geoid}') TO '{csv_path}/{geoid}.csv'
         (FORMAT CSV, OVERWRITE_OR_IGNORE);""")
 
     # write geojson
+    geojson_path = per_region_output_prefix / region_type / 'geojson'
+    geojson_path.mkdir(parents=True, exist_ok=True)
     for geoid in geoid_list:
-        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM region_grouped_risk WHERE GEOID = '{geoid}') TO '{per_region_output_prefix}/{region_type}/geojson/{geoid}.geojson'
+        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM {region_type}_grouped_risk WHERE GEOID = '{geoid}') TO '{geojson_path}/{geoid}.geojson'
         (FORMAT GDAL, DRIVER 'GEOJSON',LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE);""")
 
 
