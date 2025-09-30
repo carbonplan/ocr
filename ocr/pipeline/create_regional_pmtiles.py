@@ -60,26 +60,16 @@ def create_regional_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                        'tract_geoid', NAME,
-                        'building_count', building_count,
-                        'avg_USFS_RPS_horizon_1', avg_USFS_RPS_horizon_1,
-                        'avg_USFS_RPS_horizon_15', avg_USFS_RPS_horizon_15,
-                        'avg_USFS_RPS_horizon_30', avg_USFS_RPS_horizon_30,
-                        'avg_wind_risk_2011_horizon_1', avg_wind_risk_2011_horizon_1,
-                        'avg_wind_risk_2011_horizon_15', avg_wind_risk_2011_horizon_15,
-                        'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
-                        'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
-                        'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                        'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
-                        'USFS_RPS_horizon_1', USFS_RPS_horizon_1,
-                        'USFS_RPS_horizon_15', USFS_RPS_horizon_15,
-                        'USFS_RPS_horizon_30', USFS_RPS_horizon_30,
-                        'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
-                        'wind_risk_2011_horizon_15', wind_risk_2011_horizon_15,
-                        'wind_risk_2011_horizon_30', wind_risk_2011_horizon_30,
-                        'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1,
-                        'wind_risk_2047_horizon_15', wind_risk_2047_horizon_15,
-                        'wind_risk_2047_horizon_30', wind_risk_2047_horizon_30
+                        '0', building_count,
+                        '1', mean_wind_risk_2011,
+                        '2', mean_wind_risk_2047,
+                        '3',median_wind_risk_2011,
+                        '4', median_wind_risk_2047,
+                        '5', wind_risk_2011,
+                        '6', wind_risk_2047,
+                        '7', GEOID,
+
+
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{tracts_summary_stats_path}')
@@ -114,26 +104,17 @@ def create_regional_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                        'county_name', NAME,
-                        'building_count', building_count,
-                        'avg_USFS_RPS_horizon_1', avg_USFS_RPS_horizon_1,
-                        'avg_USFS_RPS_horizon_15', avg_USFS_RPS_horizon_15,
-                        'avg_USFS_RPS_horizon_30', avg_USFS_RPS_horizon_30,
-                        'avg_wind_risk_2011_horizon_1', avg_wind_risk_2011_horizon_1,
-                        'avg_wind_risk_2011_horizon_15', avg_wind_risk_2011_horizon_15,
-                        'avg_wind_risk_2011_horizon_30', avg_wind_risk_2011_horizon_30,
-                        'avg_wind_risk_2047_horizon_1', avg_wind_risk_2047_horizon_1,
-                        'avg_wind_risk_2047_horizon_15', avg_wind_risk_2047_horizon_15,
-                        'avg_wind_risk_2047_horizon_30', avg_wind_risk_2047_horizon_30,
-                        'USFS_RPS_horizon_1', USFS_RPS_horizon_1,
-                        'USFS_RPS1_horizon_15', USFS_RPS_horizon_15,
-                        'USFS_RPS_horizon_30', USFS_RPS_horizon_30,
-                        'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
-                        'wind_risk_2011_horizon_15', wind_risk_2011_horizon_15,
-                        'wind_risk_2011_horizon_30', wind_risk_2011_horizon_30,
-                        'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1,
-                        'wind_risk_2047_horizon_15', wind_risk_2047_horizon_15,
-                        'wind_risk_2047_horizon_30', wind_risk_2047_horizon_30
+
+                        '0', building_count,
+                        '1', mean_wind_risk_2011,
+                        '2', mean_wind_risk_2047,
+                        '3', median_wind_risk_2011,
+                        '4', median_wind_risk_2047,
+                        '5', wind_risk_2011,
+                        '6', wind_risk_2047,
+                        '7', GEOID,
+                        '8', NAME,
+
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{counties_summary_stats_path}')

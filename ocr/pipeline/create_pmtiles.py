@@ -47,9 +47,13 @@ def create_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                        'USFS_RPS', CAST(USFS_RPS AS DECIMAL(10,2)),
-                        'wind_risk_2011', CAST(wind_risk_2011 AS DECIMAL(10,2)),
-                        'wind_risk_2047', CAST(wind_risk_2047 AS DECIMAL(10,2))
+                        '0', wind_risk_2011,
+                        '1', wind_risk_2047,
+                        '2', burn_probability_2011,
+                        '3', burn_probability_2047,
+                        '4',conditional_risk_usfs,
+                        '5',burn_probability_usfs_2011,
+                        '6',burn_probability_usfs_2047
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{input_path}')
