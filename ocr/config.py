@@ -1193,9 +1193,9 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             'wind_risk_2047',
             'burn_probability_2011',
             'burn_probability_2047',
-            'CRPS_USFS',
-            'BP_USFS_2011',
-            'BP_USFS_2047',
+            'conditional_risk_usfs',
+            'burn_probability_usfs_2011',
+            'burn_probability_usfs_2047',
         ]
         template_encoding_dict = {}
         for variable in variables:

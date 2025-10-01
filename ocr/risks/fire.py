@@ -470,13 +470,13 @@ def calculate_wind_adjusted_risk(
     )
 
     # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
-    fire_risk['CRPS_USFS'] = rps_30_subset['CRPS']
+    fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
 
     # burn_probability_usfs_2011 (BP from Riley 2025 (RDS-2025-0006))
-    fire_risk['BP_USFS_2011'] = climate_run_2011_subset['BP']
+    fire_risk['burn_probability_usfs_2011'] = climate_run_2011_subset['BP']
 
     # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
-    fire_risk['BP_USFS_2047'] = climate_run_2047_subset['BP']
+    fire_risk['burn_probability_usfs_2047'] = climate_run_2047_subset['BP']
 
     # trim values less then 0.01 to 0 to match binning.
     fire_risk = fire_risk.where(fire_risk >= 0.01, 0)

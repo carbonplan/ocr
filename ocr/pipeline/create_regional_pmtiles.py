@@ -63,11 +63,11 @@ def create_regional_pmtiles(
                         '0', building_count,
                         '1', mean_wind_risk_2011,
                         '2', mean_wind_risk_2047,
-                        '3',median_wind_risk_2011,
+                        '3', median_wind_risk_2011,
                         '4', median_wind_risk_2047,
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
-                        '7', GEOID,
+                        '7', GEOID
 
 
                     ) AS properties,
@@ -113,7 +113,7 @@ def create_regional_pmtiles(
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
                         '7', GEOID,
-                        '8', NAME,
+                        '8', NAME
 
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry

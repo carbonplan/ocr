@@ -29,7 +29,7 @@ def create_summary_stat_tmp_tables(
     # tmp table for geoms
     con.execute(f"""
         CREATE TEMP TABLE county AS
-        SELECT NAME, GEOID geometry
+        SELECT NAME, GEOID, geometry
         FROM read_parquet('{counties_path}')
         """)
 
@@ -56,6 +56,10 @@ def custom_histogram_query(
     """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
     then add them on to a histogram that excludes values of 0.
     """
+    # optional add if geo_table_name is county, we add a county Name to select.
+    name_column = 'b.NAME as NAME,' if geo_table_name == 'county' else ''
+    name_group_by = ', NAME' if geo_table_name == 'county' else ''
+
     # Connection, extensions, and credentials are managed by caller.
 
     # First temp table: zero counts by county.
@@ -63,13 +67,14 @@ def custom_histogram_query(
     zero_counts_query = f"""
     CREATE TEMP TABLE temp_zero_counts_{geo_table_name} AS
     SELECT
-        b.NAME as NAME,
+        b.GEOID as GEOID,
+        {name_column}
         count(CASE WHEN a.wind_risk_2011 = 0 THEN 1 END) as zero_count_wind_risk_2011,
         count(CASE WHEN a.wind_risk_2047 = 0 THEN 1 END) as zero_count_wind_risk_2047,
 
     FROM buildings a
     JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
-    GROUP BY NAME
+    GROUP BY GEOID{name_group_by}
     """
     con.execute(zero_counts_query)
 
@@ -78,16 +83,20 @@ def custom_histogram_query(
     nonzero_hist_query = f"""
     CREATE TEMP TABLE temp_nonzero_histograms_{geo_table_name} AS
     SELECT
-        b.NAME as NAME,
-        round(avg(a.wind_risk_2011), 2) as avg_wind_risk_2011,
-        round(avg(a.wind_risk_2047), 2) as avg_wind_risk_2047,
+        b.GEOID as GEOID,
+        {name_column}
+        count(b.GEOID) as building_count,
+        avg(a.wind_risk_2011) as mean_wind_risk_2011,
+        avg(a.wind_risk_2047) as mean_wind_risk_2047,
+        median(a.wind_risk_2011) as median_wind_risk_2011,
+        median(a.wind_risk_2047) as median_wind_risk_2047,
         list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2011 <> 0 THEN a.wind_risk_2011 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2011,
         list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2047 <> 0 THEN a.wind_risk_2047 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2047,
 
         b.geometry as geometry
     FROM buildings a
     JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
-    GROUP BY NAME, b.geometry
+    GROUP BY GEOID, b.geometry{name_group_by}
 
     """
 
@@ -101,16 +110,19 @@ def custom_histogram_query(
     # We then write the result to parquet.
     merge_and_write = f""" COPY (
     SELECT
-        h.NAME,
-        h.building_count,
-        h.avg_wind_risk_2011,
-        h.avg_wind_risk_2047,
-        list_concat([z.zero_count_wind_risk_2011], h.nonzero_hist_wind_risk_2011) as wind_risk_2011,
-        list_concat([z.zero_count_wind_risk_2047], h.nonzero_hist_wind_risk_2047) as wind_risk_2047,
+        b.GEOID,
+        {name_column}
+        b.building_count,
+        b.mean_wind_risk_2011,
+        b.mean_wind_risk_2047,
+        b.median_wind_risk_2011,
+        b.median_wind_risk_2047,
+        list_concat([z.zero_count_wind_risk_2011], b.nonzero_hist_wind_risk_2011) as wind_risk_2011,
+        list_concat([z.zero_count_wind_risk_2047], b.nonzero_hist_wind_risk_2047) as wind_risk_2047,
 
-        h.geometry
-    FROM temp_nonzero_histograms_{geo_table_name} h
-    JOIN temp_zero_counts_{geo_table_name} z ON h.NAME = z.NAME)
+        b.geometry
+    FROM temp_nonzero_histograms_{geo_table_name} b
+    JOIN temp_zero_counts_{geo_table_name} z ON b.GEOID = z.GEOID)
         TO '{output_path}'
         (
                 FORMAT 'parquet',
