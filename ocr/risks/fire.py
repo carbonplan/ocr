@@ -318,15 +318,6 @@ def create_weighted_composite_bp_map(
             f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(wind_direction_distribution["direction"].values)}'
         )
 
-    # --- Interpolate (spatial dims only) BEFORE validity / renorm ---
-    spatial_dims = [d for d in bp_da.dims if d != 'direction']
-    # Build a dict of target coords that actually appear in wind_direction_distribution
-    interp_targets = {d: bp_da[d] for d in spatial_dims if d in wind_direction_distribution.dims}
-    if interp_targets:
-        wind_direction_distribution = wind_direction_distribution.interp(
-            interp_targets, method='nearest'
-        )
-
     # Identify invalid / missing rows
     any_nan_row = wind_direction_distribution.isnull().any(dim='direction')
     negative_weights = (wind_direction_distribution < 0).any()
