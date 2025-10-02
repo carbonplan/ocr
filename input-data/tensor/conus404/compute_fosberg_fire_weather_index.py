@@ -467,13 +467,13 @@ def reproject_ffwi(
     _write_icechunk_store(
         out_path=output_path,
         dataset=reprojected_mode,
-        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox.',
+        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox and ensure coords match.',
         overwrite=overwrite,
     )
     _write_icechunk_store(
         out_path=distribution_output_path,
         dataset=reprojected_distribution,
-        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox.',
+        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox and ensure coords match.',
         overwrite=overwrite,
     )
 
