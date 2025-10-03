@@ -56,6 +56,10 @@ def reproject(
         .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
     )
 
+    # To avoid issues with floating point noise in coordinates, we directly adopt the target dataset's coords
+    # fixes https://github.com/carbonplan/ocr/issues/247
+    result = result.assign_coords(latitude=tgt.latitude, longitude=tgt.longitude)
+
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
 
@@ -463,13 +467,13 @@ def reproject_ffwi(
     _write_icechunk_store(
         out_path=output_path,
         dataset=reprojected_mode,
-        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox.',
+        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox and ensure coords match.',
         overwrite=overwrite,
     )
     _write_icechunk_store(
         out_path=distribution_output_path,
         dataset=reprojected_distribution,
-        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox.',
+        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox and ensure coords match.',
         overwrite=overwrite,
     )
 
