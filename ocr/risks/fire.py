@@ -382,7 +382,19 @@ def classify_wind(
 
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
-    return wind_informed_bp
+
+    # We only want to spread (fill) burn probability into areas where it was not
+    # modeled by USFS (NaN in the USFS BP layer). Retain original modeled BP where present.
+    # climate_run_subset['BP'] is the original USFS burn probability. Use it to mask.
+
+    # Fill NaNs in USFS BP with wind-informed BP (2011 / 2047) before multiplying by CRPS.
+    # Preserve original values where USFS BP is finite.
+    # TODO: https://github.com/carbonplan/ocr/issues/257
+    wind_informed_bp_corrected = climate_run_subset['BP'].where(
+        climate_run_subset['BP'].notnull(), wind_informed_bp
+    )
+
+    return wind_informed_bp_corrected
 
 
 def calculate_wind_adjusted_risk(
@@ -423,11 +435,11 @@ def calculate_wind_adjusted_risk(
         .load()
     )
 
-    wind_informed_bp_float_corrected_2011 = classify_wind(
+    wind_informed_bp_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
         wind_direction_distribution=wind_direction_distribution,
     )
-    wind_informed_bp_float_corrected_2047 = classify_wind(
+    wind_informed_bp_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
     )
@@ -435,19 +447,8 @@ def calculate_wind_adjusted_risk(
     # Start fire_risk dataset with USFS RPS (risk to potential structures) baseline
     fire_risk = (rps_30_subset['RPS']).to_dataset(name='USFS_RPS')
 
-    # We only want to spread (fill) burn probability into areas where it was not
-    # modeled by USFS (NaN in the USFS BP layer). Retain original modeled BP where present.
-    # rps_30_subset['BP'] is the original USFS burn probability. Use it to mask.
-    usfs_bp = rps_30_subset['BP']
-
-    # Fill NaNs in USFS BP with wind-informed BP (2011 / 2047) before multiplying by CRPS.
-    # Preserve original values where USFS BP is finite.
-    # TODO: https://github.com/carbonplan/ocr/issues/257
-    filled_bp_2011 = usfs_bp.where(usfs_bp.notnull(), wind_informed_bp_float_corrected_2011)
-    filled_bp_2047 = usfs_bp.where(usfs_bp.notnull(), wind_informed_bp_float_corrected_2047)
-
-    fire_risk['wind_risk_2011'] = filled_bp_2011 * rps_30_subset['CRPS']
-    fire_risk['wind_risk_2047'] = filled_bp_2047 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2011'] = wind_informed_bp_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2047'] = wind_informed_bp_corrected_2047 * rps_30_subset['CRPS']
 
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
