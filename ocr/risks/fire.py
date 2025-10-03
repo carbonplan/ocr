@@ -382,8 +382,6 @@ def classify_wind(
 
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
-    # Fix tiny FP misalignment in .sel of lat/lon between two datasets.
-
     return wind_informed_bp
 
 
