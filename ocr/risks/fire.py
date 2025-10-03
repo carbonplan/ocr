@@ -382,7 +382,9 @@ def classify_wind(
 
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
-    return wind_informed_bp
+    # only adjust BP where it was NaN before
+    result = xr.where(blurred_bp.isnull(), blurred_bp, wind_informed_bp)
+    return result
 
 
 def calculate_wind_adjusted_risk(
