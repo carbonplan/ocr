@@ -12,6 +12,7 @@ on:
       - "docs/**"
 
 permissions:
+  id-token: write
   contents: write
 
 concurrency:
@@ -20,9 +21,19 @@ concurrency:
 
 jobs:
   deploy:
+    environment:
+      name: docs
+      url: https://carbonplan.github.io/ocr
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
