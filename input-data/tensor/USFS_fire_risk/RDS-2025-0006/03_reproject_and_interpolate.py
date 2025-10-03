@@ -24,7 +24,7 @@ def load_climate_run_ds(climate_run_year: str):
 def write_to_icechunk(ds: xr.Dataset, climate_run_year: str):
     storage = icechunk.s3_storage(
         bucket='carbonplan-ocr',
-        prefix=f'input/fire-risk/tensor/USFS/{climate_run_year}_climate_run_30m_4326_chunked_icechunk',
+        prefix=f'input/fire-risk/tensor/USFS/{climate_run_year}-climate-run-30m-4326.icechunk',
         region='us-west-2',
     )
     repo = icechunk.Repository.open_or_create(storage)
@@ -34,7 +34,7 @@ def write_to_icechunk(ds: xr.Dataset, climate_run_year: str):
 
 
 def interpolate_and_reproject(climate_run_year: str):
-    climate_run_ds = load_climate_run_ds(climate_run_year)
+    climate_run_ds = load_climate_run_ds(climate_run_year).persist()
     rps_30 = (
         catalog.get_dataset('USFS-wildfire-risk-communities')
         .to_xarray()['BP']
@@ -50,7 +50,14 @@ def interpolate_and_reproject(climate_run_year: str):
 
     # assign crs and reproject to lat/lon EPSG:4326
     interp_30 = assign_crs(interp_30, crs='EPSG:5070')
-    climate_run_4326 = xr_reproject(interp_30, how='EPSG:4326')
+
+    climate_run_4326 = xr_reproject(interp_30, how='EPSG:4326', chunks=(6000, 4500))
+
+    # ensure the coords match the rps_30_4326 coords exactly
+    rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
+    climate_run_4326 = climate_run_4326.assign_coords(
+        latitude=rps_30_4326.latitude, longitude=rps_30_4326.longitude
+    )
 
     # assign processing attributes
     climate_run_4326.attrs = {
@@ -62,18 +69,19 @@ def interpolate_and_reproject(climate_run_year: str):
         'resolution': '30m',
     }
 
+    print(climate_run_4326)
+
     # Write to icechunk
     write_to_icechunk(climate_run_4326, climate_run_year)
 
 
-# WARNING: This function is using very large VM's that should not be left running!
 @coiled.function(
     region='us-west-2',
-    n_workers=10,
-    vm_type='r7a.24xlarge',
-    scheduler_vm_types='r7a.xlarge',
+    n_workers=20,
+    vm_type='r7g.16xlarge',
     tags={'Project': 'OCR'},
-    idle_timeout='5 minutes',
+    extra_kwargs=dict(scheduler_vm_types='m8g.4xlarge', wait_for_workers=1),
+    software='ocr-main',
 )
 def main():
     interpolate_and_reproject(climate_run_year='2011')
