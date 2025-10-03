@@ -442,8 +442,9 @@ def calculate_wind_adjusted_risk(
 
     # Fill NaNs in USFS BP with wind-informed BP (2011 / 2047) before multiplying by CRPS.
     # Preserve original values where USFS BP is finite.
-    filled_bp_2011 = usfs_bp.where(~usfs_bp.isnull(), wind_informed_bp_float_corrected_2011)
-    filled_bp_2047 = usfs_bp.where(~usfs_bp.isnull(), wind_informed_bp_float_corrected_2047)
+    # TODO: https://github.com/carbonplan/ocr/issues/257
+    filled_bp_2011 = usfs_bp.where(usfs_bp.notnull(), wind_informed_bp_float_corrected_2011)
+    filled_bp_2047 = usfs_bp.where(usfs_bp.notnull(), wind_informed_bp_float_corrected_2047)
 
     fire_risk['wind_risk_2011'] = filled_bp_2011 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2047'] = filled_bp_2047 * rps_30_subset['CRPS']
