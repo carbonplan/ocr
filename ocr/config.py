@@ -782,7 +782,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
                 ax.add_patch(rect)
                 center_x = (xx0 + xx1) / 2
                 center_y = (yy0 + yy1) / 2
-                region_id = f'y{iy}_x{ix}'  # Match your get_chunk_mapping format
+                region_id = f'y{iy}_x{ix}'
                 ax.text(
                     center_x,
                     center_y,
@@ -790,7 +790,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
                     transform=ccrs.PlateCarree(),
                     ha='center',
                     va='center',
-                    fontsize=8,
+                    fontsize=6,
                     fontweight='bold',
                     color='black',
                     bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.7),
