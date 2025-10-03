@@ -12,7 +12,8 @@ on:
       - "docs/**"
 
 permissions:
-  contents: write
+  id-token: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
