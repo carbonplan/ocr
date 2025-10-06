@@ -456,14 +456,14 @@ datasets = [
         name='2011-climate-run-30m-4326',
         description='USFS 2011 Climate Run',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/2011_climate_run_30m_4326_chunked_icechunk',
+        prefix='input/fire-risk/tensor/USFS/2011-climate-run-30m-4326.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='2047-climate-run-30m-4326',
         description='USFS 2047 Climate Run',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/2047_climate_run_30m_4326_chunked_icechunk',
+        prefix='input/fire-risk/tensor/USFS/2047-climate-run-30m-4326.icechunk',
         data_format='zarr',
     ),
     Dataset(

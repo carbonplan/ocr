@@ -3,14 +3,17 @@
 # - Interpolate from 270m to 30m
 # - Note: This uses the USFS Community Risk 30m dataset as an input for interpolation
 
-
 import coiled
+import dask.base
 import icechunk
+import rich
 import xarray as xr
 from icechunk.xarray import to_icechunk
 from odc.geo.xr import assign_crs, xr_reproject
 
 from ocr import catalog
+
+console = rich.console.Console()
 
 
 def load_climate_run_ds(climate_run_year: str):
@@ -24,17 +27,19 @@ def load_climate_run_ds(climate_run_year: str):
 def write_to_icechunk(ds: xr.Dataset, climate_run_year: str):
     storage = icechunk.s3_storage(
         bucket='carbonplan-ocr',
-        prefix=f'input/fire-risk/tensor/USFS/{climate_run_year}_climate_run_30m_4326_chunked_icechunk',
+        prefix=f'input/fire-risk/tensor/USFS/{climate_run_year}-climate-run-30m-4326.icechunk',
         region='us-west-2',
     )
     repo = icechunk.Repository.open_or_create(storage)
     session = repo.writable_session('main')
-    to_icechunk(ds, session)
+    to_icechunk(ds, session, mode='w')
     session.commit('reproject and interp')
 
 
 def interpolate_and_reproject(climate_run_year: str):
-    climate_run_ds = load_climate_run_ds(climate_run_year)
+    console.print(f'Processing climate run year: {climate_run_year}')
+    climate_run_ds = load_climate_run_ds(climate_run_year).persist()
+    console.print(f'Pre-interp_30: {climate_run_ds}')
     rps_30 = (
         catalog.get_dataset('USFS-wildfire-risk-communities')
         .to_xarray()['BP']
@@ -46,11 +51,30 @@ def interpolate_and_reproject(climate_run_year: str):
         rps_30, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
     )
     # interp_like produces values slightly less then 0, which causes downstream issues. We are clipping to 0 as a min of burn probability.
-    interp_30 = interp_30.clip(min=0)
+    interp_30 = interp_30.clip(min=0).chunk({'y': 6000, 'x': 5000})
+    interp_30 = dask.base.optimize(interp_30)[0]
+
+    console.print(f'Post-interp_30: {interp_30}')
+
+    tmp_path = f's3://carbonplan-scratch/ocr-input/fire-risk/tensor/USFS/{climate_run_year}-climate-run-30m.zarr'
+
+    interp_30.to_zarr(
+        tmp_path,
+        mode='w',
+    )
+
+    interp_30 = xr.open_zarr(tmp_path)
 
     # assign crs and reproject to lat/lon EPSG:4326
     interp_30 = assign_crs(interp_30, crs='EPSG:5070')
+
     climate_run_4326 = xr_reproject(interp_30, how='EPSG:4326')
+
+    # ensure the coords match the rps_30_4326 coords exactly
+    rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
+    climate_run_4326 = climate_run_4326.assign_coords(
+        latitude=rps_30_4326.latitude, longitude=rps_30_4326.longitude
+    )
 
     # assign processing attributes
     climate_run_4326.attrs = {
@@ -62,22 +86,43 @@ def interpolate_and_reproject(climate_run_year: str):
         'resolution': '30m',
     }
 
+    console.print(climate_run_4326)
+    climate_run_4326 = dask.base.optimize(climate_run_4326)[0]
+
     # Write to icechunk
     write_to_icechunk(climate_run_4326, climate_run_year)
+    console.print(f'Completed processing climate run year: {climate_run_year}')
 
 
-# WARNING: This function is using very large VM's that should not be left running!
-@coiled.function(
-    region='us-west-2',
-    n_workers=10,
-    vm_type='r7a.24xlarge',
-    scheduler_vm_types='r7a.xlarge',
-    tags={'Project': 'OCR'},
-    idle_timeout='5 minutes',
-)
 def main():
-    interpolate_and_reproject(climate_run_year='2011')
-    interpolate_and_reproject(climate_run_year='2047')
+    args = {
+        'name': 'reproject-and-interpolate-climate-runs',
+        'n_workers': 10,
+        'region': 'us-west-2',
+        'tags': {'Project': 'OCR'},
+        'worker_vm_types': 'r7a.24xlarge',
+        'scheduler_vm_types': 'r7a.xlarge',
+        'spot_policy': 'spot_with_fallback',
+        'software': 'ocr-main',
+        'wait_for_workers': 1,
+        'idle_timeout': '5 minutes',
+    }
+    console.log(f'Creating Coiled cluster with args: {args}')
+    cluster = coiled.Cluster(**args)
+    # Touch the client to ensure startup
+    client = cluster.get_client()
+    console.log(
+        f'Cluster {cluster.name} started with {len(client.scheduler_info()["workers"])} workers (initial).'
+    )
+    try:
+        interpolate_and_reproject(climate_run_year='2011')
+        interpolate_and_reproject(climate_run_year='2047')
+    except Exception as e:
+        console.log(f'Error occurred: {e}')
+        client.cluster.close()
+    finally:
+        client.cluster.close()
+        console.log('Cluster closed.')
 
 
 if __name__ == '__main__':

@@ -52,6 +52,8 @@ nav:
 
   - Tutorials:
       - Data Pipeline: tutorials/data-pipeline.md
+      - Calculate Wind-Adjusted Fire Risk: tutorials/calculate-wind-adjusted-fire-risk-for-a-region.ipynb
+
   - Reference:
       - API: reference/api.md
       - Project Structure: reference/project-structure.md

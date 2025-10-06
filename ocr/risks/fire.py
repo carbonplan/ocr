@@ -3,7 +3,6 @@ import warnings
 
 import numpy as np
 import xarray as xr
-from odc.geo.xr import assign_crs
 from scipy.ndimage import rotate
 
 from ocr import catalog
@@ -318,15 +317,6 @@ def create_weighted_composite_bp_map(
             f'Distribution direction labels must match {CARDINAL_AND_ORDINAL}; got {list(wind_direction_distribution["direction"].values)}'
         )
 
-    # --- Interpolate (spatial dims only) BEFORE validity / renorm ---
-    spatial_dims = [d for d in bp_da.dims if d != 'direction']
-    # Build a dict of target coords that actually appear in wind_direction_distribution
-    interp_targets = {d: bp_da[d] for d in spatial_dims if d in wind_direction_distribution.dims}
-    if interp_targets:
-        wind_direction_distribution = wind_direction_distribution.interp(
-            interp_targets, method='nearest'
-        )
-
     # Identify invalid / missing rows
     any_nan_row = wind_direction_distribution.isnull().any(dim='direction')
     negative_weights = (wind_direction_distribution < 0).any()
@@ -373,9 +363,7 @@ def create_weighted_composite_bp_map(
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset,
-    wind_direction_distribution: xr.DataArray,
-    rps_30_subset: xr.Dataset,
+    climate_run_subset: xr.Dataset, wind_direction_distribution: xr.DataArray
 ) -> xr.DataArray:
     """Classify wind by applying directional convolution and creating a weighted composite burn probability map.
 
@@ -385,21 +373,16 @@ def classify_wind(
         Subset of the climate run dataset containing burn probability ('BP') data.
     wind_direction_distribution : xr.DataArray
         Wind direction distribution data array.
-    rps_30_subset : xr.Dataset
-        Subset of the USFS wildfire risk communities dataset.
 
     Returns
     -------
     wind_informed_bp_float_corrected : xr.DataArray
-        Wind-informed burn probability data array with corrected coordinates."""
+        Wind-informed burn probability data array with corrected coordinates.
+    """
+
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
-    blurred_bp = assign_crs(blurred_bp, crs='EPSG:4326')
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
-    # Fix tiny FP misalignment in .sel of lat/lon between two datasets.
-    wind_informed_bp_float_corrected = wind_informed_bp.assign_coords(
-        latitude=rps_30_subset.latitude, longitude=rps_30_subset.longitude
-    )
-    return wind_informed_bp_float_corrected
+    return wind_informed_bp
 
 
 def calculate_wind_adjusted_risk(
@@ -420,7 +403,7 @@ def calculate_wind_adjusted_risk(
     -------
     fire_risk : xr.Dataset
         Dataset containing wind-adjusted fire risk variables."""
-    # Open input dataset: USFS 30m community risk, USFS 30m interpolated 2011 climate runs and 1/4 degree? ERA5 Wind.
+
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
 
@@ -429,12 +412,9 @@ def calculate_wind_adjusted_risk(
     ]
 
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
-    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice).chunk(
-        {'latitude': 6000, 'longitude': 4500}
-    )
-    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice).chunk(
-        {'latitude': 6000, 'longitude': 4500}
-    )
+    climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
+
+    climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
 
     wind_direction_distribution = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
@@ -446,12 +426,10 @@ def calculate_wind_adjusted_risk(
     wind_informed_bp_float_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
         wind_direction_distribution=wind_direction_distribution,
-        rps_30_subset=rps_30_subset,
     )
     wind_informed_bp_float_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
-        rps_30_subset=rps_30_subset,
     )
     # wind_risk_2011 (our wind-informed RPS value)
     fire_risk = (wind_informed_bp_float_corrected_2011).to_dataset(name='wind_risk_2011')
@@ -477,12 +455,6 @@ def calculate_wind_adjusted_risk(
 
     # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
     fire_risk['burn_probability_usfs_2047'] = climate_run_2047_subset['BP']
-
-    # trim values less then 0.01 to 0 to match binning.
-    fire_risk = fire_risk.where(fire_risk >= 0.01, 0)
-
-    # round variables to two decimal places
-    fire_risk = fire_risk.round(decimals=2)
 
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"

@@ -12,6 +12,7 @@ on:
       - "docs/**"
 
 permissions:
+  id-token: write
   contents: write
 
 concurrency:
@@ -20,17 +21,27 @@ concurrency:
 
 jobs:
   deploy:
+    environment:
+      name: docs
+      url: https://carbonplan.github.io/ocr
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
+          role-session-name: ocr-etl-role-session
+          aws-region: us-west-2
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.x
-      - uses: prefix-dev/setup-pixi@v0.9.0
+      - uses: prefix-dev/setup-pixi@v0.9.1
         with:
           cache: false # no pixi.lock
           locked: false
