@@ -37,6 +37,10 @@ class CoiledConfig(pydantic_settings.BaseSettings):
     scheduler_vm_type: str = pydantic.Field(
         'm8g.2xlarge', description='VM type to use for the scheduler node'
     )
+    idle_timeout: str = pydantic.Field(
+        '5 minutes',
+        description='Shut down the cluster after this duration if no activity has occurred. E.g. “30 minutes”',
+    )
 
     model_config = {
         'env_prefix': 'ocr_coiled_',
