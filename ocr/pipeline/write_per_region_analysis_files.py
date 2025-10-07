@@ -1,16 +1,13 @@
 """For each (counties, census tract), write analysis files in multiple file formats"""
 
-from typing import Literal
-
 import duckdb
 from upath import UPath
 
 from ocr import catalog
 from ocr.config import OCRConfig
 from ocr.console import console
+from ocr.types import RegionType
 from ocr.utils import apply_s3_creds, install_load_extensions
-
-RegionType = Literal['tract', 'county']
 
 
 def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, region_type: RegionType):
@@ -46,7 +43,7 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
     csv_path = per_region_output_prefix / region_type / 'csv'
     csv_path.mkdir(parents=True, exist_ok=True)
     for geoid in geoid_list:
-        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM {region_type}_grouped_risk WHERE GEOID = '{geoid}') TO '{csv_path}/{geoid}.csv'
+        con.execute(f"""COPY (SELECT * EXCLUDE geometry FROM {region_type}_grouped_risk WHERE GEOID = '{geoid}') TO '{csv_path}/{geoid}.csv.gz'
         (FORMAT CSV, OVERWRITE_OR_IGNORE);""")
 
     # write geojson
