@@ -28,8 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v1
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v5
