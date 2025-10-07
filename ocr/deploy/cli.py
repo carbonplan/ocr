@@ -74,7 +74,7 @@ def run(
     ),
     write_per_region: bool = typer.Option(
         False,
-        '-r',
+        '-pr',
         '--write-per-region',
         help='Writes per region split analysis files (geoparquet, geojson, csv etc.)',
         show_default=True,
