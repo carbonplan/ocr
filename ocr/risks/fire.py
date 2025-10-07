@@ -469,6 +469,8 @@ def calculate_wind_adjusted_risk(
     fire_risk['burn_probability_2047'].attrs['description'] = (
         'Wind-informed burn probability for 2047 calculated as wind-informed BP * CRPS'
     )
+    # wind_risk_2011 (our wind-informed RPS value)
+    fire_risk = (wind_informed_bp_float_corrected_2011).to_dataset(name='wind_risk_2011')
 
     # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
     fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']

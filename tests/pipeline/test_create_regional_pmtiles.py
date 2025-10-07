@@ -38,7 +38,9 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
     union = unary_union(b_gdf.geometry)
     geom = union.buffer(0.0001)
 
-    counties_gdf = gpd.GeoDataFrame({'NAME': ['TestCounty'], 'geometry': [geom]}, crs='EPSG:4326')
+    counties_gdf = gpd.GeoDataFrame(
+        {'NAME': ['TestCounty'], 'geometry': [geom], 'GEOID': ['000000000000000']}, crs='EPSG:4326'
+    )
     tracts_gdf = gpd.GeoDataFrame(
         {'GEOID': ['000000000000000'], 'geometry': [geom]}, crs='EPSG:4326'
     )
@@ -91,20 +93,20 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
     con_check.execute('install spatial; load spatial;')
     tract_rows = con_check.execute(f"""
         SELECT json_object(
-            'tract_geoid', NAME,
-            'building_count', building_count,
-            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
-            'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1
+            '7', GEOID,
+            '0', building_count,
+            '1', mean_wind_risk_2011,
+            '2', mean_wind_risk_2047
         ) AS props
         FROM read_parquet('{cfg.vector.tracts_summary_stats_uri}')
         LIMIT 1
     """).fetchall()
     county_rows = con_check.execute(f"""
         SELECT json_object(
-            'county_name', NAME,
-            'building_count', building_count,
-            'wind_risk_2011_horizon_1', wind_risk_2011_horizon_1,
-            'wind_risk_2047_horizon_1', wind_risk_2047_horizon_1
+            '7', GEOID,
+            '0', building_count,
+            '1', mean_wind_risk_2011,
+            '2', mean_wind_risk_2047
         ) AS props
         FROM read_parquet('{cfg.vector.counties_summary_stats_uri}')
         LIMIT 1
@@ -117,21 +119,21 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
     tract_props = _json.loads(tract_row)
     county_props = _json.loads(county_row)
     for k in [
-        'tract_geoid',
-        'building_count',
-        'wind_risk_2011_horizon_1',
-        'wind_risk_2047_horizon_1',
+        '7',
+        '0',
+        '1',
+        '2',
     ]:
         assert k in tract_props, f'Missing key {k} in tract properties JSON'
     for k in [
-        'county_name',
-        'building_count',
-        'wind_risk_2011_horizon_1',
-        'wind_risk_2047_horizon_1',
+        '7',
+        '0',
+        '1',
+        '2',
     ]:
         assert k in county_props, f'Missing key {k} in county properties JSON'
-    assert tract_props['tract_geoid'] == '000000000000000'
-    assert county_props['county_name'] == 'TestCounty'
+    assert tract_props['7'] == '000000000000000'
+    assert county_props['7'] == '000000000000000'
 
     # Idempotency
     create_regional_pmtiles(cfg)

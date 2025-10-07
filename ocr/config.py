@@ -1185,7 +1185,16 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             ),
             dims=('latitude', 'longitude'),
         )
-        variables = ['USFS_RPS', 'wind_risk_2011', 'wind_risk_2047']
+
+        variables = [
+            'wind_risk_2011',
+            'wind_risk_2047',
+            'burn_probability_2011',
+            'burn_probability_2047',
+            'conditional_risk_usfs',
+            'burn_probability_usfs_2011',
+            'burn_probability_usfs_2047',
+        ]
         template_encoding_dict = {}
         for variable in variables:
             template[variable] = template_data_array
