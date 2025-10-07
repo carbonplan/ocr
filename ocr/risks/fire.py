@@ -431,11 +431,30 @@ def calculate_wind_adjusted_risk(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
     )
+    # wind_risk_2011 (our wind-informed RPS value)
+    fire_risk = (wind_informed_bp_float_corrected_2011).to_dataset(name='wind_risk_2011')
 
-    fire_risk = (rps_30_subset['RPS']).to_dataset(name='USFS_RPS')
+    # wind_risk_2047 (our wind-informed RPS value)
+    fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047
 
-    fire_risk['wind_risk_2011'] = wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
-    fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
+    # burn_probability_2011 (our wind-informed BP value)
+    fire_risk['burn_probability_2011'] = (
+        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    )
+
+    # burn_probability_2047 (our wind-informed BP value)
+    fire_risk['burn_probability_2047'] = (
+        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
+    )
+
+    # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
+    fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
+
+    # burn_probability_usfs_2011 (BP from Riley 2025 (RDS-2025-0006))
+    fire_risk['burn_probability_usfs_2011'] = climate_run_2011_subset['BP']
+
+    # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
+    fire_risk['burn_probability_usfs_2047'] = climate_run_2047_subset['BP']
 
     # Add metadata/attrs to the variables in the dataset
     # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
