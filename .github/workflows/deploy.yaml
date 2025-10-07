@@ -506,4 +506,5 @@ jobs:
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
             --write-region-files \
+            --write-per-region \
             --platform coiled
