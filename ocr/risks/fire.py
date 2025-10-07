@@ -416,8 +416,11 @@ def calculate_wind_adjusted_risk(
 
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
-    unburnable_mask_climate_run = catalog.get_dataset(
-        'unburnable-mask-climate-run-30m-4326'
+    unburnable_mask_climate_run_2011 = catalog.get_dataset(
+        'unburnable-mask-2011-climate-run-30m-4326'
+    ).to_xarray()
+    unburnable_mask_climate_run_2047 = catalog.get_dataset(
+        'unburnable-mask-2047-climate-run-30m-4326'
     ).to_xarray()
 
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
@@ -427,7 +430,10 @@ def calculate_wind_adjusted_risk(
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
-    unburnable_mask_subset = unburnable_mask_climate_run.sel(
+    unburnable_mask_2011_subset = unburnable_mask_climate_run_2011.sel(
+        latitude=y_slice, longitude=x_slice
+    ).unburnable
+    unburnable_mask_2047_subset = unburnable_mask_climate_run_2047.sel(
         latitude=y_slice, longitude=x_slice
     ).unburnable
 
@@ -441,12 +447,12 @@ def calculate_wind_adjusted_risk(
     wind_informed_bp_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
         wind_direction_distribution=wind_direction_distribution,
-        unburnable_mask_climate_run=unburnable_mask_subset,
+        unburnable_mask_climate_run=unburnable_mask_2011_subset,
     )
     wind_informed_bp_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
-        unburnable_mask_climate_run=unburnable_mask_subset,
+        unburnable_mask_climate_run=unburnable_mask_2047_subset,
     )
 
     # wind_risk_2011 (our wind-informed RPS value)

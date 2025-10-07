@@ -52,7 +52,7 @@ def create_unburnable_mask(climate_run_year: str):
     ).chunk({'latitude': 6000, 'longitude': 4500})
     console.print(unburnable_mask_30m_4326)
     unburnable_mask_30m_4326 = dask.base.optimize(unburnable_mask_30m_4326)[0]
-    write_to_icechunk(unburnable_mask_30m_4326, 'unburnable-mask')
+    write_to_icechunk(unburnable_mask_30m_4326, f'unburnable-mask-{climate_run_year}')
 
 
 def interpolate_and_reproject(climate_run_year: str):
@@ -121,6 +121,7 @@ def main():
         interpolate_and_reproject(climate_run_year='2011')
         interpolate_and_reproject(climate_run_year='2047')
         create_unburnable_mask(climate_run_year='2011')
+        create_unburnable_mask(climate_run_year='2047')
     except Exception as e:
         console.log(f'Error occurred: {e}')
         client.cluster.close()
