@@ -138,5 +138,5 @@ def test_fire_wind_risk_regional_aggregator(tmp_path, region_risk_parquet):
         avg_val = float(avg_raw)
         assert 0 <= avg_val <= 100, 'Average risk out of range'
 
-    validate(counties_summary_path, 'NAME')
-    validate(tracts_summary_path, 'NAME')
+    validate(counties_summary_path, 'GEOID')
+    validate(tracts_summary_path, 'GEOID')
