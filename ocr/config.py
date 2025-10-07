@@ -54,9 +54,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     }
 
     def model_post_init(self, __context):
-        self.chunks = self.chunks or dict(
-            zip(['longitude', 'latitude'], self.ds['CRPS'].data.chunksize)
-        )
+        self.chunks = self.chunks or dict(zip(self.ds['CRPS'].dims, self.ds['CRPS'].data.chunksize))
 
     def __repr__(self):
         return self.extent.__repr__()
