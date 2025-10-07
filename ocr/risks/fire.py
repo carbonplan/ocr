@@ -387,10 +387,7 @@ def classify_wind(
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
 
-    # retain original modeled BP where present.
-    # climate_run_subset['BP'] is the original USFS burn probability.
-    # wherever the unburnable mask is 0, use climate_run_subset['BP'] as our value, else, use the wind_informed_bp
-    # TODO: https://github.com/carbonplan/ocr/issues/257
+    # retain original Riley et al. (2025) burn probability, reprojected and interpolated to a 30m EPSG:4326 grid
     wind_informed_bp_corrected = xr.where(
         unburnable_mask_climate_run == 0, climate_run_subset['BP'], wind_informed_bp
     )
@@ -469,8 +466,6 @@ def calculate_wind_adjusted_risk(
     fire_risk['burn_probability_2047'].attrs['description'] = (
         'Wind-informed burn probability for 2047 calculated as wind-informed BP * CRPS'
     )
-    # wind_risk_2011 (our wind-informed RPS value)
-    fire_risk = (wind_informed_bp_float_corrected_2011).to_dataset(name='wind_risk_2011')
 
     # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
     fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
