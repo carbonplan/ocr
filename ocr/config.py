@@ -1174,7 +1174,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
         var_encoding_dict = {
-            'chunks': ((config.chunks['longitude'], config.chunks['latitude'])),
+            'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
             'fill_value': np.nan,
         }
         template_data_array = xr.DataArray(
