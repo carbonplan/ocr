@@ -363,7 +363,9 @@ def create_weighted_composite_bp_map(
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset, wind_direction_distribution: xr.DataArray
+    climate_run_subset: xr.Dataset,
+    wind_direction_distribution: xr.DataArray,
+    unburnable_mask_climate_run: xr.DataArray,
 ) -> xr.DataArray:
     """Classify wind by applying directional convolution and creating a weighted composite burn probability map.
 
@@ -373,6 +375,8 @@ def classify_wind(
         Subset of the climate run dataset containing burn probability ('BP') data.
     wind_direction_distribution : xr.DataArray
         Wind direction distribution data array.
+    unburnable_mask_climate_run : xr.DataArray
+        Unburnable mask for the climate run dataset.
 
     Returns
     -------
@@ -382,7 +386,13 @@ def classify_wind(
 
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
-    return wind_informed_bp
+
+    # retain original Riley et al. (2025) burn probability, reprojected and interpolated to a 30m EPSG:4326 grid
+    wind_informed_bp_corrected = xr.where(
+        unburnable_mask_climate_run == 0, climate_run_subset['BP'], wind_informed_bp
+    )
+
+    return wind_informed_bp_corrected
 
 
 def calculate_wind_adjusted_risk(
@@ -406,6 +416,12 @@ def calculate_wind_adjusted_risk(
 
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
+    unburnable_mask_climate_run_2011 = catalog.get_dataset(
+        'unburnable-mask-2011-climate-run-30m-4326'
+    ).to_xarray()
+    unburnable_mask_climate_run_2047 = catalog.get_dataset(
+        'unburnable-mask-2047-climate-run-30m-4326'
+    ).to_xarray()
 
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
         ['BP', 'CRPS', 'RPS']
@@ -413,8 +429,13 @@ def calculate_wind_adjusted_risk(
 
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
-
     climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
+    unburnable_mask_2011_subset = unburnable_mask_climate_run_2011.sel(
+        latitude=y_slice, longitude=x_slice
+    ).unburnable
+    unburnable_mask_2047_subset = unburnable_mask_climate_run_2047.sel(
+        latitude=y_slice, longitude=x_slice
+    ).unburnable
 
     wind_direction_distribution = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
@@ -423,28 +444,40 @@ def calculate_wind_adjusted_risk(
         .load()
     )
 
-    wind_informed_bp_float_corrected_2011 = classify_wind(
+    wind_informed_bp_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
         wind_direction_distribution=wind_direction_distribution,
+        unburnable_mask_climate_run=unburnable_mask_2011_subset,
     )
-    wind_informed_bp_float_corrected_2047 = classify_wind(
+    wind_informed_bp_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
+        unburnable_mask_climate_run=unburnable_mask_2047_subset,
     )
-    # wind_risk_2011 (our wind-informed RPS value)
-    fire_risk = (wind_informed_bp_float_corrected_2011).to_dataset(name='wind_risk_2011')
 
+    fire_risk = xr.Dataset()
+
+    # wind_risk_2011 (our wind-informed RPS value)
+    fire_risk['wind_risk_2011'] = wind_informed_bp_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2011'].attrs['description'] = (
+        'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
+    )
     # wind_risk_2047 (our wind-informed RPS value)
-    fire_risk['wind_risk_2047'] = wind_informed_bp_float_corrected_2047
+    fire_risk['wind_risk_2047'] = wind_informed_bp_corrected_2047 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2047'].attrs['description'] = (
+        'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
+    )
 
     # burn_probability_2011 (our wind-informed BP value)
-    fire_risk['burn_probability_2011'] = (
-        wind_informed_bp_float_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['burn_probability_2011'] = wind_informed_bp_corrected_2011
+    fire_risk['burn_probability_2011'].attrs['description'] = (
+        'Wind-informed burn probability for 2011 calculated as wind-informed BP'
     )
 
     # burn_probability_2047 (our wind-informed BP value)
-    fire_risk['burn_probability_2047'] = (
-        wind_informed_bp_float_corrected_2047 * rps_30_subset['CRPS']
+    fire_risk['burn_probability_2047'] = wind_informed_bp_corrected_2047
+    fire_risk['burn_probability_2047'].attrs['description'] = (
+        'Wind-informed burn probability for 2047 calculated as wind-informed BP'
     )
 
     # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
@@ -455,13 +488,6 @@ def calculate_wind_adjusted_risk(
 
     # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
     fire_risk['burn_probability_usfs_2047'] = climate_run_2047_subset['BP']
-
-    # Add metadata/attrs to the variables in the dataset
-    # BP is burn probability (should be between 0 and 1) and CRPS is the conditional risk to potential structures - aka "if a structure burns, how bad would it be"
-    for var in fire_risk.data_vars:
-        fire_risk[var].attrs['units'] = 'dimensionless'
-        fire_risk[var].attrs['long_name'] = f'{var} (wind-adjusted)'
-        fire_risk[var].attrs['description'] = f'{var} adjusted for wind effects'
 
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 

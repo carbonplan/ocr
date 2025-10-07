@@ -467,6 +467,20 @@ datasets = [
         data_format='zarr',
     ),
     Dataset(
+        name='unburnable-mask-2011-climate-run-30m-4326',
+        description='Mask of unburnable areas based on burn probability',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/unburnable-mask-2011-climate-run-30m-4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='unburnable-mask-2047-climate-run-30m-4326',
+        description='Mask of unburnable areas based on burn probability',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/unburnable-mask-2047-climate-run-30m-4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
         name='RDS-2016-0032-3',
         description='Spatial datasets of probabilistic wildfire risk components for the United States (270m)',
         bucket='carbonplan-ocr',

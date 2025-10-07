@@ -109,7 +109,7 @@ plugins:
       include_source: true
       ignore: ["*.py", "**/.ipynb_checkpoints/*.ipynb"]
       enabled: true
-      execute: true
+      execute: false
   - mkdocstrings:
       enable_inventory: true
       handlers:

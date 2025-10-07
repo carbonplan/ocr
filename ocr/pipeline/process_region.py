@@ -56,7 +56,9 @@ def calculate_risk(
             console.log(
                 f'Calculating wind risk for region with x_slice: {x_slice} and y_slice: {y_slice}'
             )
-        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
+        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice).chunk(
+            config.chunking.chunks
+        )
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
