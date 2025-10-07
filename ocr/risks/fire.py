@@ -363,7 +363,9 @@ def create_weighted_composite_bp_map(
 
 
 def classify_wind(
-    climate_run_subset: xr.Dataset, wind_direction_distribution: xr.DataArray
+    climate_run_subset: xr.Dataset,
+    wind_direction_distribution: xr.DataArray,
+    unburnable_mask_climate_run: xr.DataArray,
 ) -> xr.DataArray:
     """Classify wind by applying directional convolution and creating a weighted composite burn probability map.
 
@@ -373,6 +375,8 @@ def classify_wind(
         Subset of the climate run dataset containing burn probability ('BP') data.
     wind_direction_distribution : xr.DataArray
         Wind direction distribution data array.
+    unburnable_mask_climate_run : xr.DataArray
+        Unburnable mask for the climate run dataset.
 
     Returns
     -------
@@ -383,15 +387,12 @@ def classify_wind(
     blurred_bp = apply_wind_directional_convolution(climate_run_subset['BP'], iterations=3)
     wind_informed_bp = create_weighted_composite_bp_map(blurred_bp, wind_direction_distribution)
 
-    # We only want to spread (fill) burn probability into areas where it was not
-    # modeled by USFS (NaN in the USFS BP layer). Retain original modeled BP where present.
-    # climate_run_subset['BP'] is the original USFS burn probability. Use it to mask.
-
-    # Fill NaNs in USFS BP with wind-informed BP (2011 / 2047) before multiplying by CRPS.
-    # Preserve original values where USFS BP is finite.
+    # retain original modeled BP where present.
+    # climate_run_subset['BP'] is the original USFS burn probability.
+    # wherever the unburnable mask is 0, use climate_run_subset['BP'] as our value, else, use the wind_informed_bp
     # TODO: https://github.com/carbonplan/ocr/issues/257
-    wind_informed_bp_corrected = climate_run_subset['BP'].where(
-        climate_run_subset['BP'].notnull(), wind_informed_bp
+    wind_informed_bp_corrected = xr.where(
+        unburnable_mask_climate_run == 0, climate_run_subset['BP'], wind_informed_bp
     )
 
     return wind_informed_bp_corrected
@@ -418,6 +419,9 @@ def calculate_wind_adjusted_risk(
 
     climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
+    unburnable_mask_climate_run = catalog.get_dataset(
+        'unburnable-mask-climate-run-30m-4326'
+    ).to_xarray()
 
     rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
         ['BP', 'CRPS', 'RPS']
@@ -425,8 +429,8 @@ def calculate_wind_adjusted_risk(
 
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
-
     climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
+    unburnable_mask_subset = unburnable_mask_climate_run.sel(latitude=y_slice, longitude=x_slice)
 
     wind_direction_distribution = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
@@ -438,10 +442,12 @@ def calculate_wind_adjusted_risk(
     wind_informed_bp_corrected_2011 = classify_wind(
         climate_run_subset=climate_run_2011_subset,
         wind_direction_distribution=wind_direction_distribution,
+        unburnable_mask_climate_run=unburnable_mask_subset,
     )
     wind_informed_bp_corrected_2047 = classify_wind(
         climate_run_subset=climate_run_2047_subset,
         wind_direction_distribution=wind_direction_distribution,
+        unburnable_mask_climate_run=unburnable_mask_subset,
     )
 
     # Start fire_risk dataset with USFS RPS (risk to potential structures) baseline

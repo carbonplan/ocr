@@ -45,7 +45,7 @@ def create_unburnable_mask(climate_run_year: str):
     rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
     unburnable_mask_30m_4326 = unburnable_mask_4326.interp_like(
         rps_30_4326, method='nearest', kwargs={'fill_value': True, 'bounds_error': False}
-    )
+    ).chunk({'latitude': 6000, 'longitude': 5000})
     console.print(unburnable_mask_30m_4326)
     unburnable_mask_30m_4326 = dask.base.optimize(unburnable_mask_30m_4326)[0]
     write_to_icechunk(unburnable_mask_30m_4326, 'unburnable-mask')
