@@ -11,7 +11,15 @@ def test_calculate_risk_process_region_end_to_end(region_risk_parquet):
     assert out_file.exists(), 'Expected region geoparquet output file to exist'
     gdf = gpd.read_parquet(out_file)
 
-    expected_vars = {'USFS_RPS', 'wind_risk_2011', 'wind_risk_2047'}
+    expected_vars = {
+        'wind_risk_2011',
+        'wind_risk_2047',
+        'burn_probability_2011',
+        'burn_probability_2047',
+        'conditional_risk_usfs',
+        'burn_probability_usfs_2011',
+        'burn_probability_usfs_2047',
+    }
     assert expected_vars.issubset(gdf.columns), (
         f'Missing expected risk columns: {expected_vars - set(gdf.columns)}'
     )
