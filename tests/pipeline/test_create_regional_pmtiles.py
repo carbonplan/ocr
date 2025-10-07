@@ -132,8 +132,8 @@ def test_create_regional_pmtiles_end_to_end(region_risk_parquet, tmp_path):
         '2',
     ]:
         assert k in county_props, f'Missing key {k} in county properties JSON'
-    assert tract_props['tract_geoid'] == '000000000000000'
-    assert county_props['county_name'] == 'TestCounty'
+    assert tract_props['7'] == '000000000000000'
+    assert county_props['7'] == '000000000000000'
 
     # Idempotency
     create_regional_pmtiles(cfg)
