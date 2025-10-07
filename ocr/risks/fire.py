@@ -430,7 +430,9 @@ def calculate_wind_adjusted_risk(
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2011_subset = climate_run_2011.sel(latitude=y_slice, longitude=x_slice)
     climate_run_2047_subset = climate_run_2047.sel(latitude=y_slice, longitude=x_slice)
-    unburnable_mask_subset = unburnable_mask_climate_run.sel(latitude=y_slice, longitude=x_slice)
+    unburnable_mask_subset = unburnable_mask_climate_run.sel(
+        latitude=y_slice, longitude=x_slice
+    ).unburnable
 
     wind_direction_distribution = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
