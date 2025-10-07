@@ -36,45 +36,44 @@ def write_to_icechunk(ds: xr.Dataset, climate_run_year: str):
     session.commit('reproject and interp')
 
 
+def create_unburnable_mask(climate_run_year: str):
+    """Create a mask of unburnable areas based on burn probability"""
+    climate_run_ds = load_climate_run_ds(climate_run_year).persist()
+    unburnable_mask_270 = (climate_run_ds['BP'] == 0).to_dataset(name='unburnable')
+    unburnable_mask_270 = assign_crs(unburnable_mask_270, crs='EPSG:5070')
+    unburnable_mask_4326 = xr_reproject(unburnable_mask_270, how='EPSG:4326')
+    rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
+    unburnable_mask_30m_4326 = unburnable_mask_4326.interp_like(
+        rps_30_4326, method='nearest', kwargs={'fill_value': True, 'bounds_error': False}
+    )
+    console.print(unburnable_mask_30m_4326)
+    unburnable_mask_30m_4326 = dask.base.optimize(unburnable_mask_30m_4326)[0]
+    write_to_icechunk(unburnable_mask_30m_4326, 'unburnable-mask')
+
+
 def interpolate_and_reproject(climate_run_year: str):
     console.print(f'Processing climate run year: {climate_run_year}')
     climate_run_ds = load_climate_run_ds(climate_run_year).persist()
-    console.print(f'Pre-interp_30: {climate_run_ds}')
-    rps_30 = (
-        catalog.get_dataset('USFS-wildfire-risk-communities')
-        .to_xarray()['BP']
-        .astype('float32')
-        .to_dataset()
-    )
-    # interpolate to 30m & chunk
-    interp_30 = climate_run_ds.interp_like(
-        rps_30, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
-    )
-    # interp_like produces values slightly less then 0, which causes downstream issues. We are clipping to 0 as a min of burn probability.
-    interp_30 = interp_30.clip(min=0).chunk({'y': 6000, 'x': 5000})
-    interp_30 = dask.base.optimize(interp_30)[0]
-
-    console.print(f'Post-interp_30: {interp_30}')
-
-    tmp_path = f's3://carbonplan-scratch/ocr-input/fire-risk/tensor/USFS/{climate_run_year}-climate-run-30m.zarr'
-
-    interp_30.to_zarr(
-        tmp_path,
-        mode='w',
-    )
-
-    interp_30 = xr.open_zarr(tmp_path)
+    console.print(f'Pre-reproject: {climate_run_ds}')
 
     # assign crs and reproject to lat/lon EPSG:4326
-    interp_30 = assign_crs(interp_30, crs='EPSG:5070')
+    climate_run_ds = assign_crs(climate_run_ds, crs='EPSG:5070')
+    climate_run_4326 = xr_reproject(climate_run_ds, how='EPSG:4326')
 
-    climate_run_4326 = xr_reproject(interp_30, how='EPSG:4326')
+    console.print(f'Post-reproject: {climate_run_4326}')
 
-    # ensure the coords match the rps_30_4326 coords exactly
+    # load target dataset for interpolation
     rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
-    climate_run_4326 = climate_run_4326.assign_coords(
-        latitude=rps_30_4326.latitude, longitude=rps_30_4326.longitude
+
+    # interpolate to 30m using the reprojected target
+    climate_run_4326 = climate_run_4326.interp_like(
+        rps_30_4326, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
     )
+    # interp_like produces values slightly less then 0, which causes downstream issues. We are clipping to 0 as a min of burn probability.
+    climate_run_4326 = climate_run_4326.clip(min=0).chunk({'latitude': 6000, 'longitude': 5000})
+    climate_run_4326 = dask.base.optimize(climate_run_4326)[0]
+
+    console.print(f'Post-interpolate: {climate_run_4326}')
 
     # assign processing attributes
     climate_run_4326.attrs = {
@@ -117,6 +116,7 @@ def main():
     try:
         interpolate_and_reproject(climate_run_year='2011')
         interpolate_and_reproject(climate_run_year='2047')
+        create_unburnable_mask(climate_run_year='2011')
     except Exception as e:
         console.log(f'Error occurred: {e}')
         client.cluster.close()

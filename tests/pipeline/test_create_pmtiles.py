@@ -35,7 +35,17 @@ def test_create_pmtiles_end_to_end(region_risk_parquet):
     bdf = gpd.read_parquet(buildings_parquet)
     assert not bdf.empty, 'Consolidated buildings parquet is empty'
     assert set(bdf.columns) == set(
-        ['USFS_RPS', 'wind_risk_2011', 'wind_risk_2047', 'geometry', 'bbox']
+        [
+            'wind_risk_2011',
+            'wind_risk_2047',
+            'burn_probability_2011',
+            'burn_probability_2047',
+            'conditional_risk_usfs',
+            'burn_probability_usfs_2011',
+            'burn_probability_usfs_2047',
+            'geometry',
+            'bbox',
+        ]
     )
 
     # Run pipeline to create PMTiles
@@ -50,8 +60,8 @@ def test_create_pmtiles_end_to_end(region_risk_parquet):
     sample_rows = con.execute(
         f"""
         SELECT json_object(
-            'wind_risk_2011', wind_risk_2011,
-            'wind_risk_2047', wind_risk_2047
+            '0', wind_risk_2011,
+            '1', wind_risk_2047
         ) AS props
         FROM read_parquet('{buildings_parquet}')
         LIMIT 1
@@ -61,7 +71,7 @@ def test_create_pmtiles_end_to_end(region_risk_parquet):
     import json as _json
 
     props = _json.loads(sample_rows[0][0])
-    for k in ['wind_risk_2011', 'wind_risk_2047']:
+    for k in ['0', '1']:
         assert k in props, f'Missing key {k} in regenerated properties JSON'
         # Values can legitimately be 0.0; just assert they are numeric (duckdb -> python type)
         assert props[k] is None or isinstance(props[k], int | float), f'Non-numeric value for {k}'

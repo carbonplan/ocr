@@ -26,20 +26,27 @@ def write_stats_table(
 
     con.execute(f"""
         CREATE TEMP TABLE {stats_table_name} AS
-        SELECT a.NAME,
-            COUNT(b.USFS_RPS) as building_count,
+        SELECT a.GEOID,
+            COUNT(b.wind_risk_2011) as building_count,
 
-            AVG(b.USFS_RPS) as avg_USFS_RPS,
+            AVG(b.burn_probability_2011) as avg_burn_probability_2011,
+            AVG(b.burn_probability_2047) as avg_burn_probability_2047,
             AVG(b.wind_risk_2011) as avg_wind_risk_2011,
             AVG(b.wind_risk_2047) as avg_wind_risk_2047,
 
-            MEDIAN(b.USFS_RPS) as median_USFS_RPS,
+            MEDIAN(b.burn_probability_2011) as median_burn_probability_2011,
+            MEDIAN(b.burn_probability_2047) as median_burn_probability_2047,
             MEDIAN(b.wind_risk_2011) as median_wind_risk_2011,
             MEDIAN(b.wind_risk_2047) as median_wind_risk_2047,
 
-            quantile_cont(b.USFS_RPS, 0.90) as p90_USFS_RPS,
-            quantile_cont(b.USFS_RPS, 0.95) as p95_USFS_RPS,
-            quantile_cont(b.USFS_RPS, 0.99) as p99_USFS_RPS,
+
+            quantile_cont(b.burn_probability_2011, 0.90) as p90_burn_probability_2011,
+            quantile_cont(b.burn_probability_2011, 0.95) as p95_burn_probability_2011,
+            quantile_cont(b.burn_probability_2011, 0.99) as p99_burn_probability_2011,
+
+            quantile_cont(b.burn_probability_2047, 0.90) as p90_burn_probability_2047,
+            quantile_cont(b.burn_probability_2047, 0.95) as p95_burn_probability_2047,
+            quantile_cont(b.burn_probability_2047, 0.99) as p99_burn_probability_2047,
 
             quantile_cont(b.wind_risk_2011, 0.90) as p90_wind_risk_2011,
             quantile_cont(b.wind_risk_2011, 0.95) as p95_wind_risk_2011,
@@ -52,13 +59,20 @@ def write_stats_table(
             -- we have to cast the histogram from HUGEINT[] to array_json since gdal/json does not support HUGEINT[]
 
             array_to_json(list_concat(
-                [count(CASE WHEN b.USFS_RPS = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.USFS_RPS <> 0 THEN b.USFS_RPS END, {hist_bins}))
-            )) as USFS_RPS_hist,
+                [count(CASE WHEN b.burn_probability_2011 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.burn_probability_2011 <> 0 THEN b.burn_probability_2011 END, {hist_bins}))
+            )) as burn_probability_2011_hist,
+
+            array_to_json(list_concat(
+                [count(CASE WHEN b.burn_probability_2047 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.burn_probability_2047 <> 0 THEN b.burn_probability_2047 END, {hist_bins}))
+            )) as burn_probability_2047_hist,
+
             array_to_json(list_concat(
                 [count(CASE WHEN b.wind_risk_2011 = 0 THEN 1 END)],
                 map_values(histogram(CASE WHEN b.wind_risk_2011 <> 0 THEN b.wind_risk_2011 END, {hist_bins}))
             )) as wind_risk_2011_hist,
+
             array_to_json(list_concat(
                 [count(CASE WHEN b.wind_risk_2047 = 0 THEN 1 END)],
                 map_values(histogram(CASE WHEN b.wind_risk_2047 <> 0 THEN b.wind_risk_2047 END, {hist_bins}))
@@ -68,7 +82,7 @@ def write_stats_table(
         FROM read_parquet('{region_path}') a
         JOIN read_parquet('{consolidated_buildings_path}') b
             ON ST_Intersects(a.geometry, b.geometry)
-        GROUP BY a.NAME, a.geometry ;
+        GROUP BY a.GEOID, a.geometry ;
     """)
 
     # Write Geoparquet

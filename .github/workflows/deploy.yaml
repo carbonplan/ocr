@@ -55,6 +55,7 @@ env:
 
 jobs:
   ocr-coiled-software:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
       name: ${{ steps.compute.outputs.name }}
@@ -111,6 +112,7 @@ jobs:
           pixi run export-and-create-coiled
 
   qa-pr:
+    timeout-minutes: 30
     needs: ocr-coiled-software
     # Automatic non-production deploy on PR to main (qa env, limited regions, wipe each time)
     if: github.event_name == 'pull_request' &&  (
@@ -166,6 +168,7 @@ jobs:
             --wipe
 
   staging-main:
+    timeout-minutes: 60
     needs: ocr-coiled-software
     # Automatic non-production deploy on push to main (staging env, all regions, no wipe)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -230,6 +233,7 @@ jobs:
             --wipe
 
   manual:
+    timeout-minutes: 60
     needs: ocr-coiled-software
     # Regular manual (non-production) deploy path
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag == ''
@@ -323,6 +327,7 @@ jobs:
             --platform coiled
 
   production:
+    timeout-minutes: 240
     needs: ocr-coiled-software
     # Automatic production deploy on release publish
     if: github.event_name == 'release'
@@ -409,6 +414,7 @@ jobs:
             --platform coiled
 
   production-rerun:
+    timeout-minutes: 240
     needs: ocr-coiled-software
     # Manual production redeploy via workflow_dispatch + production_tag input
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.production_tag != ''
