@@ -63,24 +63,24 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
 
     # create joined temp table
     con.execute(f"""
-	CREATE TEMP TABLE {region_type}_grouped_risk AS
-	SELECT
-		b.NAME,
-		b.GEOID,
-		a.wind_risk_2011,
-		a.wind_risk_2047,
-		a.burn_probability_2011,
-		a.burn_probability_2047,
-		a.conditional_risk_usfs,
-		a.burn_probability_usfs_2011,
-		a.burn_probability_usfs_2047,
-		ST_X(ST_Centroid(a.geometry)) AS longitude,
-		ST_Y(ST_Centroid(a.geometry)) AS latitude,
-		a.geometry
-	FROM read_parquet('{consolidated_buildings_uri.as_uri()}') a
-	JOIN read_parquet('{region_path}') b
-		ON ST_Intersects(a.geometry, b.geometry)
-""")
+        CREATE TEMP TABLE {region_type}_grouped_risk AS
+        SELECT
+            b.NAME,
+            b.GEOID,
+            a.wind_risk_2011,
+            a.wind_risk_2047,
+            a.burn_probability_2011,
+            a.burn_probability_2047,
+            a.conditional_risk_usfs,
+            a.burn_probability_usfs_2011,
+            a.burn_probability_usfs_2047,
+            ST_X(ST_Centroid(a.geometry)) AS longitude,
+            ST_Y(ST_Centroid(a.geometry)) AS latitude,
+            a.geometry
+        FROM read_parquet('{consolidated_buildings_uri.as_uri()}') a
+        JOIN read_parquet('{region_path}') b
+            ON ST_Intersects(a.geometry, b.geometry)
+    """)
 
     geoid_list = con.sql(
         f"""SELECT DISTINCT(GEOID) from {region_type}_grouped_risk"""
@@ -126,15 +126,16 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
 
     # Modify CSV and GeoJSON headers in s3 for data downloads
     if region_path.protocol == 's3':
+        bucket = csv_path.parts[0].strip('/')
         for geoid in geoid_list:
             _modify_headers(
-                bucket=csv_path.parts[1],
-                prefix=(csv_path / f'{geoid}.csv').lstrip('/'),
+                bucket=bucket,
+                prefix=(csv_path / f'{geoid}.csv').path.split(bucket + '/')[1],
                 content_type='text/csv',
             )
             _modify_headers(
-                bucket=geojson_path.parts[1],
-                prefix=(geojson_path / f'{geoid}.geojson').lstrip('/'),
+                bucket=bucket,
+                prefix=(geojson_path / f'{geoid}.geojson').path.split(bucket + '/')[1],
                 content_type='text/json',
             )
 
