@@ -33,7 +33,9 @@ def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 
             Body=compressed_data,
             ContentType=content_type,
             ContentEncoding='gzip',
+            ContentDisposition='attachement',
         )
+        # Content-Disposition: attachment
     else:
         # for csv, we can just modify the headers
         s3_client.copy_object(
@@ -42,6 +44,7 @@ def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 
             CopySource={'Bucket': bucket, 'Key': prefix},
             ContentType=content_type,
             ContentEncoding='gzip',
+            ContentDisposition='attachement',
             MetadataDirective='REPLACE',
         )
 
@@ -122,19 +125,15 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
 
     # Modify CSV and GeoJSON headers in s3 for data downloads
     if region_path.protocol == 's3':
-        from cloudpathlib import AnyPath
-
-        csv_path = AnyPath(csv_path)
-        geojson_path = AnyPath(geojson_path)
         for geoid in geoid_list:
             _modify_headers(
-                bucket=csv_path.bucket,
-                prefix=(csv_path / f'{geoid}.csv').key,
+                bucket=csv_path.parts[1],
+                prefix=(csv_path / f'{geoid}.csv').lstrip('/'),
                 content_type='text/csv',
             )
             _modify_headers(
-                bucket=geojson_path.bucket,
-                prefix=(geojson_path / f'{geoid}.geojson').key,
+                bucket=geojson_path.parts[1],
+                prefix=(geojson_path / f'{geoid}.geojson').lstrip('/'),
                 content_type='text/json',
             )
 
