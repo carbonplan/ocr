@@ -122,7 +122,7 @@ from ocr.testing import XarraySnapshotExtension
 def xarray_snapshot(snapshot):
     return snapshot.use_extension(XarraySnapshotExtension)
 
-
+@pytest.mark.integration # mark this test as integration
 def test_fire_risk_calculation(xarray_snapshot):
     # Your data processing
     result = xr.Dataset({
