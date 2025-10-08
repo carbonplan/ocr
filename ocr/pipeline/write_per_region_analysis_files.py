@@ -63,23 +63,26 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
     region_path = UPath(f's3://{region_ds.bucket}/{region_ds.prefix}')
 
     # create joined temp table
-    con.execute(f""" CREATE TEMP TABLE {region_type}_grouped_risk AS
-    SELECT
-    b.NAME,
-    b.GEOID,
-    a.wind_risk_2011,
-    a.wind_risk_2047,
-    a.burn_probability_2011,
-    a.burn_probability_2047,
-    a.conditional_risk_usfs,
-    a.burn_probability_usfs_2011,
-    a.burn_probability_usfs_2047,
-    ST_X (ST_Centroid (a.geometry)) AS longitude,
-    ST_Y (ST_Centroid (a.geometry)) AS latitude,
-    a.geometry
-    from
-    read_parquet('{consolidated_buildings_uri.as_uri()}') a
-    JOIN read_parquet('{region_path}') b ON ST_Intersects (a.geometry, b.geometry)""")
+    con.execute(f"""
+	CREATE TEMP TABLE {region_type}_grouped_risk AS
+	SELECT
+		b.NAME,
+		b.GEOID,
+		a.wind_risk_2011,
+		a.wind_risk_2047,
+		a.burn_probability_2011,
+		a.burn_probability_2047,
+		a.conditional_risk_usfs,
+		a.burn_probability_usfs_2011,
+		a.burn_probability_usfs_2047,
+		ST_X(ST_Centroid(a.geometry)) AS longitude,
+		ST_Y(ST_Centroid(a.geometry)) AS latitude,
+		a.geometry
+	FROM read_parquet('{consolidated_buildings_uri.as_uri()}') a
+	JOIN read_parquet('{region_path}') b
+		ON ST_Intersects(a.geometry, b.geometry)
+""")
+
 
     geoid_list = con.sql(
         f"""SELECT DISTINCT(GEOID) from {region_type}_grouped_risk"""
