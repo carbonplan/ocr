@@ -35,7 +35,6 @@ def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 
             ContentEncoding='gzip',
             ContentDisposition='attachement',
         )
-        # Content-Disposition: attachment
     else:
         # for csv, we can just modify the headers
         s3_client.copy_object(
@@ -82,7 +81,6 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
 	JOIN read_parquet('{region_path}') b
 		ON ST_Intersects(a.geometry, b.geometry)
 """)
-
 
     geoid_list = con.sql(
         f"""SELECT DISTINCT(GEOID) from {region_type}_grouped_risk"""
