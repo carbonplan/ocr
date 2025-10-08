@@ -1,9 +1,14 @@
+import os
+
 import pytest
 from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.pipeline.process_region import calculate_risk
 from ocr.types import RiskType
+
+# Set default snapshot storage path to S3 if not already set
+os.environ.setdefault('SNAPSHOT_STORAGE_PATH', 's3://carbonplan-ocr/integration-tests/snapshots/')
 
 
 @pytest.fixture(scope='session')

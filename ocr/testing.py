@@ -15,13 +15,17 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
 
     Supports both local and remote (S3) storage via environment variable configuration:
     - SNAPSHOT_STORAGE_PATH: Base path for snapshots (local or s3://bucket/path)
+      Default: s3://carbonplan-scratch/snapshots (configured in tests/conftest.py)
 
     Examples:
-        # Local storage (default)
-        SNAPSHOT_STORAGE_PATH=tests/__snapshots__
+        # Use default S3 storage (no env var needed)
+        pytest tests/test_snapshot.py --snapshot-update
 
-        # S3 storage
-        SNAPSHOT_STORAGE_PATH=s3://my-bucket/snapshots
+        # Override with local storage
+        SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pytest tests/
+
+        # Override with different S3 bucket
+        SNAPSHOT_STORAGE_PATH=s3://my-bucket/snapshots pytest tests/
     """
 
     file_extension = 'zarr'
@@ -52,6 +56,20 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
         if index == 0:
             return f'{test_file}_{test_name}'
         return f'{test_file}_{test_name}.{index}'
+
+    @classmethod
+    def get_location(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
+        """Get the full snapshot location path.
+
+        Override to properly handle S3 paths using upath instead of os.path.join.
+        """
+        dirname = cls.dirname(test_location=test_location)
+        basename = cls.get_snapshot_name(test_location=test_location, index=index)
+        filename = f'{basename}.{cls.file_extension}'
+
+        # Use upath for proper S3/remote path handling
+        snapshot_path = upath.UPath(dirname) / filename
+        return str(snapshot_path)
 
     def serialize(self, data: SerializableData, **kwargs: typing.Any) -> typing.Any:
         """Convert DataArray to Dataset for consistent zarr storage. Returns the data unchanged."""
