@@ -127,7 +127,7 @@ def run(
         if write_region_files:
             parts += ['--write-region-files']
         if write_region_files:
-            parts += ['--write_per_region']
+            parts += ['--write-per-region']
         if wipe:
             parts += ['--wipe']
 
