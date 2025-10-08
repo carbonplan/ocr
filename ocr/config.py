@@ -54,9 +54,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     }
 
     def model_post_init(self, __context):
-        self.chunks = self.chunks or dict(
-            zip(['longitude', 'latitude'], self.ds['CRPS'].data.chunksize)
-        )
+        self.chunks = self.chunks or dict(zip(self.ds['CRPS'].dims, self.ds['CRPS'].data.chunksize))
 
     def __repr__(self):
         return self.extent.__repr__()
@@ -1191,7 +1189,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
         var_encoding_dict = {
-            'chunks': ((config.chunks['longitude'], config.chunks['latitude'])),
+            'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
             'fill_value': np.nan,
         }
         template_data_array = xr.DataArray(

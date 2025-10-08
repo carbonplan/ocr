@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   deploy:
+    timeout-minutes: 15
     environment:
       name: docs
       url: https://carbonplan.github.io/ocr
@@ -52,4 +53,4 @@ jobs:
         run: |
           pixi list -e docs
       - name: Deploy docs
-        run: pixi run -e docs mkdocs gh-deploy --force
+        run: pixi run -e docs mkdocs gh-deploy --force --verbose
