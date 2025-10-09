@@ -10,6 +10,7 @@ import xarray as xr
 
 from ocr.risks.fire import (
     apply_wind_directional_convolution,
+    calculate_wind_adjusted_risk,
     classify_wind_directions,
     compute_modal_wind_direction,
     compute_wind_direction_distribution,
@@ -301,4 +302,30 @@ class TestFosbergIndexSnapshot:
         )
 
         result = fosberg_fire_weather_index(hurs, T2, sfcWind).to_dataset()
+        assert xarray_snapshot == result
+
+
+class TestWindAdjustedRiskSnapshot:
+    """Snapshot tests for the complete wind-adjusted risk calculation pipeline."""
+
+    @pytest.mark.parametrize(
+        'region_coords',
+        [
+            pytest.param((slice(-120.0, -119.9), slice(35.1, 35.0)), id='california_coast'),
+            pytest.param((slice(-105.0, -104.9), slice(40.1, 40.0)), id='rocky_mountains'),
+        ],
+    )
+    def test_calculate_wind_adjusted_risk_regions(self, xarray_snapshot, region_coords):
+        """Snapshot test for wind-adjusted risk calculation on different regions.
+
+        This test captures the full output of the main risk calculation pipeline,
+        including all intermediate datasets and transformations. Tests multiple
+        geographic regions to ensure the pipeline works correctly across different
+        landscapes and conditions.
+        """
+        x_slice, y_slice = region_coords
+
+        result = calculate_wind_adjusted_risk(x_slice=x_slice, y_slice=y_slice)
+
+        # Snapshot the full result
         assert xarray_snapshot == result

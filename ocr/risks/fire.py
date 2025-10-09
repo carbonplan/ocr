@@ -636,7 +636,10 @@ def compute_wind_direction_distribution(
         'Fraction of hours in each of 8 cardinal and ordinal directions during hours meeting fire weather criteria'
     )
 
-    return wind_direction_hist.to_dataset().chunk({'x': -1, 'y': -1})
+    hist_dim = 'wind_direction'
+    chunk_dict = {dim: -1 for dim in wind_direction_hist.dims if dim != hist_dim}
+
+    return wind_direction_hist.to_dataset().chunk(chunk_dict)
 
 
 def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
