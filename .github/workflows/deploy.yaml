@@ -164,7 +164,8 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
-            --write-region-files \
+            --write-regional-stats \
+            --write-regional-subsets \
             --wipe
 
   staging-main:
@@ -229,7 +230,8 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             --platform coiled \
-            --write-region-files \
+            --write-regional-stats \
+            --write-regional-subsets \
             --wipe
 
   manual:
@@ -323,7 +325,8 @@ jobs:
             $REGION_ARGS \
             --env-file "$ENV_FILE" \
             $WIPE_ARG \
-            --write-region-files \
+            --write-regional-stats \
+            --write-regional-subsets \
             --platform coiled
 
   production:
@@ -346,7 +349,7 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 10000
+          role-duration-seconds: 12000
 
       - uses: prefix-dev/setup-pixi@v0.9.1
         with:
@@ -410,7 +413,8 @@ jobs:
           pixi run ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
-            --write-region-files \
+            --write-regional-stats \
+            --write-regional-subsets \
             --platform coiled
 
   production-rerun:
@@ -447,7 +451,7 @@ jobs:
           role-to-assume: arn:aws:iam::631969445205:role/github-action-role
           role-session-name: ocr-etl-role-session
           aws-region: us-west-2
-          role-duration-seconds: 10000
+          role-duration-seconds: 12000
 
       - uses: prefix-dev/setup-pixi@v0.9.1
         with:
@@ -511,5 +515,6 @@ jobs:
           pixi run ocr run \
             $REGION_ARGS \
             --env-file ocr-coiled-s3-production.env \
-            --write-region-files \
+            --write-regional-stats \
+            --write-regional-subsets \
             --platform coiled

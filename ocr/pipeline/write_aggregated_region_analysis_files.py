@@ -121,10 +121,6 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     install_load_extensions(aws=True, spatial=True, httpfs=True, con=connection)
     apply_s3_creds(con=connection)
 
-    # NotImplementedException: Not implemented Error: GDAL Error (6): The GeoJSON driver does not overwrite existing files.
-    # So we need to clear any existing files
-    config.vector.delete_region_analysis_files()
-
     if config.debug:
         console.log('Writing aggregated region analysis files for counties.')
     write_stats_table(

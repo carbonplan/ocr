@@ -878,6 +878,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
             )
         self.delete_region_gpqs()
         self.delete_region_analysis_files()
+        # NotImplementedException: Not implemented Error: GDAL Error (6): The GeoJSON driver does not overwrite existing files.
+        # So we need to clear any existing files
+        self.delete_per_region_files()
 
     # ----------------------------
     # output pmtiles
@@ -940,6 +943,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
+    def per_region_analysis_prefix(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.output_prefix}/per-region-analysis/')
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
         path.mkdir(parents=True, exist_ok=True)
@@ -959,14 +968,39 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def upath_delete(self, path: UPath) -> None:
         """Use UPath to handle deletion in a cloud-agnostic way"""
-        # First, get a list of all files in the region geoparquet prefix
-        if path.exists():
-            for file in path.rglob('*'):
-                if file.is_file():
-                    file.unlink()
-        else:
+        if not path.exists():
             if self.debug:
                 console.log('No files found to delete.')
+            return
+
+        protocol = path.protocol
+
+        # For S3, use fsspec's rm method which supports recursive deletion
+        if protocol == 's3':
+            if self.debug:
+                console.log(f'Deleting S3 path: {path}')
+            # Use the underlying filesystem's rm method for efficient batch deletion
+            fs = path.fs
+            fs.rm(path.path, recursive=True)
+        else:
+            # For local filesystems, use standard recursive deletion
+            if self.debug:
+                console.log(f'Deleting local path: {path}')
+            import shutil
+
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+
+    def delete_per_region_files(self):
+        """Deletes the per region analysis files"""
+        if self.debug:
+            console.log(
+                f'Deleting per region  analysis files from {self.per_region_analysis_prefix}'
+            )
+        per_region_path = UPath(self.per_region_analysis_prefix)
+        self.upath_delete(per_region_path)
 
     def delete_region_analysis_files(self):
         """Deletes the region aggregated analysis files"""
@@ -1073,8 +1107,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
     def wipe(self):
         """Wipe the icechunk repository."""
-        if self.debug:
-            console.log(f'Wiping icechunk repository at {self.uri}')
         self.delete()
         self.init_repo()
 
@@ -1137,10 +1169,12 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         if self.uri is None:
             raise ValueError('URI must be set before deleting the icechunk repo.')
 
-        console.log(f'Deleting icechunk repository at {self.uri}')
         if self.uri.protocol == 's3':
             if self.uri.exists():
-                self.uri.rmdir()
+                # Use the underlying filesystem's rm method for efficient batch deletion
+                fs = self.uri.fs
+                console.log(f'Deleting icechunk repository at {self.uri}')
+                fs.rm(self.uri.path, recursive=True)
             else:
                 if self.debug:
                     console.log('No files found to delete.')
@@ -1150,6 +1184,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             import shutil
 
             if UPath(path).exists():
+                console.log(f'Deleting icechunk repository at {self.uri}')
                 shutil.rmtree(path)
             else:
                 if self.debug:

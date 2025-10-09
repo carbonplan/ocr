@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 
 
 class Environment(str, Enum):
@@ -16,3 +17,6 @@ class RiskType(str, Enum):
     """Available risk types for calculation."""
 
     FIRE = 'fire'
+
+
+RegionType = Literal['tract', 'county']
