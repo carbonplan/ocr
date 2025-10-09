@@ -31,9 +31,6 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.1
         with:
-          cache: true
-          cache-key: ${{ runner.os }}-pixi-${{ hashFiles('pyproject.toml') }}
-          locked: false
           activate-environment: true
           environments: dev
 

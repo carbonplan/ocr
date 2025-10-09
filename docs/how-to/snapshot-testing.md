@@ -88,13 +88,13 @@ The snapshot storage location is controlled by the `SNAPSHOT_STORAGE_PATH` envir
 
 ```bash
 # Use default S3 storage (no env var needed)
-pixi run pytest tests/
+pixi run tests-integration
 
 # Override with local storage
-SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pixi run pytest tests/
+SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pixi run tests-integration
 
 # Override with different S3 bucket
-SNAPSHOT_STORAGE_PATH=s3://my-bucket/snapshots pixi run pytest tests/
+SNAPSHOT_STORAGE_PATH=s3://my-bucket/snapshots pixi run tests-integration
 ```
 
 ## Snapshot Organization
