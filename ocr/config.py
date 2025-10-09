@@ -968,14 +968,30 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     def upath_delete(self, path: UPath) -> None:
         """Use UPath to handle deletion in a cloud-agnostic way"""
-        # First, get a list of all files in the region geoparquet prefix
-        if path.exists():
-            for file in path.rglob('*'):
-                if file.is_file():
-                    file.unlink()
-        else:
+        if not path.exists():
             if self.debug:
                 console.log('No files found to delete.')
+            return
+
+        protocol = path.protocol
+
+        # For S3, use fsspec's rm method which supports recursive deletion
+        if protocol == 's3':
+            if self.debug:
+                console.log(f'Deleting S3 path: {path}')
+            # Use the underlying filesystem's rm method for efficient batch deletion
+            fs = path.fs
+            fs.rm(path.path, recursive=True)
+        else:
+            # For local filesystems, use standard recursive deletion
+            if self.debug:
+                console.log(f'Deleting local path: {path}')
+            import shutil
+
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
 
     def delete_per_region_files(self):
         """Deletes the per region analysis files"""
@@ -1091,8 +1107,6 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
     def wipe(self):
         """Wipe the icechunk repository."""
-        if self.debug:
-            console.log(f'Wiping icechunk repository at {self.uri}')
         self.delete()
         self.init_repo()
 
