@@ -1169,10 +1169,12 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         if self.uri is None:
             raise ValueError('URI must be set before deleting the icechunk repo.')
 
-        console.log(f'Deleting icechunk repository at {self.uri}')
         if self.uri.protocol == 's3':
             if self.uri.exists():
-                self.uri.rmdir()
+                # Use the underlying filesystem's rm method for efficient batch deletion
+                fs = self.uri.fs
+                console.log(f'Deleting icechunk repository at {self.uri}')
+                fs.rm(self.uri.path, recursive=True)
             else:
                 if self.debug:
                     console.log('No files found to delete.')
@@ -1182,6 +1184,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             import shutil
 
             if UPath(path).exists():
+                console.log(f'Deleting icechunk repository at {self.uri}')
                 shutil.rmtree(path)
             else:
                 if self.debug:
