@@ -31,8 +31,6 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.1
         with:
-          cache: false # no pixi.lock
-          locked: false
           activate-environment: true
           environments: dev
 
