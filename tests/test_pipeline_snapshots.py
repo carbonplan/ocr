@@ -2,16 +2,10 @@ import pytest
 
 from ocr.pipeline.process_region import sample_risk_to_buildings
 from ocr.risks.fire import calculate_wind_adjusted_risk
-from ocr.testing import GeoDataFrameSnapshotExtension
+
+pytestmark = pytest.mark.integration
 
 
-@pytest.fixture
-def geodataframe_snapshot(snapshot):
-    """Fixture for GeoDataFrame snapshot testing."""
-    return snapshot.use_extension(GeoDataFrameSnapshotExtension)
-
-
-@pytest.mark.integration
 @pytest.mark.parametrize(
     'region_coords',
     [

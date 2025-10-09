@@ -19,15 +19,8 @@ from ocr.risks.fire import (
     fosberg_fire_weather_index,
     generate_wind_directional_kernels,
 )
-from ocr.testing import XarraySnapshotExtension
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def xarray_snapshot(snapshot):
-    """Fixture for xarray snapshot testing."""
-    return snapshot.use_extension(XarraySnapshotExtension)
 
 
 @pytest.fixture

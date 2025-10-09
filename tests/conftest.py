@@ -5,10 +5,29 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.pipeline.process_region import calculate_risk
+from ocr.testing import GeoDataFrameSnapshotExtension, XarraySnapshotExtension
 from ocr.types import RiskType
 
 # Set default snapshot storage path to S3 if not already set
 os.environ.setdefault('SNAPSHOT_STORAGE_PATH', 's3://carbonplan-ocr/integration-tests/snapshots/')
+
+
+@pytest.fixture
+def xarray_snapshot(snapshot):
+    """Fixture for xarray snapshot testing.
+
+    Available to all tests - use for snapshotting xarray DataArrays and Datasets.
+    """
+    return snapshot.use_extension(XarraySnapshotExtension)
+
+
+@pytest.fixture
+def geodataframe_snapshot(snapshot):
+    """Fixture for GeoDataFrame snapshot testing.
+
+    Available to all tests - use for snapshotting GeoPandas GeoDataFrames.
+    """
+    return snapshot.use_extension(GeoDataFrameSnapshotExtension)
 
 
 @pytest.fixture(scope='session')
