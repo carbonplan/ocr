@@ -155,16 +155,15 @@
 [tool.pixi.feature.docs.dependencies]
     cairosvg                    = ">=2.8.2,<3"
     griffe-inherited-docstrings = ">=1.1.1,<2"
-
-    mike                = ">=2.1.3,<3"
-    mkdocs              = ">=1.6.1,<2"
-    mkdocs-click        = ">=0.9.0,<0.10"
-    mkdocs-jupyter      = ">=0.25.1,<0.26"
-    mkdocs-material     = ">=9.6.20,<10"
-    mkdocstrings        = ">=0.30.0,<0.31"
-    mkdocstrings-python = ">=1.18.2,<2"
-    pillow              = ">=11.3.0,<12"
-    ruff                = ">=0.12.12,<0.14"
+    mike                        = ">=2.1.3,<3"
+    mkdocs                      = ">=1.6.1,<2"
+    mkdocs-click                = ">=0.9.0,<0.10"
+    mkdocs-jupyter              = ">=0.25.1,<0.26"
+    mkdocs-material             = ">=9.6.20,<10"
+    mkdocstrings                = ">=0.30.0,<0.31"
+    mkdocstrings-python         = ">=1.18.2,<2"
+    pillow                      = ">=11.3.0,<12"
+    ruff                        = ">=0.12.12,<0.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
     markdown-exec             = ">=1.11.0, <2"
@@ -208,7 +207,6 @@
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
-cloudpathlib = ">=0.22.0,<0.23"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
