@@ -4,11 +4,11 @@ OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with cu
 
 ## Overview
 
-The `XarraySnapshotExtension` allows you to:
+The `XarraySnapshotExtension` and `GeoDataFrameSnapshotExtension` allow you to:
 
-- Create and compare snapshots of xarray DataArrays and Datasets
+- Create and compare snapshots of xarray DataArrays and Datasets and GeoPandas dataframes
 - Store snapshots in S3 (default) or locally
-- Handle large datasets efficiently using zarr format
+- Handle large datasets efficiently using zarr format and geoparquet for geodataframes.
 
 ## Basic Usage
 
@@ -20,12 +20,17 @@ By default, snapshots are stored in S3 at `s3://carbonplan-ocr/integration-tests
 import numpy as np
 import pytest
 import xarray as xr
-from ocr.testing import XarraySnapshotExtension
+import geopandas as gpd
+from ocr.testing import XarraySnapshotExtension, GeoDataFrameSnapshotExtension
 
 
 @pytest.fixture
 def xarray_snapshot(snapshot):
     return snapshot.use_extension(XarraySnapshotExtension)
+
+@pytest.fixture
+def geodataframe_snapshot(snapshot):
+    return snapshot.use_extension(GeoDataFrameSnapshotExtension)
 
 
 def test_my_data(xarray_snapshot):
@@ -34,6 +39,20 @@ def test_my_data(xarray_snapshot):
         dims=('x', 'y'),
     )
     assert xarray_snapshot == data
+
+
+def test_geodataframe_snapshot_extension(geodataframe_snapshot) -> None:
+    """Test snapshot extension for GeoDataFrames."""
+    gdf = gpd.GeoDataFrame(
+        {
+            'name': ['Point A', 'Point B', 'Point C'],
+            'value': [10.5, 20.3, 30.7],
+            'category': ['type1', 'type2', 'type1'],
+        },
+        geometry=[Point(-120.0, 35.0), Point(-119.5, 35.5), Point(-119.0, 36.0)],
+        crs='EPSG:4326',
+    )
+    assert geodataframe_snapshot == gdf
 ```
 
 Run tests with:
