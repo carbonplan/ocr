@@ -34,8 +34,10 @@ def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 
             Body=compressed_data,
             ContentType=content_type,
             ContentEncoding='gzip',
-            ContentDisposition='attachement',
+            ContentDisposition='attachment',
         )
+        # free up memory
+        response['Body'].close()
     else:
         # for csv, we can just modify the headers
         s3_client.copy_object(
@@ -44,7 +46,7 @@ def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 
             CopySource={'Bucket': bucket, 'Key': prefix},
             ContentType=content_type,
             ContentEncoding='gzip',
-            ContentDisposition='attachement',
+            ContentDisposition='attachment',
             MetadataDirective='REPLACE',
         )
 
