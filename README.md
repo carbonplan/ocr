@@ -1,4 +1,4 @@
-# OCR - Open Climate Risk Platform
+# Open Climate Risk (OCR) Platform
 
 | CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
 | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -25,33 +25,6 @@ pixi install
 pixi shell
 ```
 
-### Basic Usage
-
-```bash
-# Process fire risk for a single region locally
-ocr run --region-id y10_x2 --platform local --risk-type fire
-```
-
-## Architecture
-
-The OCR pipeline consists of four main stages:
-
-1. **Region Processing** - Calculate risk metrics for individual geographic regions
-2. **Data Aggregation** - Combine regional geoparquet files into consolidated datasets
-3. **Statistical Summaries** - Generate county and tract-level risk statistics (optional)
-4. **Tile Generation** - Create PMTiles for web visualization
-
-### Data Flow
-
-```mermaid
-flowchart LR
-    A[Raw Climate Data] --> B[Region Processing]
-    B --> C[Data Aggregation]
-    C --> D[PMTiles]
-    C --> E[Regional Stats]
-    E --> D
-```
-
 ## Development
 
 ### Running Tests
@@ -62,6 +35,9 @@ pixi run tests
 
 # Run specific test file
 pixi run pytest tests/test_datasets.py
+
+# Run integration tests
+pixi run tests-integration
 ```
 
 ### Code Quality
@@ -91,24 +67,9 @@ pixi shell
 ```
 
 ```bash
-# 1. Test single region processing
-ocr process-region y10_x2 --risk-type fire --env-file .env
-
-# 2. Run minimal pipeline locally
+Run minimal pipeline locally
 ocr run --region-id y10_x2 --platform local --env-file .env
-
-# 3. Generate tiles from existing data
-ocr create-pmtiles --env-file .env
 ```
-
-## Data Products
-
-OCR generates several data products:
-
-- **Regional Geoparquet** - Building-level risk scores by region
-- **Consolidated Dataset** - Combined data across all regions
-- **Regional Statistics** - County and tract-level aggregations
-- **PMTiles** - Vector tiles for web visualization
 
 ## Contributing
 
@@ -121,7 +82,7 @@ We welcome contributions! Please see our [contributing guide](./contributing.md)
 
 ## Support
 
-- **Documentation** - [Full documentation](https://carbonplan-ocr.readthedocs.io) (coming soon)
+- **Documentation** - [Full documentation](https://carbonplan-ocr.readthedocs.io)
 - **Issues** - Report bugs or request features via [GitHub Issues](https://github.com/carbonplan/ocr/issues)
 - **Discussions** - Join the conversation in [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
 
