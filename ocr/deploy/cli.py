@@ -65,18 +65,16 @@ def run(
     risk_type: RiskType = typer.Option(
         RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
-    write_region_files: bool = typer.Option(
+    write_regional_stats: bool = typer.Option(
         False,
-        '-w',
-        '--write-region-files',
-        help='Writes region aggregated geospatial analysis files (geoparquet, geojson, csv etc.)',
+        '--write-regional-stats',
+        help='Write aggregated statistical summaries for each region (one file per region type with stats like averages, medians, percentiles, and histograms)',
         show_default=True,
     ),
-    write_per_region: bool = typer.Option(
+    write_regional_subsets: bool = typer.Option(
         False,
-        '-pr',
-        '--write-per-region',
-        help='Writes per region split analysis files (geoparquet, geojson, csv etc.)',
+        '--write-regional-subsets',
+        help='Write individual building-level data split by region (one file per GEOID containing raw building records)',
         show_default=True,
     ),
     platform: Platform = typer.Option(
@@ -124,10 +122,10 @@ def run(
             parts += ['--all-region-ids']
         parts += ['--risk-type', risk_type.value]
         parts += ['--platform', platform.value]
-        if write_region_files:
-            parts += ['--write-region-files']
-        if write_region_files:
-            parts += ['--write-per-region']
+        if write_regional_stats:
+            parts += ['--write-regional-stats']
+        if write_regional_subsets:
+            parts += ['--write-regional-subsets']
         if wipe:
             parts += ['--wipe']
 
@@ -233,7 +231,7 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if write_region_files:
+        if write_regional_stats:
             manager = _get_manager(Platform.COILED, config.debug)
 
             manager.submit_job(
@@ -245,7 +243,7 @@ def run(
                     'software': COILED_SOFTWARE,
                 },
             )
-        if write_per_region:
+        if write_regional_subsets:
             batch_manager = _get_manager(Platform.COILED, config.debug)
 
             batch_manager.submit_job(
@@ -330,7 +328,7 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if write_region_files:
+        if write_regional_stats:
             manager = _get_manager(Platform.LOCAL, config.debug)
 
             manager.submit_job(
@@ -341,7 +339,7 @@ def run(
                 },
             )
 
-        if write_per_region:
+        if write_regional_subsets:
             manager = _get_manager(Platform.LOCAL, config.debug)
 
             manager.submit_job(
@@ -639,7 +637,11 @@ def write_aggregated_region_analysis_files(
     ),
 ):
     """
-    Generate statistical summaries at county and tract levels and write to multiple geospatial file formats (geoparquet, geojson, csv).
+    Write aggregated statistical summaries for each region (county and tract).
+
+    Creates one file per region type containing aggregated statistics for ALL regions,
+    including building counts, average/median risk values, percentiles (p90, p95, p99),
+    and histograms. Outputs in geoparquet, geojson, and csv formats.
     """
 
     # Schedule if requested and not already inside a batch task
@@ -693,7 +695,11 @@ def write_per_region_analysis_files(
     ),
 ):
     """
-    For each region (tract, county) group data and write to multiple geospatial file formats (geoparquet, geojson, csv).
+    Write individual building-level fire risk data split by region (county and tract).
+
+    Creates one file per GEOID containing raw building records with fire risk values,
+    wind risk, and coordinates/geometry. Outputs thousands of files (one per county
+    and one per tract) in csv and geojson formats for downloadable data subsets.
     """
 
     # Schedule if requested and not already inside a batch task
@@ -714,9 +720,7 @@ def write_per_region_analysis_files(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.write_per_region_analysis_files import (
-        write_per_region_analysis_files,
-    )
+    from ocr.pipeline.write_per_region_analysis_files import write_per_region_analysis_files
 
     config = load_config(env_file)
 
