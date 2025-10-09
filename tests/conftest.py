@@ -13,6 +13,19 @@ from ocr.types import RiskType
 os.environ.setdefault('SNAPSHOT_STORAGE_PATH', 's3://carbonplan-ocr/integration-tests/snapshots/')
 
 
+@pytest.fixture(scope='session', autouse=True)
+def cleanup_s3_directory():
+    """Clean up incorrectly created 's3:' directory from syrupy."""
+    yield
+    # Cleanup after all tests complete
+    import pathlib
+    import shutil
+
+    s3_dir = pathlib.Path('s3:')
+    if s3_dir.exists():
+        shutil.rmtree(s3_dir, ignore_errors=True)
+
+
 # Define test regions used across multiple test modules
 TEST_REGIONS = {
     'california-coast': (slice(-120.0, -119.995), slice(35.005, 35.0)),
