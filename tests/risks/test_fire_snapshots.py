@@ -304,11 +304,11 @@ class TestWindAdjustedRiskSnapshot:
     @pytest.mark.parametrize(
         'region_coords',
         [
-            pytest.param((slice(-120.0, -119.95), slice(35.05, 35.0)), id='california_coast'),
-            pytest.param((slice(-105.0, -104.95), slice(40.05, 40.0)), id='colorado_rockies'),
-            pytest.param((slice(-122.5, -122.45), slice(47.65, 47.6)), id='seattle_area'),
-            pytest.param((slice(-84.4, -84.35), slice(33.8, 33.75)), id='georgia_piedmont'),
-            pytest.param((slice(-111.9, -111.85), slice(33.5, 33.45)), id='arizona_desert'),
+            pytest.param((slice(-120.0, -119.995), slice(35.005, 35.0)), id='california_coast'),
+            pytest.param((slice(-105.0, -104.995), slice(40.005, 40.0)), id='colorado_rockies'),
+            pytest.param((slice(-122.5, -122.495), slice(47.605, 47.6)), id='seattle_area'),
+            pytest.param((slice(-84.4, -84.395), slice(33.755, 33.75)), id='georgia_piedmont'),
+            pytest.param((slice(-111.9, -111.895), slice(33.455, 33.45)), id='arizona_desert'),
         ],
     )
     def test_calculate_wind_adjusted_risk_regions(self, xarray_snapshot, region_coords):

@@ -44,20 +44,21 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
     def dirname(cls, *, test_location: PyTestLocation) -> str:
         """Return the directory for storing snapshots."""
         base_path = cls._get_base_snapshot_path()
+        test_file = upath.UPath(test_location.filepath).stem
+
         if base_path:
-            # Remote storage: use configured base path
-            return str(base_path)
+            # Remote storage: use configured base path with test file subdirectory
+            return str(upath.UPath(base_path) / test_file)
         # Local storage: use __snapshots__ dir next to test file
         return str(upath.UPath(test_location.filepath).parent / '__snapshots__')
 
     @classmethod
     def get_snapshot_name(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
-        """Generate snapshot name based on test location and test name."""
-        test_file = upath.UPath(test_location.filepath).stem
+        """Generate snapshot name based on test name."""
         test_name = test_location.testname
         if index == 0:
-            return f'{test_file}_{test_name}'
-        return f'{test_file}_{test_name}.{index}'
+            return test_name
+        return f'{test_name}.{index}'
 
     @classmethod
     def get_location(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
@@ -72,6 +73,15 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
         # Use upath for proper S3/remote path handling
         snapshot_path = upath.UPath(dirname) / filename
         return str(snapshot_path)
+
+    @classmethod
+    def _warn_on_snapshot_name(cls, *, snapshot_name: str, test_location: PyTestLocation) -> None:
+        """Override to disable snapshot name validation warnings.
+
+        The base class warns if snapshot name doesn't contain test name, but our
+        naming convention intentionally uses just the test name for cleaner organization.
+        """
+        pass
 
     def serialize(self, data: SerializableData, **kwargs: typing.Any) -> typing.Any:
         """Convert DataArray to Dataset for consistent zarr storage. Returns the data unchanged."""
@@ -179,20 +189,21 @@ class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
     def dirname(cls, *, test_location: PyTestLocation) -> str:
         """Return the directory for storing snapshots."""
         base_path = cls._get_base_snapshot_path()
+        test_file = upath.UPath(test_location.filepath).stem
+
         if base_path:
-            # Remote storage: use configured base path
-            return str(base_path)
+            # Remote storage: use configured base path with test file subdirectory
+            return str(upath.UPath(base_path) / test_file)
         # Local storage: use __snapshots__ dir next to test file
         return str(upath.UPath(test_location.filepath).parent / '__snapshots__')
 
     @classmethod
     def get_snapshot_name(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
-        """Generate snapshot name based on test location and test name."""
-        test_file = upath.UPath(test_location.filepath).stem
+        """Generate snapshot name based on test name."""
         test_name = test_location.testname
         if index == 0:
-            return f'{test_file}_{test_name}'
-        return f'{test_file}_{test_name}.{index}'
+            return test_name
+        return f'{test_name}.{index}'
 
     @classmethod
     def get_location(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
@@ -207,6 +218,15 @@ class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
         # Use upath for proper S3/remote path handling
         snapshot_path = upath.UPath(dirname) / filename
         return str(snapshot_path)
+
+    @classmethod
+    def _warn_on_snapshot_name(cls, *, snapshot_name: str, test_location: PyTestLocation) -> None:
+        """Override to disable snapshot name validation warnings.
+
+        The base class warns if snapshot name doesn't contain test name, but our
+        naming convention intentionally uses just the test name for cleaner organization.
+        """
+        pass
 
     def serialize(self, data: SerializableData, **kwargs: typing.Any) -> typing.Any:
         """Validate that data is a GeoDataFrame. Returns the data unchanged."""

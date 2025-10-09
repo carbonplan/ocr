@@ -92,8 +92,6 @@
         "--cov-report=xml",
         "--cov=./ocr",
         "--verbose",
-        "-n",
-        "auto",
     ]
     console_output_style = "count"
     markers = [
@@ -145,11 +143,10 @@
 
 # Dev feature dependencies (conda-forge)
 [tool.pixi.feature.dev.dependencies]
-    pre-commit   = ">=4.3.0,<5"
-    pytest       = ">=8.4.2,<9"
-    pytest-cov   = ">=7.0.0,<8"
-    pytest-xdist = ">=3.8.0,<4"
-    ruff         = ">=0.13.0,<0.14"
+    pre-commit = ">=4.3.0,<5"
+    pytest     = ">=8.4.2,<9"
+    pytest-cov = ">=7.0.0,<8"
+    ruff       = ">=0.13.0,<0.14"
 
 # Dev-only PyPI deps (kept on PyPI because not available on conda-forge)
 [tool.pixi.feature.dev.pypi-dependencies]
