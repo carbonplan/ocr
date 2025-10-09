@@ -5,6 +5,7 @@ from typing import Literal
 
 import boto3
 import duckdb
+from rich.progress import track
 from upath import UPath
 
 from ocr import catalog
@@ -14,7 +15,7 @@ from ocr.types import RegionType
 from ocr.utils import apply_s3_creds, install_load_extensions
 
 
-def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 'text/geojson']):
+def _modify_headers(bucket: str, prefix: str, content_type: Literal['text/csv', 'text/json']):
     """Updates the file headers in S3 so that compressed data will be automatically uncompressed by the browser on download.
     If the data is geojson, we are also modify it by compressing it because the duckdb/GDAL driver can't write compressed geojson."""
 
@@ -61,6 +62,9 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
 
     region_path = UPath(f's3://{region_ds.bucket}/{region_ds.prefix}')
 
+    if config.debug:
+        console.log(f'Creating temporary table for {region_type} grouped risk data.')
+
     # create joined temp table
     con.execute(f"""
         CREATE TEMP TABLE {region_type}_grouped_risk AS
@@ -86,12 +90,18 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
         f"""SELECT DISTINCT(GEOID) from {region_type}_grouped_risk"""
     ).fetchnumpy()['GEOID']
 
+    if config.debug:
+        console.log(f'Found {len(geoid_list)} {region_type}s to process.')
+
     # write csv
     csv_path = per_region_output_prefix / region_type / 'csv'
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    for geoid in geoid_list:
-        fname = f'{csv_path}/{geoid}.csv'
+    if config.debug:
+        console.log(f'Writing CSV files to {csv_path}.')
+
+    for geoid in track(geoid_list, description=f'Writing CSV files for {region_type}s'):
+        ufname = csv_path / f'{geoid}.csv'
         con.execute(f"""COPY (
         SELECT
             * EXCLUDE geometry
@@ -99,16 +109,32 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
             {region_type}_grouped_risk
         WHERE
             GEOID = '{geoid}'
-        ) TO '{fname}' (
+        ) TO '{ufname.as_uri()}' (
         FORMAT CSV,
         COMPRESSION 'gzip',
         OVERWRITE_OR_IGNORE
         );""")
 
+        if region_path.protocol == 's3':
+            bucket = ufname.parts[0].strip('/')
+            _modify_headers(
+                bucket=bucket,
+                prefix=ufname.path.split(bucket + '/')[1],
+                content_type='text/csv',
+            )
+
+    if config.debug:
+        console.log(f'Finished writing {len(geoid_list)} CSV files.')
+
     # write geojson
     geojson_path = per_region_output_prefix / region_type / 'geojson'
     geojson_path.mkdir(parents=True, exist_ok=True)
-    for geoid in geoid_list:
+
+    if config.debug:
+        console.log(f'Writing GeoJSON files to {geojson_path}.')
+
+    for geoid in track(geoid_list, description=f'Writing GeoJSON files for {region_type}s'):
+        ufname = geojson_path / f'{geoid}.geojson'
         con.execute(f"""COPY (
         SELECT
             * EXCLUDE latitude,
@@ -117,27 +143,23 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
             {region_type}_grouped_risk
         WHERE
             GEOID = '{geoid}'
-        ) TO '{geojson_path}/{geoid}.geojson' (
+        ) TO '{ufname.as_uri()}' (
         FORMAT GDAL,
         DRIVER 'GEOJSON',
         LAYER_NAME {region_type},
         OVERWRITE_OR_IGNORE
         );""")
 
-    # Modify CSV and GeoJSON headers in s3 for data downloads
-    if region_path.protocol == 's3':
-        bucket = csv_path.parts[0].strip('/')
-        for geoid in geoid_list:
+        if region_path.protocol == 's3':
+            bucket = ufname.parts[0].strip('/')
             _modify_headers(
                 bucket=bucket,
-                prefix=(csv_path / f'{geoid}.csv').path.split(bucket + '/')[1],
-                content_type='text/csv',
-            )
-            _modify_headers(
-                bucket=bucket,
-                prefix=(geojson_path / f'{geoid}.geojson').path.split(bucket + '/')[1],
+                prefix=ufname.path.split(bucket + '/')[1],
                 content_type='text/json',
             )
+
+    if config.debug:
+        console.log(f'Finished writing {len(geoid_list)} GeoJSON files.')
 
 
 def write_per_region_analysis_files(config: OCRConfig):
