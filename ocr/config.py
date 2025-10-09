@@ -878,6 +878,9 @@ class VectorConfig(pydantic_settings.BaseSettings):
             )
         self.delete_region_gpqs()
         self.delete_region_analysis_files()
+        # NotImplementedException: Not implemented Error: GDAL Error (6): The GeoJSON driver does not overwrite existing files.
+        # So we need to clear any existing files
+        self.delete_per_region_files()
 
     # ----------------------------
     # output pmtiles
