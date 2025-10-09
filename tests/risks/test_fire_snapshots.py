@@ -10,7 +10,6 @@ import xarray as xr
 
 from ocr.risks.fire import (
     apply_wind_directional_convolution,
-    calculate_wind_adjusted_risk,
     classify_wind_directions,
     compute_modal_wind_direction,
     compute_wind_direction_distribution,
@@ -302,26 +301,29 @@ class TestWindAdjustedRiskSnapshot:
     """Snapshot tests for the complete wind-adjusted risk calculation pipeline."""
 
     @pytest.mark.parametrize(
-        'region_coords',
+        'region_id',
         [
-            pytest.param((slice(-120.0, -119.995), slice(35.005, 35.0)), id='california_coast'),
-            pytest.param((slice(-105.0, -104.995), slice(40.005, 40.0)), id='colorado_rockies'),
-            pytest.param((slice(-122.5, -122.495), slice(47.605, 47.6)), id='seattle_area'),
-            pytest.param((slice(-84.4, -84.395), slice(33.755, 33.75)), id='georgia_piedmont'),
-            pytest.param((slice(-111.9, -111.895), slice(33.455, 33.45)), id='arizona_desert'),
+            pytest.param('california-coast', id='california-coast'),
+            pytest.param('colorado-rockies', id='colorado-rockies'),
+            pytest.param('seattle-area', id='seattle-area'),
+            pytest.param('georgia-piedmont', id='georgia-piedmont'),
+            pytest.param('arizona-desert', id='arizona-desert'),
         ],
     )
-    def test_calculate_wind_adjusted_risk_regions(self, xarray_snapshot, region_coords):
+    def test_calculate_wind_adjusted_risk_regions(
+        self, xarray_snapshot, get_wind_adjusted_risk, region_id
+    ):
         """Snapshot test for wind-adjusted risk calculation on different regions.
 
         This test captures the full output of the main risk calculation pipeline,
         including all intermediate datasets and transformations. Tests multiple
         geographic regions to ensure the pipeline works correctly across different
         landscapes and conditions.
-        """
-        x_slice, y_slice = region_coords
 
-        result = calculate_wind_adjusted_risk(x_slice=x_slice, y_slice=y_slice)
+        Note: Uses cached risk calculations (session-scoped) shared with pipeline tests.
+        """
+        # Get cached risk calculation (shared with pipeline tests)
+        result = get_wind_adjusted_risk(region_id)
 
         # Snapshot the full result
         assert xarray_snapshot == result

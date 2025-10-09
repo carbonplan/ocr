@@ -54,11 +54,17 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
 
     @classmethod
     def get_snapshot_name(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
-        """Generate snapshot name based on test name."""
+        """Generate snapshot name based on test name.
+
+        Sanitizes the test name to replace problematic characters (e.g., brackets from
+        parametrized tests) with underscores for valid file paths.
+        """
         test_name = test_location.testname
+        # Replace brackets and other problematic characters with underscores
+        sanitized_name = test_name.replace('[', '_').replace(']', '').replace('/', '_')
         if index == 0:
-            return test_name
-        return f'{test_name}.{index}'
+            return sanitized_name
+        return f'{sanitized_name}.{index}'
 
     @classmethod
     def get_location(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
@@ -134,8 +140,6 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
                 # Use standard shutil for local paths
                 shutil.rmtree(snapshot_path)
 
-        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-
         if isinstance(data, xr.Dataset):
             data.to_zarr(str(snapshot_path), mode='w')
 
@@ -199,11 +203,17 @@ class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
 
     @classmethod
     def get_snapshot_name(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
-        """Generate snapshot name based on test name."""
+        """Generate snapshot name based on test name.
+
+        Sanitizes the test name to replace problematic characters (e.g., brackets from
+        parametrized tests) with underscores for valid file paths.
+        """
         test_name = test_location.testname
+        # Replace brackets and other problematic characters with underscores
+        sanitized_name = test_name.replace('[', '_').replace(']', '').replace('/', '_')
         if index == 0:
-            return test_name
-        return f'{test_name}.{index}'
+            return sanitized_name
+        return f'{sanitized_name}.{index}'
 
     @classmethod
     def get_location(cls, *, test_location: PyTestLocation, index: SnapshotIndex = 0) -> str:
@@ -277,7 +287,7 @@ class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
         filepath = snapshot_collection.location
         data = next(iter(snapshot_collection)).data
 
-        snapshot_path = upath.UPath(filepath)
+        snapshot_path = upath.UPath(str(filepath))
 
         # Remove existing parquet if it exists
         if snapshot_path.exists():
@@ -290,17 +300,14 @@ class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
                 # Use standard removal for local paths
                 snapshot_path.unlink()
 
-        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if isinstance(data, gpd.GeoDataFrame):
-            data.to_parquet(
-                str(snapshot_path),
-                index=False,
-                compression='gzip',
-                geometry_encoding='WKB',
-                write_covering_bbox=True,
-                schema_version='1.1.0',
-            )
+        data.to_parquet(
+            str(snapshot_path),
+            index=False,
+            compression='zstd',
+            geometry_encoding='WKB',
+            write_covering_bbox=True,
+            schema_version='1.1.0',
+        )
 
     def diff_lines(
         self, serialized_data: typing.Any, snapshot_data: typing.Any
