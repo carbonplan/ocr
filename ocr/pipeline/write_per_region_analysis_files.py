@@ -139,8 +139,7 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
         ufname = geojson_path / f'{geoid}.geojson'
         con.execute(f"""COPY (
         SELECT
-            * EXCLUDE latitude,
-            longitude
+            * EXCLUDE (longitude, latitude, NAME, GEOID)
         FROM
             {region_type}_grouped_risk
         WHERE
