@@ -37,10 +37,13 @@ extra:
 nav:
   - Home: index.md
   - How-to Guides:
-      - Getting Started: how-to/getting-started.md
-      - Installation: how-to/installation.md
-      - Working with Data: how-to/work-with-data.ipynb
-      - Snapshot Testing: how-to/snapshot-testing.md
+      - User Guides:
+          - Installation: how-to/installation.md
+          - Getting Started: how-to/getting-started.md
+          - Working with Data: how-to/work-with-data.ipynb
+      - Developer Guides:
+          - Release Procedure: how-to/release-procedure.md
+          - Snapshot Testing: how-to/snapshot-testing.md
 
   - Methods:
       - Fire Risk:
