@@ -15,7 +15,7 @@ def write_stats_table(
     config: OCRConfig,
     region_path: UPath,
     stats_table_name: str,
-    hist_bins: list | None = [5, 10, 15, 20, 25, 100],
+    hist_bins: list | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
 ):
     region_analysis_path = config.vector.aggregated_region_analysis_uri
     consolidated_buildings_path = config.vector.building_geoparquet_uri
@@ -23,6 +23,7 @@ def write_stats_table(
     region_stats_path = region_analysis_path / stats_table_name
 
     region_stats_path.mkdir(parents=True, exist_ok=True)
+    hist_bin_padding = len(hist_bins)
 
     con.execute(f"""
         CREATE TEMP TABLE {stats_table_name} AS
@@ -45,43 +46,15 @@ def write_stats_table(
             MEDIAN(b.burn_probability_usfs_2011) as avg_burn_probability_usfs_2011,
             MEDIAN(b.burn_probability_usfs_2047) as avg_burn_probability_usfs_2047,
 
-
             -- we have to cast the histogram from HUGEINT[] to array_json since gdal/json does not support HUGEINT[]
 
-            array_to_json(list_concat(
-                [count(CASE WHEN b.wind_risk_2011 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.wind_risk_2011 <> 0 THEN b.wind_risk_2011 END, {hist_bins}))
-            )) as wind_risk_2011_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.wind_risk_2047 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.wind_risk_2047 <> 0 THEN b.wind_risk_2047 END, {hist_bins}))
-            )) as wind_risk_2047_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.burn_probability_2011 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.burn_probability_2011 <> 0 THEN b.burn_probability_2011 END, {hist_bins}))
-            )) as burn_probability_2011_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.burn_probability_2047 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.burn_probability_2047 <> 0 THEN b.burn_probability_2047 END, {hist_bins}))
-            )) as burn_probability_2047_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.conditional_risk_usfs = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.conditional_risk_usfs <> 0 THEN b.conditional_risk_usfs END, {hist_bins}))
-            )) as conditional_risk_usfs_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.burn_probability_usfs_2011 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.burn_probability_usfs_2011 <> 0 THEN b.burn_probability_usfs_2011 END, {hist_bins}))
-            )) as burn_probability_usfs_2011_hist,
-
-            array_to_json(list_concat(
-                [count(CASE WHEN b.burn_probability_usfs_2047 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.burn_probability_usfs_2047 <> 0 THEN b.burn_probability_usfs_2047 END, {hist_bins}))
-            )) as burn_probability_usfs_2047_hist,
+            array_to_json(list_resize(histogram(a.wind_risk_2011, {hist_bins}), {hist_bin_padding}, 0)) as wind_risk_2011_hist,
+            array_to_json(list_resize(histogram(a.wind_risk_2047, {hist_bins}), {hist_bin_padding}, 0)) as wind_risk_2047_hist,
+            array_to_json(list_resize(histogram(a.burn_probability_2011, {hist_bins}), {hist_bin_padding}, 0)) as burn_probability_2011_hist,
+            array_to_json(list_resize(histogram(a.burn_probability_2047, {hist_bins}), {hist_bin_padding}, 0)) as conditional_risk_usfs_hist,
+            array_to_json(list_resize(histogram(a.conditional_risk_usfs, {hist_bins}), {hist_bin_padding}, 0)) as conditional_risk_usfs_hist,
+            array_to_json(list_resize(histogram(a.burn_probability_usfs_2011, {hist_bins}), {hist_bin_padding}, 0)) as burn_probability_usfs_2011_hist,
+            array_to_json(list_resize(histogram(a.burn_probability_usfs_2047, {hist_bins}), {hist_bin_padding}, 0)) as burn_probability_usfs_2047_hist,
 
             ST_X(ST_Centroid(a.geometry)) AS centroid_longitude,
             ST_Y(ST_Centroid(a.geometry)) AS centroid_latitude,
