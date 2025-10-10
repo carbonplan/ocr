@@ -1222,6 +1222,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         )
 
         variables = [
+            'USFS_RPS',
             'wind_risk_2011',
             'wind_risk_2047',
             'burn_probability_2011',
