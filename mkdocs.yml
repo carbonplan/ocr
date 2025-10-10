@@ -34,6 +34,9 @@ extra:
     version:
         provider: mike
 
+extra_javascript:
+    - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
 nav:
     - Home: index.md
     - How-to Guides:
@@ -102,7 +105,6 @@ plugins:
     - markdown-exec
     - social
     - material-plausible
-    - mermaid2
     - panzoom:
           always_show_hint: true
           full_screen: True
@@ -180,7 +182,7 @@ markdown_extensions:
           custom_fences:
               - name: mermaid
                 class: mermaid
-                format: !!python/name:mermaid2.fence_mermaid
+                format: !!python/name:pymdownx.superfences.fence_code_format
     - pymdownx.tabbed:
           alternate_style: true
     - pymdownx.tasklist:
