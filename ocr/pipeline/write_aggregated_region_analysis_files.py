@@ -51,7 +51,7 @@ def write_stats_table(
             array_to_json(list_resize(map_values(histogram(b.wind_risk_2011, {hist_bins})), {hist_bin_padding}, 0)) as wind_risk_2011_hist,
             array_to_json(list_resize(map_values(histogram(b.wind_risk_2047, {hist_bins})), {hist_bin_padding}, 0)) as wind_risk_2047_hist,
             array_to_json(list_resize(map_values(histogram(b.burn_probability_2011, {hist_bins})), {hist_bin_padding}, 0)) as burn_probability_2011_hist,
-            array_to_json(list_resize(map_values(histogram(b.burn_probability_2047, {hist_bins})), {hist_bin_padding}, 0)) as conditional_risk_usfs_hist,
+            array_to_json(list_resize(map_values(histogram(b.burn_probability_2047, {hist_bins})), {hist_bin_padding}, 0)) as burn_probability_2047_hist,
             array_to_json(list_resize(map_values(histogram(b.conditional_risk_usfs, {hist_bins})), {hist_bin_padding}, 0)) as conditional_risk_usfs_hist,
             array_to_json(list_resize(map_values(histogram(b.burn_probability_usfs_2011, {hist_bins})), {hist_bin_padding}, 0)) as burn_probability_usfs_2011_hist,
             array_to_json(list_resize(map_values(histogram(b.burn_probability_usfs_2047, {hist_bins})), {hist_bin_padding}, 0)) as burn_probability_usfs_2047_hist,
