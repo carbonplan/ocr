@@ -457,6 +457,9 @@ def calculate_wind_adjusted_risk(
 
     fire_risk = xr.Dataset()
 
+    # Note: for QA. Remove in further production versions
+    fire_risk['USFS_RPS'] = rps_30_subset['RPS']
+
     # wind_risk_2011 (our wind-informed RPS value)
     fire_risk['wind_risk_2011'] = wind_informed_bp_corrected_2011 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2011'].attrs['description'] = (
