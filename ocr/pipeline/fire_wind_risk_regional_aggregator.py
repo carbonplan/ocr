@@ -69,8 +69,8 @@ def custom_histogram_query(
         avg(a.wind_risk_2047) as mean_wind_risk_2047,
         median(a.wind_risk_2011) as median_wind_risk_2011,
         median(a.wind_risk_2047) as median_wind_risk_2047,
-        list_resize(histogram(a.wind_risk_2011, {hist_bins}), {hist_bin_padding}, 0) as wind_risk_2011,
-        list_resize(histogram(a.wind_risk_2047, {hist_bins}), {hist_bin_padding}, 0) as wind_risk_2047,
+        list_resize(map_values(histogram(a.wind_risk_2011, {hist_bins})), {hist_bin_padding}, 0) as wind_risk_2011,
+        list_resize(map_values(histogram(a.wind_risk_2047, {hist_bins})), {hist_bin_padding}, 0) as wind_risk_2047,
         b.geometry as geometry
     FROM buildings a
     JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
