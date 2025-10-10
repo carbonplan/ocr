@@ -80,8 +80,8 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
             a.conditional_risk_usfs,
             a.burn_probability_usfs_2011,
             a.burn_probability_usfs_2047,
-            ST_X(ST_Centroid(a.geometry)) AS longitude,
-            ST_Y(ST_Centroid(a.geometry)) AS latitude,
+            ST_X(ST_Centroid(a.geometry)) AS centroid_longitude,
+            ST_Y(ST_Centroid(a.geometry)) AS centroid_latitude,
             a.geometry
         FROM read_parquet('{consolidated_buildings_uri.as_uri()}') a
         JOIN read_parquet('{region_path}') b
@@ -106,7 +106,7 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
         ufname = csv_path / f'{geoid}.csv'
         con.execute(f"""COPY (
         SELECT
-            * EXCLUDE geometry
+            * EXCLUDE (geometry, NAME, GEOID)
         FROM
             {region_type}_grouped_risk
         WHERE
@@ -139,8 +139,7 @@ def write_per_region(*, con: duckdb.DuckDBPyConnection, config: OCRConfig, regio
         ufname = geojson_path / f'{geoid}.geojson'
         con.execute(f"""COPY (
         SELECT
-            * EXCLUDE latitude,
-            longitude
+            * EXCLUDE (centroid_longitude, centroid_latitude, NAME, GEOID)
         FROM
             {region_type}_grouped_risk
         WHERE
