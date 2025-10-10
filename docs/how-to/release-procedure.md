@@ -1,3 +1,5 @@
+<!-- prettier-ignore-start -->
+
 # Release OCR to Production
 
 This guide shows how to release a new version of OCR to production.
@@ -128,14 +130,14 @@ Verify:
 
 1. **Validates version**: Ensures tag is valid semantic version (e.g., `1.2.3`)
 2. **Sets environment variables**:
-   - `OCR_VERSION=X.Y.Z`
-   - `OCR_ENVIRONMENT=production`
+    - `OCR_VERSION=X.Y.Z`
+    - `OCR_ENVIRONMENT=production`
 3. **Updates configuration**: Injects version into `ocr-coiled-s3-production.env`
 4. **Runs full pipeline**:
-   - Processes all regions (`--all-region-ids`)
-   - Writes regional statistics
-   - Generates regional PMTiles
-   - Creates aggregated outputs
+    - Processes all regions (`--all-region-ids`)
+    - Writes regional statistics
+    - Generates regional PMTiles
+    - Creates aggregated outputs
 5. **Deploys to S3**: Outputs stored at versioned path
 
 ## Manual production redeployment
@@ -200,3 +202,5 @@ After releasing:
 
 - Monitor production for any issues
 - Update changelog or documentation if needed
+
+<!-- prettier-ignore-end -->
