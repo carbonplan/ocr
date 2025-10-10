@@ -29,34 +29,34 @@ def write_stats_table(
         SELECT a.GEOID,
             COUNT(b.wind_risk_2011) as building_count,
 
-            AVG(b.burn_probability_2011) as avg_burn_probability_2011,
-            AVG(b.burn_probability_2047) as avg_burn_probability_2047,
             AVG(b.wind_risk_2011) as avg_wind_risk_2011,
             AVG(b.wind_risk_2047) as avg_wind_risk_2047,
+            AVG(b.burn_probability_2011) as avg_burn_probability_2011,
+            AVG(b.burn_probability_2047) as avg_burn_probability_2047,
+            AVG(b.conditional_risk_usfs) as avg_conditional_risk_usfs,
+            AVG(b.burn_probability_usfs_2011) as avg_burn_probability_usfs_2011,
+            AVG(b.burn_probability_usfs_2047) as avg_burn_probability_usfs_2047,
 
-            MEDIAN(b.burn_probability_2011) as median_burn_probability_2011,
-            MEDIAN(b.burn_probability_2047) as median_burn_probability_2047,
-            MEDIAN(b.wind_risk_2011) as median_wind_risk_2011,
-            MEDIAN(b.wind_risk_2047) as median_wind_risk_2047,
+            MEDIAN(b.wind_risk_2011) as avg_wind_risk_2011,
+            MEDIAN(b.wind_risk_2047) as avg_wind_risk_2047,
+            MEDIAN(b.burn_probability_2011) as avg_burn_probability_2011,
+            MEDIAN(b.burn_probability_2047) as avg_burn_probability_2047,
+            MEDIAN(b.conditional_risk_usfs) as avg_conditional_risk_usfs,
+            MEDIAN(b.burn_probability_usfs_2011) as avg_burn_probability_usfs_2011,
+            MEDIAN(b.burn_probability_usfs_2047) as avg_burn_probability_usfs_2047,
 
-
-            quantile_cont(b.burn_probability_2011, 0.90) as p90_burn_probability_2011,
-            quantile_cont(b.burn_probability_2011, 0.95) as p95_burn_probability_2011,
-            quantile_cont(b.burn_probability_2011, 0.99) as p99_burn_probability_2011,
-
-            quantile_cont(b.burn_probability_2047, 0.90) as p90_burn_probability_2047,
-            quantile_cont(b.burn_probability_2047, 0.95) as p95_burn_probability_2047,
-            quantile_cont(b.burn_probability_2047, 0.99) as p99_burn_probability_2047,
-
-            quantile_cont(b.wind_risk_2011, 0.90) as p90_wind_risk_2011,
-            quantile_cont(b.wind_risk_2011, 0.95) as p95_wind_risk_2011,
-            quantile_cont(b.wind_risk_2011, 0.99) as p99_wind_risk_2011,
-
-            quantile_cont(b.wind_risk_2047, 0.90) as p90_wind_risk_2047,
-            quantile_cont(b.wind_risk_2047, 0.95) as p95_wind_risk_2047,
-            quantile_cont(b.wind_risk_2047, 0.99) as p99_wind_risk_2047,
 
             -- we have to cast the histogram from HUGEINT[] to array_json since gdal/json does not support HUGEINT[]
+
+            array_to_json(list_concat(
+                [count(CASE WHEN b.wind_risk_2011 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.wind_risk_2011 <> 0 THEN b.wind_risk_2011 END, {hist_bins}))
+            )) as wind_risk_2011_hist,
+
+            array_to_json(list_concat(
+                [count(CASE WHEN b.wind_risk_2047 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.wind_risk_2047 <> 0 THEN b.wind_risk_2047 END, {hist_bins}))
+            )) as wind_risk_2047_hist,
 
             array_to_json(list_concat(
                 [count(CASE WHEN b.burn_probability_2011 = 0 THEN 1 END)],
@@ -69,41 +69,37 @@ def write_stats_table(
             )) as burn_probability_2047_hist,
 
             array_to_json(list_concat(
-                [count(CASE WHEN b.wind_risk_2011 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.wind_risk_2011 <> 0 THEN b.wind_risk_2011 END, {hist_bins}))
-            )) as wind_risk_2011_hist,
+                [count(CASE WHEN b.conditional_risk_usfs = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.conditional_risk_usfs <> 0 THEN b.conditional_risk_usfs END, {hist_bins}))
+            )) as conditional_risk_usfs_hist,
 
             array_to_json(list_concat(
-                [count(CASE WHEN b.wind_risk_2047 = 0 THEN 1 END)],
-                map_values(histogram(CASE WHEN b.wind_risk_2047 <> 0 THEN b.wind_risk_2047 END, {hist_bins}))
-            )) as wind_risk_2047_hist,
+                [count(CASE WHEN b.burn_probability_usfs_2011 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.burn_probability_usfs_2011 <> 0 THEN b.burn_probability_usfs_2011 END, {hist_bins}))
+            )) as burn_probability_usfs_2011_hist,
 
-            a.geometry
+            array_to_json(list_concat(
+                [count(CASE WHEN b.burn_probability_usfs_2047 = 0 THEN 1 END)],
+                map_values(histogram(CASE WHEN b.burn_probability_usfs_2047 <> 0 THEN b.burn_probability_usfs_2047 END, {hist_bins}))
+            )) as burn_probability_usfs_2047_hist,
+
+            ST_X(ST_Centroid(a.geometry)) AS centroid_longitude,
+            ST_Y(ST_Centroid(a.geometry)) AS centroid_latitude,
+            a.geometry,
         FROM read_parquet('{region_path}') a
         JOIN read_parquet('{consolidated_buildings_path}') b
             ON ST_Intersects(a.geometry, b.geometry)
         GROUP BY a.GEOID, a.geometry ;
     """)
 
-    # Write Geoparquet
-    con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.parquet' (
-        FORMAT 'parquet',
-        COMPRESSION 'zstd',
-        OVERWRITE_OR_IGNORE true);""")
-
     # Write GeoJSON
     con.execute(
-        f"""COPY {stats_table_name} TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
+        f"""COPY (SELECT * EXCLUDE (centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
     )
-
     # Write CSV
     con.execute(
         f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_stats_path}/stats.csv';"""
     )
-
-    # this might break, shapefiles are terrible
-    # IOException: IO Error: GDAL Error (1): Failed to create file
-    # con.execute(f"""COPY {stats_table_name} TO '{region_stats_path}/stats.shp' (FORMAT GDAL, DRIVER 'ESRI Shapefile');""")
 
 
 def write_aggregated_region_analysis_files(config: OCRConfig):
