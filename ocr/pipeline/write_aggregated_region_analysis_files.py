@@ -107,7 +107,7 @@ def write_stats_table(
 
 
 def write_aggregated_region_analysis_files(config: OCRConfig):
-    hist_bins = [5, 10, 15, 20, 25, 100]
+    hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
 
     counties_dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{counties_dataset.bucket}/{counties_dataset.prefix}')
