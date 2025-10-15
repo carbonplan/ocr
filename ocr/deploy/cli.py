@@ -239,7 +239,7 @@ def run(
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
+                    'scheduler_vm_type': 'm8g.4xlarge',
                     'software': COILED_SOFTWARE,
                 },
             )
@@ -251,7 +251,8 @@ def run(
                 name=f'write-per-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
+                    'scheduler_vm_type': 'c8g.4xlarge',
+                    'disk_size': 150,
                     'software': COILED_SOFTWARE,
                 },
             )
@@ -708,11 +709,15 @@ def write_per_region_analysis_files(
         manager = _get_manager(platform, config.debug)
         command = 'ocr write-per-region-analysis-files'
         name = f'write-per-region-analysis-files-{config.environment.value}'
-
         if platform == Platform.COILED:
-            kwargs = {**_coiled_kwargs(config, env_file)}
+            kwargs = {
+                **_coiled_kwargs(config, env_file),
+                'scheduler_vm_type': 'm8g.4xlarge',
+                'disk_size': 200,
+            }
             if vm_type:
                 kwargs['vm_type'] = vm_type
+
         else:
             kwargs = {**_local_kwargs()}
 
