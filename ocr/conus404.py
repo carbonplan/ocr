@@ -147,6 +147,7 @@ def geo_sel(
     bbox: tuple[float, float, float, float] | None = None,  # (west, south, east, north)
     method: str = 'nearest',
     tolerance: float | None = None,
+    crs_wkt: str | None = None,
 ):
     """
     Geographic selection helper.
@@ -178,7 +179,10 @@ def geo_sel(
       Multiple points: adds 'point' dimension
       BBox: retains y, x subset
     """
-    wkt = ds.crs.attrs['crs_wkt']
+    if crs_wkt is None:
+        wkt = ds.crs.attrs['crs_wkt']
+    else:
+        wkt = crs_wkt
     fwd, _ = _get_transformers(wkt)
 
     # --- Case 1: Bounding box ---
