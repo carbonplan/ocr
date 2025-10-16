@@ -14,14 +14,20 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Create bounding box from region
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     # Query buildings within the region
-    building_parquet = catalog.get_dataset('conus-overture-buildings')
+    building_parquet = catalog.get_dataset('region-id-tagged-buildings')
     buildings_table = building_parquet.query_geoparquet(
-        """SELECT bbox, ST_AsText(geometry) as geometry
+        """
+        SELECT
+            block_geoid as GEOID,
+            state_abbrev as state,
+            county_name as county,
+            bbox,
+            ST_AsText(geometry) as geometry
         FROM read_parquet('{s3_path}')"""
         + f"""
         WHERE
-        bbox.xmin BETWEEN {bbox[0]} AND {bbox[2]} AND
-        bbox.ymin BETWEEN {bbox[1]} AND {bbox[3]}"""
+            bbox.xmin BETWEEN {bbox[0]} AND {bbox[2]} AND
+            bbox.ymin BETWEEN {bbox[1]} AND {bbox[3]}"""
     ).df()
 
     # Convert to GeoDataFrame
@@ -36,8 +42,8 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
         buildings_gdf[var] = extract_points(buildings_gdf, ds[var])
 
     # Remove any buildings with NaN values (outside CONUS)
-    geom_cols = ['geometry']
-    buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
+    keep_cols = ['GEOID', 'state', 'county', 'geometry']
+    buildings_gdf = buildings_gdf[data_var_list + keep_cols].dropna(subset=data_var_list)
 
     return buildings_gdf
 

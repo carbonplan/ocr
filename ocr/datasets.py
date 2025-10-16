@@ -504,6 +504,13 @@ datasets = [
         version='v2025-09-24.0',
     ),
     Dataset(
+        name='region-id-tagged-buildings',
+        description='CONUS Overture Buildings with census region identifiers added',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/region_id_tagged_buildings.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
         name='conus-overture-buildings-5070',
         description='CONUS Overture Buildings in EPSG 5070. Columns are: bbox, bbox_5070, geometry, geometry_5070',
         bucket='carbonplan-ocr',
@@ -602,6 +609,13 @@ datasets = [
         bucket='carbonplan-ocr',
         prefix='input/conus404-wind-direction-modes/fire_weather_wind_mode-hurs15_wind35-reprojected.zarr',
         data_format='zarr',
+    ),
+    Dataset(
+        name='us-census-blocks',
+        description='US Census Tracts',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet',
+        data_format='geoparquet',
     ),
     Dataset(
         name='us-census-tracts',

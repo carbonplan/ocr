@@ -18,7 +18,7 @@ def write_stats_table(
     hist_bins: list | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
 ):
     region_analysis_path = config.vector.aggregated_region_analysis_uri
-    consolidated_buildings_path = config.vector.building_geoparquet_uri
+    consolidated_buildings_path = config.vector.building_geoparquet_glob
 
     region_stats_path = region_analysis_path / stats_table_name
 

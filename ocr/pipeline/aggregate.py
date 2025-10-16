@@ -21,14 +21,33 @@ def aggregated_gpq(config: OCRConfig):
     if config.debug:
         console.log(f'Aggregating geoparquet regions from: {path}')
 
+    # connection.execute(f"""
+    #     SET preserve_insertion_order=false;
+    #     COPY (
+    #     SELECT *
+    #     FROM '{path}')
+    #     TO  '{output_path}' (
+    #     FORMAT 'parquet',
+    #     COMPRESSION 'zstd',
+    #     OVERWRITE_OR_IGNORE true);""")
     connection.execute(f"""
         SET preserve_insertion_order=false;
         COPY (
         SELECT *
-        FROM '{path}')
-        TO  '{output_path}' (
-        FORMAT 'parquet',
-        COMPRESSION 'zstd',
-        OVERWRITE_OR_IGNORE true);""")
+        FROM (
+            SELECT
+                *,
+                SUBSTRING(GEOID, 1, 2) AS state_fips,
+                SUBSTRING(GEOID, 3, 3) AS county_fips
+            FROM '{path}'
+        )
+        )
+        TO '{output_path}' (
+            FORMAT 'parquet',
+            PARTITION_BY (state_fips, county_fips),
+            COMPRESSION 'zstd',
+            OVERWRITE_OR_IGNORE true
+        );""")
+
     if config.debug:
         console.log(f'Aggregation complete. Consolidated geoparquet written to: {output_path}')
