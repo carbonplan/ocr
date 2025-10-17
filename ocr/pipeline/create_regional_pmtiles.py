@@ -13,7 +13,7 @@ from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
 def create_regional_pmtiles(
     config: OCRConfig,
 ):
-    """Create PMTiles for tract and county regional risk statistics.
+    """Create PMTiles for county, tract and block regional risk statistics.
 
     Refactored to use DuckDB's Python API instead of spawning the DuckDB CLI.
     We materialize the feature rows to newline-delimited GeoJSON (NDJSON) files
@@ -27,14 +27,18 @@ def create_regional_pmtiles(
     """
 
     # Access vector config attributes (these exist on OCRConfig.vector)
-    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri  # type: ignore[attr-defined]
+    block_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
+    tracts_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
     counties_summary_stats_path = config.vector.counties_summary_stats_uri  # type: ignore[attr-defined]
+
+    block_pmtiles_output = config.vector.block_pmtiles_uri  # type: ignore[attr-defined]
     tract_pmtiles_output = config.vector.tracts_pmtiles_uri  # type: ignore[attr-defined]
     county_pmtiles_output = config.vector.counties_pmtiles_uri  # type: ignore[attr-defined]
 
     # Determine if we need S3 credentials (basic heuristic: any input/output on s3)
     needs_s3 = any(
-        str(p).startswith('s3://') for p in [tracts_summary_stats_path, counties_summary_stats_path]
+        str(p).startswith('s3://')
+        for p in [block_summary_stats_path, tracts_summary_stats_path, counties_summary_stats_path]
     )
 
     connection = duckdb.connect(database=':memory:')
@@ -48,10 +52,57 @@ def create_regional_pmtiles(
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = UPath(tmpdir)
+            block_pmtiles = tmp_path / 'block.pmtiles'
             tract_pmtiles = tmp_path / 'tract.pmtiles'
             county_pmtiles = tmp_path / 'counties.pmtiles'
+
+            block_ndjson = Path(tmpdir) / 'block.ndjson'
             tract_ndjson = Path(tmpdir) / 'tract.ndjson'
             county_ndjson = Path(tmpdir) / 'county.ndjson'
+
+            if config.debug:
+                console.log(f'Creating block PMTiles from {block_summary_stats_path}')
+            duckdb_block_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', mean_wind_risk_2011,
+                        '2', mean_wind_risk_2047,
+                        '3', median_wind_risk_2011,
+                        '4', median_wind_risk_2047,
+                        '5', wind_risk_2011,
+                        '6', wind_risk_2047,
+                        '7', GEOID
+
+
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{block_summary_stats_path}')
+            ) TO '{block_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_block_copy)
+
+            tippecanoe_cmd = [
+                'tippecanoe',
+                '-o',
+                str(block_pmtiles),
+                '-l',
+                'risk',
+                '-n',
+                'block',
+                '-f',
+                '-P',  # input is newline-delimited features
+                '--drop-smallest-as-needed',
+                '-q',
+                '--extend-zooms-if-still-dropping',
+                '-zg',
+                str(block_ndjson),
+            ]
+            subprocess.run(tippecanoe_cmd, check=True)
+            if config.debug:
+                console.log('block PMTiles created successfully')
 
             if config.debug:
                 console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
@@ -142,6 +193,10 @@ def create_regional_pmtiles(
             if config.debug:
                 console.log('County PMTiles created successfully')
 
+            if config.debug:
+                console.log(f'Uploading block PMTiles to {block_pmtiles_output}')
+
+            copy_or_upload(tract_pmtiles, tract_pmtiles_output)
             if config.debug:
                 console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
             copy_or_upload(tract_pmtiles, tract_pmtiles_output)
