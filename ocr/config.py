@@ -993,12 +993,6 @@ class VectorConfig(pydantic_settings.BaseSettings):
             else:
                 path.unlink()
 
-    def delete_per_region_files(self):
-        """Deletes the per region analysis files"""
-        if self.debug:
-            console.log(
-                f'Deleting per region  analysis files from {self.per_region_analysis_prefix}'
-            )
         per_region_path = UPath(self.per_region_analysis_prefix)
         self.upath_delete(per_region_path)
 
