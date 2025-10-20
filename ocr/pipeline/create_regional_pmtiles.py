@@ -195,8 +195,8 @@ def create_regional_pmtiles(
 
             if config.debug:
                 console.log(f'Uploading block PMTiles to {block_pmtiles_output}')
+            copy_or_upload(block_pmtiles, block_pmtiles_output)
 
-            copy_or_upload(tract_pmtiles, tract_pmtiles_output)
             if config.debug:
                 console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
             copy_or_upload(tract_pmtiles, tract_pmtiles_output)

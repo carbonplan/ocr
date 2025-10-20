@@ -6,6 +6,7 @@
 
 
 import geopandas as gpd
+import pandas as pd
 from tqdm import tqdm
 
 # These are FIPS codes for states minus alaska and Hawaii.
@@ -79,4 +80,3 @@ combined_gdf.to_parquet(
     write_covering_bbox=True,
     schema_version='1.1.0',
 )
-

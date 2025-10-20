@@ -84,11 +84,24 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     tracts_dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{tracts_dataset.bucket}/{tracts_dataset.prefix}')
 
+    block_dataset = catalog.get_dataset('us-census-blocks')
+    block_path = UPath(f's3://{block_dataset.bucket}/{tracts_dataset.prefix}')
+
     connection = duckdb.connect(database=':memory:')
 
     # Load required extensions (spatial + httpfs + aws) before any spatial ops or S3 reads
     install_load_extensions(aws=True, spatial=True, httpfs=True, con=connection)
     apply_s3_creds(con=connection)
+
+    if config.debug:
+        console.log('Writing aggregated region analysis files for census blocks.')
+    write_stats_table(
+        con=connection,
+        config=config,
+        region_path=block_path,
+        stats_table_name='block',
+        hist_bins=hist_bins,
+    )
 
     if config.debug:
         console.log('Writing aggregated region analysis files for counties.')
@@ -99,8 +112,9 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
         stats_table_name='counties',
         hist_bins=hist_bins,
     )
+
     if config.debug:
-        console.log('Writing aggregated region analysis files for tracts.')
+        console.log('Writing aggregated region analysis files for census tracts.')
     write_stats_table(
         con=connection,
         config=config,
