@@ -14,34 +14,55 @@ High-level package entry points and public exports.
 
 ## Core modules
 
-### Configuration and types
+### Configuration
 
-- Configuration models for storage, chunking, coiled, and processing settings
-- Strongly typed enums for environment, platform, and risk types
+Configuration models for storage, chunking, Coiled, and processing settings.
 
 ::: ocr.config
 
+### Type definitions
+
+Strongly typed enums for environment, platform, and risk types.
+
 ::: ocr.types
 
-### Data access and utilities
+---
 
-- Dataset and Catalog abstractions for Zarr and GeoParquet on S3/local
-- Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file transfer
+## Data access
+
+### Datasets
+
+Dataset and Catalog abstractions for Zarr and GeoParquet on S3/local storage.
 
 ::: ocr.datasets
 
-::: ocr.utils
-
 ### CONUS404 helpers
 
-- Load CONUS404 variables, compute relative humidity, wind rotation and diagnostics
-- Geographic selection utilities (point/bbox) with CRS-aware transforms
+Load CONUS404 variables, compute relative humidity, wind rotation and diagnostics. Geographic selection utilities (point/bbox) with CRS-aware transforms.
 
 ::: ocr.conus404
 
 ---
 
-## Risk utilities
+## Utilities
+
+### General utilities
+
+Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file transfer.
+
+::: ocr.utils
+
+### Testing utilities
+
+Snapshot testing extensions for xarray and GeoPandas.
+
+::: ocr.testing
+
+---
+
+## Risk analysis
+
+### Fire risk
 
 Core fire/wind risk utilities used by the pipeline (kernels, wind classification, risk composition).
 
@@ -49,7 +70,10 @@ Core fire/wind risk utilities used by the pipeline (kernels, wind classification
 
 ---
 
-## Deployment and CLI
+## Internal pipeline modules
+
+!!! note "Internal API"
+These modules are used internally by the pipeline and are not intended for direct public consumption. They are documented here for completeness and advanced use cases.
 
 ### Batch managers
 
@@ -57,9 +81,9 @@ Orchestration backends for local and Coiled execution.
 
 ::: ocr.deploy.managers
 
-### CLI application (Typer)
+### CLI application
 
-Command-line interface exposed as the `ocr` command. For detailed usage and options, see Tutorials as well.
+Command-line interface exposed as the `ocr` command. For detailed usage and options, see the tutorials section.
 
 <!-- prettier-ignore-start -->
 ::: mkdocs-click
@@ -68,5 +92,3 @@ Command-line interface exposed as the `ocr` command. For detailed usage and opti
   :prog_name: ocr
   :list_subcommands: true
 <!-- prettier-ignore-end -->
-
----
