@@ -71,12 +71,6 @@ def run(
         help='Write aggregated statistical summaries for each region (one file per region type with stats like averages, medians, percentiles, and histograms)',
         show_default=True,
     ),
-    write_regional_subsets: bool = typer.Option(
-        False,
-        '--write-regional-subsets',
-        help='Write individual building-level data split by region (one file per GEOID containing raw building records)',
-        show_default=True,
-    ),
     platform: Platform = typer.Option(
         Platform.LOCAL,
         '-p',
@@ -124,8 +118,6 @@ def run(
         parts += ['--platform', platform.value]
         if write_regional_stats:
             parts += ['--write-regional-stats']
-        if write_regional_subsets:
-            parts += ['--write-regional-subsets']
         if wipe:
             parts += ['--wipe']
 
@@ -239,19 +231,7 @@ def run(
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
-                    'software': COILED_SOFTWARE,
-                },
-            )
-        if write_regional_subsets:
-            batch_manager = _get_manager(Platform.COILED, config.debug)
-
-            batch_manager.submit_job(
-                command='ocr write-per-region-analysis-files',
-                name=f'write-per-region-analysis-files-{config.environment.value}',
-                kwargs={
-                    **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
+                    'scheduler_vm_type': 'm8g.4xlarge',
                     'software': COILED_SOFTWARE,
                 },
             )
@@ -334,17 +314,6 @@ def run(
             manager.submit_job(
                 command='ocr write-aggregated-region-analysis-files',
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
-                kwargs={
-                    **_local_kwargs(),
-                },
-            )
-
-        if write_regional_subsets:
-            manager = _get_manager(Platform.LOCAL, config.debug)
-
-            manager.submit_job(
-                command='ocr write-per-region-analysis-files',
-                name=f'write-per-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_local_kwargs(),
                 },
@@ -669,62 +638,6 @@ def write_aggregated_region_analysis_files(
     config = load_config(env_file)
 
     write_aggregated_region_analysis_files(config=config)
-
-
-@app.command()
-def write_per_region_analysis_files(
-    env_file: Path | None = typer.Option(
-        None,
-        '-e',
-        '--env-file',
-        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
-        show_default=True,
-        exists=True,
-        file_okay=True,
-        resolve_path=True,
-    ),
-    platform: Platform | None = typer.Option(
-        None,
-        '-p',
-        '--platform',
-        help='If set, schedule this command on the specified platform instead of running inline.',
-        show_default=True,
-    ),
-    vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
-    ),
-):
-    """
-    Write individual building-level fire risk data split by region (county and tract).
-
-    Creates one file per GEOID containing raw building records with fire risk values,
-    wind risk, and coordinates/geometry. Outputs thousands of files (one per county
-    and one per tract) in csv and geojson formats for downloadable data subsets.
-    """
-
-    # Schedule if requested and not already inside a batch task
-    if platform is not None and not _in_batch():
-        config = load_config(env_file)
-        manager = _get_manager(platform, config.debug)
-        command = 'ocr write-per-region-analysis-files'
-        name = f'write-per-region-analysis-files-{config.environment.value}'
-
-        if platform == Platform.COILED:
-            kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
-        else:
-            kwargs = {**_local_kwargs()}
-
-        manager.submit_job(command=command, name=name, kwargs=kwargs)
-        manager.wait_for_completion(exit_on_failure=True)
-        return
-
-    from ocr.pipeline.write_per_region_analysis_files import write_per_region_analysis_files
-
-    config = load_config(env_file)
-
-    write_per_region_analysis_files(config=config)
 
 
 @app.command()

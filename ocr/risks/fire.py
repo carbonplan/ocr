@@ -554,6 +554,9 @@ def calculate_wind_adjusted_risk(
     fire_risk['riley_filled_2011'] = riley_2011_filled_30m_4326
     fire_risk['riley_filled_2047'] = riley_2047_filled_30m_4326
 
+    # Note: for QA. Remove in further production versions
+    fire_risk['USFS_RPS'] = rps_30_subset['RPS']
+
     # wind_risk_2011 (our wind-informed RPS value)
     fire_risk['wind_risk_2011'] = wind_informed_bp_corrected_2011 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2011'].attrs['description'] = (
