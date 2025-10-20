@@ -5,14 +5,22 @@ import typing
 from dataclasses import dataclass
 from pathlib import Path
 
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import dotenv
 import icechunk
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 import odc.geo.xr  # noqa
 import pydantic
 import pydantic_settings
 import xarray as xr
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from pydantic_extra_types.semantic_version import SemanticVersion
+from shapely.geometry import box
 from upath import UPath
 
 from ocr import catalog
@@ -74,6 +82,20 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     def extent_as_tuple(self):
         bounds = self.extent.bounds
         return (bounds[0], bounds[2], bounds[1], bounds[3])
+
+    @functools.cached_property
+    def extent_as_tuple_5070(self):
+        """Get extent in EPSG:5070 projection as tuple (xmin, xmax, ymin, ymax)"""
+        from pyproj import Transformer
+
+        bounds = self.extent.bounds
+        transformer = Transformer.from_crs('EPSG:4326', 'EPSG:5070', always_xy=True)
+
+        # Transform corner points
+        xmin_5070, ymin_5070 = transformer.transform(bounds[0], bounds[1])
+        xmax_5070, ymax_5070 = transformer.transform(bounds[2], bounds[3])
+
+        return (xmin_5070, xmax_5070, ymin_5070, ymax_5070)
 
     @functools.cached_property
     def ds(self):
@@ -710,18 +732,11 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         color_by_size : bool, default False
             If True, color chunks based on their size (useful to identify irregularities)
         """
-        import cartopy.crs as ccrs
-        import cartopy.feature as cfeature
-        import matplotlib.cm as cm
-        import matplotlib.colors as mcolors
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Rectangle
 
         # Create figure
         fig, ax = plt.subplots(figsize=(24, 16), subplot_kw={'projection': ccrs.PlateCarree()})
 
         # Set extent to show CONUS
-        print(self.extent_as_tuple)
         ax.set_extent(self.extent_as_tuple, crs=ccrs.PlateCarree())
 
         # Get chunk information
@@ -732,6 +747,8 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         x_starts = chunk_info['x_starts']
 
         # Track chunk sizes for coloring if needed
+        norm = None
+        cmap = None
         if color_by_size:
             sizes = [
                 y_chunks[iy] * x_chunks[ix]
@@ -755,7 +772,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
                 xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
 
                 # Choose color based on size or use default cycle
-                if color_by_size:
+                if color_by_size and cmap is not None and norm is not None:
                     size = h * w
                     color = cmap(norm(size))
 
@@ -809,6 +826,178 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         ax.set_title(
             f'All Chunks ({len(y_chunks)}×{len(x_chunks)} = {len(y_chunks) * len(x_chunks)})'
         )
+
+        plt.tight_layout()
+        plt.show()
+
+    def bbox_from_wgs84(self, xmin: float, ymin: float, xmax: float, ymax: float):
+        "https://observablehq.com/@rdmurphy/u-s-state-bounding-boxes"
+
+        # Create and return bounding box in EPSG:4326 (WGS84)
+        # This matches the coordinate system of the data
+        bbox = box(xmin, ymin, xmax, ymax)
+        return bbox
+
+    def visualize_chunks_on_conus(
+        self,
+        chunks: list[tuple[int, int]] | None = None,
+        color_by_size: bool = False,
+        highlight_chunks: list[tuple[int, int]] | None = None,
+        include_all_chunks: bool = False,
+    ) -> None:
+        """
+        Visualize specified chunks on CONUS map
+
+        Parameters
+        ----------
+        chunks : list of tuples, optional
+            List of (iy, ix) tuples specifying chunks to visualize
+            If None, will show all chunks
+        color_by_size : bool, default False
+            If True, color chunks based on their size
+        highlight_chunks : list of tuples, optional
+            List of (iy, ix) tuples specifying chunks to highlight
+        include_all_chunks : bool, default False
+            If True, show all chunks in background with low opacity
+        """
+        # Create figure
+        fig, ax = plt.subplots(figsize=(16, 12), subplot_kw={'projection': ccrs.PlateCarree()})
+
+        # Set extent - either full CONUS or custom extent
+        ax.set_extent(self.extent_as_tuple, crs=ccrs.PlateCarree())
+
+        # Get chunk information
+        chunk_info = self.chunk_info
+        y_chunks = chunk_info['y_chunks']
+        x_chunks = chunk_info['x_chunks']
+        y_starts = chunk_info['y_starts']
+        x_starts = chunk_info['x_starts']
+
+        # Set up colors
+        norm = None
+        cmap = None
+        if color_by_size:
+            sizes = [
+                y_chunks[iy] * x_chunks[ix]
+                for iy in range(len(y_chunks))
+                for ix in range(len(x_chunks))
+            ]
+            min_size = min(sizes)
+            max_size = max(sizes)
+
+            norm = mcolors.Normalize(vmin=min_size, vmax=max_size)
+            cmap = cm.viridis
+
+        # Default to all chunks if none specified
+        if chunks is None:
+            chunks = [(iy, ix) for iy in range(len(y_chunks)) for ix in range(len(x_chunks))]
+
+        # Draw background chunks if requested
+        if include_all_chunks and chunks != [
+            (iy, ix) for iy in range(len(y_chunks)) for ix in range(len(x_chunks))
+        ]:
+            for iy, y0 in enumerate(y_starts):
+                h = y_chunks[iy]
+                for ix, x0 in enumerate(x_starts):
+                    # Skip chunks that are in the main visualization
+                    if (iy, ix) in chunks:
+                        continue
+
+                    w = x_chunks[ix]
+                    xx0, yy0 = self.index_to_coords(x0, y0)
+                    xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
+
+                    rect = Rectangle(
+                        (xx0, yy1),
+                        xx1 - xx0,
+                        yy0 - yy1,
+                        transform=ccrs.PlateCarree(),
+                        fill=True,
+                        facecolor='lightgray',
+                        alpha=0.2,
+                        edgecolor='gray',
+                        linewidth=0.5,
+                        zorder=5,
+                    )
+                    ax.add_patch(rect)
+
+        # Draw the specified chunks with proper styling
+        for iy, ix in chunks:
+            y0 = y_starts[iy]
+            h = y_chunks[iy]
+            x0 = x_starts[ix]
+            w = x_chunks[ix]
+
+            # Get chunk boundaries in geographic coordinates
+            xx0, yy0 = self.index_to_coords(x0, y0)
+            xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
+
+            # Determine styling
+            is_highlighted = highlight_chunks is not None and (iy, ix) in highlight_chunks
+
+            # Choose color based on size or use default cycle
+            if is_highlighted:
+                color = 'red'
+                fill_alpha = 0.4
+                linewidth = 2.0
+                zorder = 15
+            elif color_by_size and cmap is not None and norm is not None:
+                size = h * w
+                color = cmap(norm(size))
+                # edge_alpha = 0.8
+                fill_alpha = 0.3
+                linewidth = 1.5
+                zorder = 10
+            else:
+                # Use a simple coloring scheme based on indices
+                colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+                color = colors[(iy * len(x_starts) + ix) % len(colors)]
+                fill_alpha = 0.3
+                linewidth = 1.5
+                zorder = 10
+
+            # Draw rectangle around the chunk
+            rect = Rectangle(
+                (xx0, yy1),  # lower left (x, y)
+                xx1 - xx0,  # width
+                yy0 - yy1,  # height
+                transform=ccrs.PlateCarree(),
+                fill=True,
+                facecolor=color,
+                alpha=fill_alpha,
+                edgecolor=color,
+                linewidth=linewidth,
+                zorder=zorder,
+            )
+            ax.add_patch(rect)
+
+        # Add geographic features
+        ax.coastlines(resolution='10m')
+        ax.add_feature(cfeature.BORDERS, linewidth=0.8)
+        ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
+
+        # Add a colorbar if coloring by size
+        if color_by_size:
+            sm = cm.ScalarMappable(norm=norm, cmap=cmap)
+            cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.01)
+            cbar.set_label('Chunk Size (pixels)')
+
+        # Set title
+        if len(chunks) == len(y_chunks) * len(x_chunks):
+            ax.set_title(f'All Chunks ({len(y_chunks)}×{len(x_chunks)} = {len(chunks)})')
+        else:
+            ax.set_title(
+                f'Selected Chunks ({len(chunks)} of {len(y_chunks)}×{len(x_chunks)} total)'
+            )
+
+        # Add a legend
+        legend_elements = [Line2D([0], [0], color='blue', lw=2, label='Selected Chunks')]
+        if highlight_chunks:
+            legend_elements.append(Line2D([0], [0], color='red', lw=2, label='Highlighted Chunks'))
+        if include_all_chunks:
+            legend_elements.append(Line2D([0], [0], color='gray', lw=1, label='Other Chunks'))
+
+        ax.legend(handles=legend_elements, loc='lower right')
 
         plt.tight_layout()
         plt.show()
