@@ -21,15 +21,6 @@ def aggregated_gpq(config: OCRConfig):
     if config.debug:
         console.log(f'Aggregating geoparquet regions from: {path}')
 
-    # connection.execute(f"""
-    #     SET preserve_insertion_order=false;
-    #     COPY (
-    #     SELECT *
-    #     FROM '{path}')
-    #     TO  '{output_path}' (
-    #     FORMAT 'parquet',
-    #     COMPRESSION 'zstd',
-    #     OVERWRITE_OR_IGNORE true);""")
     connection.execute(f"""
         SET preserve_insertion_order=false;
         COPY (
