@@ -42,10 +42,10 @@ nav:
     - Home: index.md
     - How-to Guides:
           - User Guides:
-                - Installation: how-to/installation.md
                 - Getting Started: how-to/getting-started.md
                 - Working with Data: how-to/work-with-data.ipynb
           - Developer Guides:
+                - Installation: how-to/installation.md
                 - Release Procedure: how-to/release-procedure.md
                 - Snapshot Testing: how-to/snapshot-testing.md
 

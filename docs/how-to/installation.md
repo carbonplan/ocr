@@ -4,8 +4,8 @@ This guide shows how to set up OCR for local development using pixi.
 
 ## Prerequisites
 
-- Python 3.12+
-- Git
+-   Python 3.12+
+-   Git
 
 ## Steps
 
@@ -34,9 +34,9 @@ cp ocr-local.env .env
 
 Edit `.env` and set required variables:
 
-- `OCR_STORAGE_ROOT` — where outputs are written (e.g., `s3://your-bucket/` or local path)
-- `OCR_ENVIRONMENT` — environment name (`QA`, `STAGING`, or `PROD`)
-- `OCR_DEBUG` — set to `1` for verbose logging
+-   `OCR_STORAGE_ROOT` — where outputs are written (e.g., `s3://your-bucket/` or local path)
+-   `OCR_ENVIRONMENT` — environment name (`QA`, `STAGING`, or `PROD`)
+-   `OCR_DEBUG` — set to `1` for verbose logging
 
 ### 4. Verify installation
 
@@ -53,6 +53,7 @@ pixi run tests
 
 ## Next steps
 
-- Run [pre-commit checks](../reference/project-structure.md#pre-commit): `pre-commit run --all-files`
-- Run [integration tests with snapshots](snapshot-testing.md): `pixi run tests -m integration`
-- See [getting started](getting-started.md) to begin using OCR
+-   Run [pre-commit checks](../reference/project-structure.md#pre-commit): `pre-commit run --all-files`
+-   Run [integration tests with snapshots](snapshot-testing.md): `pixi run tests -m integration`
+-   See [Data Pipeline Tutorial](../tutorials/data-pipeline.md) to run the processing pipeline
+-   Read [Project Structure](../reference/project-structure.md) to understand the codebase
