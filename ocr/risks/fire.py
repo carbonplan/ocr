@@ -373,7 +373,6 @@ def create_weighted_composite_bp_map(
 
 
 def create_wind_informed_burn_probability(
-    # riley_30m_4326: xr.Dataset,
     wind_direction_distribution_30m_4326: xr.DataArray,
     riley_270m_5070: xr.Dataset,
 ) -> xr.DataArray:
@@ -469,7 +468,7 @@ def create_wind_informed_burn_probability(
         coords=wind_direction_distribution_30m_4326.coords,
     )
 
-    return smoothed_final_bp_ds['BP']  # , riley_filled_30m_4326
+    return smoothed_final_bp_ds['BP']
 
 
 def calculate_wind_adjusted_risk(
@@ -493,12 +492,6 @@ def calculate_wind_adjusted_risk(
 
     riley_2011_30m_4326 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     riley_2047_30m_4326 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
-    unburnable_mask_riley_2011_30m_4326 = catalog.get_dataset(
-        'unburnable-mask-2011-climate-run-30m-4326'
-    ).to_xarray()
-    unburnable_mask_riley_2047_30m_4326 = catalog.get_dataset(
-        'unburnable-mask-2047-climate-run-30m-4326'
-    ).to_xarray()
     riley_2011_270m_5070 = catalog.get_dataset('2011-climate-run').to_xarray()[
         ['BP', 'spatial_ref']
     ]
@@ -515,8 +508,6 @@ def calculate_wind_adjusted_risk(
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(latitude=y_slice, longitude=x_slice)
     riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice)
-    unburnable_mask_riley_2011_30m_4326.sel(latitude=y_slice, longitude=x_slice).unburnable
-    unburnable_mask_riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice).unburnable
     riley_2011_270m_5070_subset = geo_sel(
         riley_2011_270m_5070,
         bbox=[x_slice.start, y_slice.stop, x_slice.stop, y_slice.start],
@@ -535,47 +526,39 @@ def calculate_wind_adjusted_risk(
         .load()
     )
 
-    wind_informed_bp_corrected_2011, riley_2011_filled_30m_4326 = (
-        create_wind_informed_burn_probability(
-            # riley_30m_4326=riley_2011_30m_4326_subset,
-            wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-            riley_270m_5070=riley_2011_270m_5070_subset,
-        )
+    wind_informed_bp_combined_2011 = create_wind_informed_burn_probability(
+        wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
+        riley_270m_5070=riley_2011_270m_5070_subset,
     )
-    wind_informed_bp_corrected_2047, riley_2047_filled_30m_4326 = (
-        create_wind_informed_burn_probability(
-            # riley_30m_4326=riley_2047_30m_4326_subset,
-            wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-            riley_270m_5070=riley_2047_270m_5070_subset,
-        )
+    wind_informed_bp_combined_2047 = create_wind_informed_burn_probability(
+        wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
+        riley_270m_5070=riley_2047_270m_5070_subset,
     )
 
     fire_risk = xr.Dataset()
-    fire_risk['riley_filled_2011'] = riley_2011_filled_30m_4326
-    fire_risk['riley_filled_2047'] = riley_2047_filled_30m_4326
 
     # Note: for QA. Remove in further production versions
     fire_risk['USFS_RPS'] = rps_30_subset['RPS']
 
     # wind_risk_2011 (our wind-informed RPS value)
-    fire_risk['wind_risk_2011'] = wind_informed_bp_corrected_2011 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2011'].attrs['description'] = (
         'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
     )
     # wind_risk_2047 (our wind-informed RPS value)
-    fire_risk['wind_risk_2047'] = wind_informed_bp_corrected_2047 * rps_30_subset['CRPS']
+    fire_risk['wind_risk_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
     fire_risk['wind_risk_2047'].attrs['description'] = (
         'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
     )
 
     # burn_probability_2011 (our wind-informed BP value)
-    fire_risk['burn_probability_2011'] = wind_informed_bp_corrected_2011
+    fire_risk['burn_probability_2011'] = wind_informed_bp_combined_2011
     fire_risk['burn_probability_2011'].attrs['description'] = (
         'Wind-informed burn probability for 2011 calculated as wind-informed BP'
     )
 
     # burn_probability_2047 (our wind-informed BP value)
-    fire_risk['burn_probability_2047'] = wind_informed_bp_corrected_2047
+    fire_risk['burn_probability_2047'] = wind_informed_bp_combined_2047
     fire_risk['burn_probability_2047'].attrs['description'] = (
         'Wind-informed burn probability for 2047 calculated as wind-informed BP'
     )
