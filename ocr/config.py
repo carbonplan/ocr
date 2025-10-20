@@ -20,7 +20,7 @@ import xarray as xr
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from pydantic_extra_types.semantic_version import SemanticVersion
-from shapely.geometry import box
+from shapely.geometry import Polygon, box
 from upath import UPath
 
 from ocr import catalog
@@ -419,6 +419,55 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         # This matches the coordinate system of the data
         bbox = box(xmin, ymin, xmax, ymax)
         return bbox
+
+    def get_chunks_for_bbox(self, bbox: Polygon | tuple) -> list[tuple[int, int]]:
+        """
+        Find all chunks that intersect with the given bounding box
+
+        Parameters
+        ----------
+        bbox : BoundingBox or tuple
+            Bounding box to check for intersection. If tuple, format is (minx, miny, maxx, maxy)
+
+        Returns
+        -------
+        list of tuples
+            List of (iy, ix) tuples identifying the intersecting chunks
+        """
+        # Convert tuple to BoundingBox if needed
+        if isinstance(bbox, tuple):
+            if len(bbox) == 4:
+                bbox = box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
+            else:
+                raise ValueError('Bounding box tuple must have 4 elements (minx, miny, maxx, maxy)')
+
+        # Get chunk info
+        chunk_info = self.chunk_info
+        y_chunks = chunk_info['y_chunks']
+        x_chunks = chunk_info['x_chunks']
+        y_starts = chunk_info['y_starts']
+        x_starts = chunk_info['x_starts']
+
+        # Find intersecting chunks
+        intersecting_chunks = []
+
+        for iy, y0 in enumerate(y_starts):
+            h = y_chunks[iy]
+            for ix, x0 in enumerate(x_starts):
+                w = x_chunks[ix]
+
+                # Get chunk boundaries in geographic coordinates
+                xx0, yy0 = self.index_to_coords(x0, y0)
+                xx1, yy1 = self.index_to_coords(x0 + w, y0 + h)
+
+                # Create a box for this chunk (note Y axis flip)
+                chunk_box = box(xx0, yy1, xx1, yy0)
+
+                # Check for intersection
+                if bbox.intersects(chunk_box):
+                    intersecting_chunks.append((iy, ix))
+
+        return intersecting_chunks
 
     def visualize_chunks_on_conus(
         self,

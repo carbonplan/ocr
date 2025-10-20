@@ -55,7 +55,7 @@ nav:
                 - Implementation: methods/fire-risk/implementation.ipynb
                 - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
                 - Caveats & Limitations: methods/fire-risk/limitations.md
-                - Region Atomization: methods/fire-risk/region-atomization.md
+                - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
 
     - Tutorials:
           - Data Pipeline: tutorials/data-pipeline.md
