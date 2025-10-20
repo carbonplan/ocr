@@ -152,7 +152,6 @@ def apply_wind_directional_convolution(
     """
     import cv2 as cv
 
-    print('here2')
     # TODO: must scale the size of the kernel according to the latitude. Can either
     # be done before entering this function to calculate the kernel_size
     # argument or inside this function and pass latitude into the convolution
@@ -167,7 +166,6 @@ def apply_wind_directional_convolution(
         data_vars={var_name: (da.dims, da.values) for var_name in weights_dict.keys()},
         coords=da.coords,
     )
-    out_N_dict = {}
     for direction, weights in weights_dict.items():
         arr = spread_results[direction].values
         for _ in range(iterations):
@@ -180,16 +178,10 @@ def apply_wind_directional_convolution(
             convolved_arr = cv.filter2D(arr, ddepth=-1, kernel=weights)
             convolved_arr = np.where(convolved_arr < 10e-10, 0.0, convolved_arr)
             arr = np.where(convolved_mask > 0, convolved_arr / convolved_mask, 0.0)
-            if direction == 'N':
-                out_N_dict[_] = xr.Dataset(
-                    data_vars={var_name: (da.dims, da.values) for var_name in weights_dict.keys()},
-                    coords=da.coords,
-                )
-                out_N_dict[_][direction] = (da.dims, arr.astype(np.float32))
         # clip residual tiny negatives
         arr = np.where(arr < 0, 0.0, arr)
         spread_results[direction] = (da.dims, arr.astype(np.float32))
-    return spread_results, out_N_dict
+    return spread_results
 
 
 def classify_wind_directions(wind_direction_ds: xr.DataArray) -> xr.DataArray:
@@ -380,13 +372,13 @@ def create_weighted_composite_bp_map(
     return weighted
 
 
-def classify_wind(
+def create_wind_informed_burn_probability(
     riley_30m_4326: xr.Dataset,
     wind_direction_distribution_30m_4326: xr.DataArray,
     unburnable_mask_climate_run_30m_4326: xr.DataArray,
     riley_270m_5070: xr.Dataset,
 ) -> xr.DataArray:
-    """Classify wind by applying directional convolution and creating a weighted composite burn probability map.
+    """Create wind-informed burn probability dataset by applying directional convolution and creating a weighted composite burn probability map.
 
     Parameters
     ----------
@@ -402,17 +394,22 @@ def classify_wind(
     wind_informed_bp_float_corrected : xr.DataArray
         Wind-informed burn probability data array with corrected coordinates.
     """
+    import cv2 as cv
+    ## TODO gap fill riley 270 only filling NaN pixels which are surrounded by valid data on four sides
 
+    ## TODO reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
     blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
     wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
         blurred_bp_30m_4326, wind_direction_distribution_30m_4326
     )
     wind_informed_bp_30m_4326 = assign_crs(wind_informed_bp_30m_4326, 'EPSG:4326')
-    ## average wind_informed_bp to 270m
+    # average wind_informed_bp to 270m. do we still need to do this?
     wind_informed_bp_270m_5070 = xr_reproject(
         wind_informed_bp_30m_4326, how=riley_270m_5070.odc.geobox, resampling='average'
     )
-    ##  put non-zero numbers into where zero numbers were before
+    # gap fill unburnable pixels in riley which are surrounded on four sides by burnable pixels
+    #
+    # put wind-blurred numbers into where riley still has zero values
     riley_filled_270m_5070 = xr.where(
         riley_270m_5070.BP == 0, wind_informed_bp_270m_5070, riley_270m_5070
     )
@@ -435,7 +432,14 @@ def classify_wind(
         unburnable_mask_climate_run_30m_4326 == 0, riley_filled_30m_4326, wind_informed_bp_30m_4326
     )
 
-    return wind_informed_bp_corrected['BP'], riley_filled_30m_4326
+    # smooth using a 21x21 Gaussian filter
+    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_corrected.BP.values, (21, 21), 0)
+    smoothed_final_bp_ds = xr.Dataset(
+        data_vars={'BP': ((riley_filled_30m_4326.dims, smoothed_final_bp.astype(np.float32)))},
+        coords=riley_filled_30m_4326.coords,
+    )
+
+    return smoothed_final_bp_ds['BP']  # , riley_filled_30m_4326
 
 
 def calculate_wind_adjusted_risk(
@@ -505,17 +509,21 @@ def calculate_wind_adjusted_risk(
         .load()
     )
 
-    wind_informed_bp_corrected_2011, riley_2011_filled_30m_4326 = classify_wind(
-        riley_30m_4326=riley_2011_30m_4326_subset,
-        wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-        unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2011_30m_4326_subset,
-        riley_270m_5070=riley_2011_270m_5070_subset,
+    wind_informed_bp_corrected_2011, riley_2011_filled_30m_4326 = (
+        create_wind_informed_burn_probability(
+            riley_30m_4326=riley_2011_30m_4326_subset,
+            wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
+            unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2011_30m_4326_subset,
+            riley_270m_5070=riley_2011_270m_5070_subset,
+        )
     )
-    wind_informed_bp_corrected_2047, riley_2047_filled_30m_4326 = classify_wind(
-        riley_30m_4326=riley_2047_30m_4326_subset,
-        wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-        unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2047_30m_4326_subset,
-        riley_270m_5070=riley_2047_270m_5070_subset,
+    wind_informed_bp_corrected_2047, riley_2047_filled_30m_4326 = (
+        create_wind_informed_burn_probability(
+            riley_30m_4326=riley_2047_30m_4326_subset,
+            wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
+            unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2047_30m_4326_subset,
+            riley_270m_5070=riley_2047_270m_5070_subset,
+        )
     )
 
     fire_risk = xr.Dataset()
