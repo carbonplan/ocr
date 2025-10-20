@@ -456,11 +456,14 @@ def create_wind_informed_burn_probability(
     )
 
     # smooth using a 21x21 Gaussian filter
-    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_combined.BP.values, (21, 21), 0)
+    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_combined.values, (21, 21), 0)
     smoothed_final_bp_ds = xr.Dataset(
         data_vars={
             'BP': (
-                (wind_direction_distribution_30m_4326.dims, smoothed_final_bp.astype(np.float32))
+                (
+                    wind_direction_distribution_30m_4326.sel(wind_direction=0).dims,
+                    smoothed_final_bp.astype(np.float32),
+                )
             )
         },
         coords=wind_direction_distribution_30m_4326.coords,
