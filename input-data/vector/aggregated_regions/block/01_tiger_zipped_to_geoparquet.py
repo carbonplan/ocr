@@ -63,17 +63,20 @@ FIPS_CODES: dict[str, str] = {
 }
 
 
-for state, FIPS in tqdm(FIPS_CODES.items()):
+gdfs = []
+for state, FIPS in tqdm(FIPS_CODES.items(), desc='Processing FIPS codes'):
     block_url = (
         f'https://www2.census.gov/geo/tiger/TIGER2025/TABBLOCKSUFX/tl_2025_{FIPS}_tabblocksufx.zip'
     )
-
     gdf = gpd.read_file(block_url, columns=['GEOID', 'geometry'])
+    gdfs.append(gdf)
 
-    gdf.to_parquet(
-        f's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/FIPS/FIPS_{FIPS}.parquet',
-        compression='zstd',
-        geometry_encoding='WKB',
-        write_covering_bbox=True,
-        schema_version='1.1.0',
-    )
+combined_gdf = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True))
+combined_gdf.to_parquet(
+    's3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet',
+    compression='zstd',
+    geometry_encoding='WKB',
+    write_covering_bbox=True,
+    schema_version='1.1.0',
+)
+
