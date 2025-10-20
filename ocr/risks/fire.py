@@ -373,9 +373,8 @@ def create_weighted_composite_bp_map(
 
 
 def create_wind_informed_burn_probability(
-    riley_30m_4326: xr.Dataset,
+    # riley_30m_4326: xr.Dataset,
     wind_direction_distribution_30m_4326: xr.DataArray,
-    unburnable_mask_climate_run_30m_4326: xr.DataArray,
     riley_270m_5070: xr.Dataset,
 ) -> xr.DataArray:
     """Create wind-informed burn probability dataset by applying directional convolution and creating a weighted composite burn probability map.
@@ -395,48 +394,76 @@ def create_wind_informed_burn_probability(
         Wind-informed burn probability data array with corrected coordinates.
     """
     import cv2 as cv
-    ## TODO gap fill riley 270 only filling NaN pixels which are surrounded by valid data on four sides
 
-    ## TODO reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
+    ## gap fill riley 270 only filling NaN pixels which are surrounded by valid data on four sides
+    valid_pixels = riley_270m_5070['BP'] > 0
+    # shifting will introduce NaNs! So we need to clip along boundaries
+    surrounded_by_four_valid_values = (
+        valid_pixels.shift(x=1)
+        + valid_pixels.shift(x=-1)
+        + valid_pixels.shift(y=1)
+        + valid_pixels.shift(y=-1)
+    ) == 4
+    # 270m 5070 projection mask of every pixel which is surrounded by valid data on four sides
+    nans_surrounded_by_four_valid_values = xr.where(
+        (valid_pixels == 0) & surrounded_by_four_valid_values, 1, 0
+    )
+    # where nans_surrounded_by_four_valid_values is true, fill with a 3x3 moving window average of valid pixels
+    rolling_mean = riley_270m_5070.rolling({'x': 3, 'y': 3}, center=True, min_periods=1).mean(
+        skipna=True
+    )
+    gap_filled_riley_2011_270m_5070_subset = xr.where(
+        nans_surrounded_by_four_valid_values, rolling_mean, riley_270m_5070
+    )
+
+    wind_direction_distribution_30m_4326 = assign_crs(
+        wind_direction_distribution_30m_4326, 'EPSG:4326'
+    )
+    gap_filled_riley_2011_270m_5070_subset = assign_crs(
+        gap_filled_riley_2011_270m_5070_subset, 'EPSG:5070'
+    )
+    ## reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
+    riley_30m_4326 = xr_reproject(
+        gap_filled_riley_2011_270m_5070_subset,
+        how=wind_direction_distribution_30m_4326.odc.geobox,
+        resampling='nearest',
+    )
+    riley_30m_4326 = riley_30m_4326.assign_coords(
+        {
+            'latitude': wind_direction_distribution_30m_4326.latitude,
+            'longitude': wind_direction_distribution_30m_4326.longitude,
+        }
+    )
     blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
     wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
         blurred_bp_30m_4326, wind_direction_distribution_30m_4326
     )
     wind_informed_bp_30m_4326 = assign_crs(wind_informed_bp_30m_4326, 'EPSG:4326')
-    # average wind_informed_bp to 270m. do we still need to do this?
-    wind_informed_bp_270m_5070 = xr_reproject(
-        wind_informed_bp_30m_4326, how=riley_270m_5070.odc.geobox, resampling='average'
-    )
-    # gap fill unburnable pixels in riley which are surrounded on four sides by burnable pixels
-    #
-    # put wind-blurred numbers into where riley still has zero values
-    riley_filled_270m_5070 = xr.where(
-        riley_270m_5070.BP == 0, wind_informed_bp_270m_5070, riley_270m_5070
-    )
-    riley_filled_270m_5070 = assign_crs(riley_filled_270m_5070, 'EPSG:5070')
-    riley_filled_30m_4326 = xr_reproject(
-        riley_filled_270m_5070,
-        how=wind_informed_bp_30m_4326.odc.geobox,
-        resampling='bilinear',
-        resolution='same',
-    )
-    riley_filled_30m_4326 = riley_filled_30m_4326.assign_coords(
+
+    wind_informed_bp_30m_4326 = wind_informed_bp_30m_4326.assign_coords(
         {
-            'latitude': wind_informed_bp_30m_4326.latitude,
-            'longitude': wind_informed_bp_30m_4326.longitude,
+            'latitude': wind_direction_distribution_30m_4326.latitude,
+            'longitude': wind_direction_distribution_30m_4326.longitude,
         }
     )
+    # gap fill any zeroes remaining in riley using the wind-smeared numbers
 
-    # retain original Riley et al. (2025) burn probability, reprojected and interpolated to a 30m EPSG:4326 grid
-    wind_informed_bp_corrected = xr.where(
-        unburnable_mask_climate_run_30m_4326 == 0, riley_filled_30m_4326, wind_informed_bp_30m_4326
+    # retain original Riley et al. (2025) burn probability where there are valid numbers at a 270m scale (but based upon
+    # the dataset reprojected and interpolated to a 30m EPSG:4326 grid). anywhere there are no valid numbers use the
+    # wind smeared values
+    wind_informed_bp_combined = xr.where(
+        riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
     )
 
     # smooth using a 21x21 Gaussian filter
-    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_corrected.BP.values, (21, 21), 0)
+    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_combined.BP.values, (21, 21), 0)
     smoothed_final_bp_ds = xr.Dataset(
-        data_vars={'BP': ((riley_filled_30m_4326.dims, smoothed_final_bp.astype(np.float32)))},
-        coords=riley_filled_30m_4326.coords,
+        data_vars={
+            'BP': (
+                (wind_direction_distribution_30m_4326.dims, smoothed_final_bp.astype(np.float32))
+            )
+        },
+        coords=wind_direction_distribution_30m_4326.coords,
     )
 
     return smoothed_final_bp_ds['BP']  # , riley_filled_30m_4326
@@ -485,12 +512,8 @@ def calculate_wind_adjusted_risk(
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(latitude=y_slice, longitude=x_slice)
     riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice)
-    unburnable_mask_riley_2011_30m_4326_subset = unburnable_mask_riley_2011_30m_4326.sel(
-        latitude=y_slice, longitude=x_slice
-    ).unburnable
-    unburnable_mask_riley_2047_30m_4326_subset = unburnable_mask_riley_2047_30m_4326.sel(
-        latitude=y_slice, longitude=x_slice
-    ).unburnable
+    unburnable_mask_riley_2011_30m_4326.sel(latitude=y_slice, longitude=x_slice).unburnable
+    unburnable_mask_riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice).unburnable
     riley_2011_270m_5070_subset = geo_sel(
         riley_2011_270m_5070,
         bbox=[x_slice.start, y_slice.stop, x_slice.stop, y_slice.start],
@@ -511,17 +534,15 @@ def calculate_wind_adjusted_risk(
 
     wind_informed_bp_corrected_2011, riley_2011_filled_30m_4326 = (
         create_wind_informed_burn_probability(
-            riley_30m_4326=riley_2011_30m_4326_subset,
+            # riley_30m_4326=riley_2011_30m_4326_subset,
             wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-            unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2011_30m_4326_subset,
             riley_270m_5070=riley_2011_270m_5070_subset,
         )
     )
     wind_informed_bp_corrected_2047, riley_2047_filled_30m_4326 = (
         create_wind_informed_burn_probability(
-            riley_30m_4326=riley_2047_30m_4326_subset,
+            # riley_30m_4326=riley_2047_30m_4326_subset,
             wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
-            unburnable_mask_climate_run_30m_4326=unburnable_mask_riley_2047_30m_4326_subset,
             riley_270m_5070=riley_2047_270m_5070_subset,
         )
     )
