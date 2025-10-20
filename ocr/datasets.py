@@ -504,7 +504,7 @@ datasets = [
         version='v2025-09-24.0',
     ),
     Dataset(
-        name='region-id-tagged-buildings',
+        name='conus-overture-region-id-tagged-buildings',
         description='CONUS Overture Buildings with census region identifiers added',
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/vector/region_id_tagged_buildings.parquet',
