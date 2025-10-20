@@ -14,7 +14,7 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Create bounding box from region
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     # Query buildings within the region
-    building_parquet = catalog.get_dataset('region-id-tagged-buildings')
+    building_parquet = catalog.get_dataset('conus-overture-region-id-tagged-buildings')
     buildings_table = building_parquet.query_geoparquet(
         """
         SELECT
