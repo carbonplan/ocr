@@ -759,15 +759,11 @@ class VectorConfig(pydantic_settings.BaseSettings):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
-    @functools.cached_property
-    def building_geoparquet_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
     @property
     def building_geoparquet_glob(self) -> str:
-        return f'{self.building_geoparquet_uri}/**/*.parquet'
+        path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return f'{path}/**/*.parquet'
 
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
@@ -872,7 +868,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
         rows.extend(
             [
                 nv('Region Geoparquet URI', str(self.region_geoparquet_uri)),
-                nv('Buildings Geoparquet URI', str(self.building_geoparquet_uri)),
+                nv('Buildings Geoparquet Glob', str(self.building_geoparquet_glob)),
                 nv('Region summary stats dir', str(self.region_summary_stats_prefix)),
                 nv('Block summary stats', str(self.block_summary_stats_uri)),
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),

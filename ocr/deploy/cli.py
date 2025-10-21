@@ -426,7 +426,7 @@ def process_region(
 
 
 @app.command()
-def aggregate(
+def partition_buildings(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -449,15 +449,15 @@ def aggregate(
     ),
 ):
     """
-    Aggregate geoparquet regions, reproject and write.
+    Partition buildings geoparquet by state and county FIPS codes.
     """
 
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr aggregate'
-        name = f'aggregate-geoparquet-{config.environment.value}'
+        command = 'ocr partition-buildings'
+        name = f'partition-buildings-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -470,10 +470,10 @@ def aggregate(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.aggregate import aggregated_gpq
+    from ocr.pipeline.partition import partition_buildings_by_geography
 
     config = load_config(env_file)
-    aggregated_gpq(config=config)
+    partition_buildings_by_geography(config=config)
 
 
 @app.command()

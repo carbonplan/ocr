@@ -427,10 +427,10 @@ class TestVectorConfig:
         expected_uri = f'{temp_dir}/intermediate/fire-risk/vector/qa/geoparquet-regions'
         assert str(config.region_geoparquet_uri) == expected_uri
 
-        # Test building_geoparquet_uri
+        # Test building_geoparquet_glob
         assert (
-            str(config.building_geoparquet_uri)
-            == f'{temp_dir}/output/fire-risk/vector/qa/geoparquet/buildings.parquet'
+            str(config.building_geoparquet_glob)
+            == f'{temp_dir}/output/fire-risk/vector/qa/geoparquet/buildings.parquet/**/*.parquet'
         )
 
         # Test pmtiles_prefix
@@ -521,8 +521,6 @@ class TestVectorConfig:
         assert config.region_geoparquet_uri.is_dir()
         assert config.region_summary_stats_prefix.exists()
         assert config.region_summary_stats_prefix.is_dir()
-        # pmtiles and geoparquet parents should exist
-        assert config.building_geoparquet_uri.parent.exists()
         assert config.buildings_pmtiles_uri.parent.exists()
 
 
