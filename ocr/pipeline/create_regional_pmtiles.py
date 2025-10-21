@@ -74,8 +74,13 @@ def create_regional_pmtiles(
                         '4', median_wind_risk_2047,
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
-                        '7', GEOID
-
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry), # west
+                                ST_YMin(geometry), # south
+                                ST_XMax(geometry), # east
+                                ST_YMax(geometry) # north
+                            ]
 
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
@@ -118,8 +123,13 @@ def create_regional_pmtiles(
                         '4', median_wind_risk_2047,
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
-                        '7', GEOID
-
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry), # west
+                                ST_YMin(geometry), # south
+                                ST_XMax(geometry), # east
+                                ST_YMax(geometry) # north
+                            ]
 
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
@@ -164,8 +174,13 @@ def create_regional_pmtiles(
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
                         '7', GEOID,
-                        '8', NAME
-
+                        '8', NAME,
+                        '9', [
+                                ST_XMin(geometry), # west
+                                ST_YMin(geometry), # south
+                                ST_XMax(geometry), # east
+                                ST_YMax(geometry) # north
+                            ]
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{counties_summary_stats_path}')
