@@ -212,8 +212,8 @@ def run(
         # ----------- 02 Aggregate -------------
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
