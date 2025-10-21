@@ -102,7 +102,7 @@
 [tool.uv.sources]
     ocr = { workspace = true }
 
-[tool.pixi.project]
+[tool.pixi.workspace]
     channels  = ["conda-forge"]
     name      = "ocr"
     platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
