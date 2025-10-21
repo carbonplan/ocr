@@ -267,8 +267,8 @@ def run(
 
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
@@ -344,8 +344,8 @@ def run(
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },

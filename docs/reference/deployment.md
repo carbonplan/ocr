@@ -75,7 +75,7 @@ graph TB
 
     %% Section 03: Tiles Creation
     subgraph Section03["<b>Phase 03 - Tile Generation</b>"]
-        CreatePMTiles[["🌍 <b>create-pmtiles</b><br/>Command: ocr create-pmtiles<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Disk: 250 GB"]]
+        CreatePMTiles[["🌍 <b>create-building-pmtiles</b><br/>Command: ocr create-building-pmtiles<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Disk: 250 GB"]]
         RegionalPMTiles --> CreatePMTiles
     end
 
@@ -123,10 +123,10 @@ graph TB
 
 ### Key Pipeline Features
 
-- **Automatic Retry Logic**: Failed region processing attempts are automatically retried with exponential backoff (5 seconds × attempt number)
-- **Distributed Processing**: Leverages Coiled for parallel processing across multiple regions
-- **Resource Optimization**: Each job is configured with specific VM types and disk requirements optimized for its workload
-- **Conditional Branching**: Optional region file writing based on deployment configuration
+-   **Automatic Retry Logic**: Failed region processing attempts are automatically retried with exponential backoff (5 seconds × attempt number)
+-   **Distributed Processing**: Leverages Coiled for parallel processing across multiple regions
+-   **Resource Optimization**: Each job is configured with specific VM types and disk requirements optimized for its workload
+-   **Conditional Branching**: Optional region file writing based on deployment configuration
 
 ## Deployment Automation via GitHub Actions
 
@@ -216,23 +216,23 @@ graph TB
 
 #### Automatic Deployments
 
-- **QA**: Triggered automatically when PRs to main include `e2e` or `QA/QC` labels
-- **Staging**: Deployed automatically on every push to the main branch
-- **Production**: Released automatically when a new version is published
+-   **QA**: Triggered automatically when PRs to main include `e2e` or `QA/QC` labels
+-   **Staging**: Deployed automatically on every push to the main branch
+-   **Production**: Released automatically when a new version is published
 
 #### Manual Controls
 
-- **Environment Selection**: Choose between QA and staging for manual deployments
-- **Region Selection**: Deploy specific regions or all regions
-- **Data Management**: Option to wipe existing data before deployment
-- **Production Redeployment**: Redeploy specific versions to production using semantic version tags
+-   **Environment Selection**: Choose between QA and staging for manual deployments
+-   **Region Selection**: Deploy specific regions or all regions
+-   **Data Management**: Option to wipe existing data before deployment
+-   **Production Redeployment**: Redeploy specific versions to production using semantic version tags
 
 #### Safety Features
 
-- **Environment Isolation**: Each environment uses separate configuration files
-- **Version Tracking**: Production deployments are tagged with semantic versions
-- **Concurrency Control**: Prevents simultaneous deployments to the same environment
-- **Rollback Capability**: Production can be redeployed to any previous version
+-   **Environment Isolation**: Each environment uses separate configuration files
+-   **Version Tracking**: Production deployments are tagged with semantic versions
+-   **Concurrency Control**: Prevents simultaneous deployments to the same environment
+-   **Rollback Capability**: Production can be redeployed to any previous version
 
 ## Configuration Management
 
@@ -240,9 +240,9 @@ graph TB
 
 Each environment maintains its own configuration file:
 
-- **QA**: `ocr-coiled-s3.env`
-- **Staging**: `ocr-coiled-s3-staging.env`
-- **Production**: `ocr-coiled-s3-production.env`
+-   **QA**: `ocr-coiled-s3.env`
+-   **Staging**: `ocr-coiled-s3-staging.env`
+-   **Production**: `ocr-coiled-s3-production.env`
 
 ### Key Configuration Parameters
 
@@ -264,13 +264,13 @@ Each environment maintains its own configuration file:
 
 ### Common Issues
 
-- **Region Processing Failures**: Check retry logs; system automatically retries up to the configured limit
-- **Environment Variable Missing**: Ensure `COILED_SOFTWARE_ENV_NAME` is set in GitHub Actions
-- **Deployment Conflicts**: Wait for current deployment to complete; concurrency controls prevent overlaps
-- **Version Mismatch**: Verify semantic version format when redeploying to production
+-   **Region Processing Failures**: Check retry logs; system automatically retries up to the configured limit
+-   **Environment Variable Missing**: Ensure `COILED_SOFTWARE_ENV_NAME` is set in GitHub Actions
+-   **Deployment Conflicts**: Wait for current deployment to complete; concurrency controls prevent overlaps
+-   **Version Mismatch**: Verify semantic version format when redeploying to production
 
 ### Support Resources
 
-- Check deployment status at the environment URLs listed above
-- Review GitHub Actions logs for detailed error messages
-- Consult Coiled dashboard for distributed job execution details
+-   Check deployment status at the environment URLs listed above
+-   Review GitHub Actions logs for detailed error messages
+-   Consult Coiled dashboard for distributed job execution details
