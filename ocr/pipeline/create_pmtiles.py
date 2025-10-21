@@ -61,6 +61,8 @@ def create_pmtiles(
             """
             connection.execute(copy_sql)
 
+            # Use all available CPU cores for parallel processing
+            # The -P flag alone doesn't parallelize - need to use read-parallel
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -70,7 +72,8 @@ def create_pmtiles(
                 '-n',
                 'building',
                 '-f',
-                '-P',
+                '-P',  # Parallel processing
+                '--read-parallel',  # Enable parallel reading of input
                 '--drop-smallest-as-needed',
                 '-q',
                 '--extend-zooms-if-still-dropping',
