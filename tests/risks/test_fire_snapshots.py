@@ -297,6 +297,37 @@ class TestFosbergIndexSnapshot:
         assert xarray_snapshot == result
 
 
+class TestWindInformedBurnProbabilitySnapshot:
+    """Snapshot tests for wind-informed burn probability creation."""
+
+    @pytest.mark.parametrize(
+        'region_id',
+        [
+            pytest.param('california-coast', id='california-coast'),
+            pytest.param('colorado-rockies', id='colorado-rockies'),
+            pytest.param('seattle-area', id='seattle-area'),
+            pytest.param('georgia-piedmont', id='georgia-piedmont'),
+            pytest.param('arizona-desert', id='arizona-desert'),
+        ],
+    )
+    def test_create_wind_informed_burn_probability_regions(
+        self, xarray_snapshot, get_wind_informed_burn_probability, region_id
+    ):
+        """Snapshot test for wind-informed burn probability creation on different regions.
+
+        This test captures the output of the wind-informed burn probability calculation,
+        which combines directional convolution with Riley burn probability data and
+        wind direction distributions. Tests multiple geographic regions to ensure
+        correct behavior across different landscapes and wind patterns.
+
+        Note: Uses cached calculations (session-scoped) to share data with other tests.
+        """
+        result = get_wind_informed_burn_probability(region_id)
+
+        # Snapshot the result
+        assert xarray_snapshot == result
+
+
 class TestWindAdjustedRiskSnapshot:
     """Snapshot tests for the complete wind-adjusted risk calculation pipeline."""
 
