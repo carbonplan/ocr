@@ -297,11 +297,11 @@ def run(
             )
         manager.wait_for_completion(exit_on_failure=True)
 
-        # Aggregate geoparquet regions
+        # Partition buildings by geography
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
