@@ -22,7 +22,7 @@ def create_pmtiles(
       4. Upload resulting PMTiles to the configured destination.
     """
 
-    input_path = config.vector.building_geoparquet_uri  # type: ignore[attr-defined]
+    input_path = config.vector.building_geoparquet_glob  # type: ignore[attr-defined]
     output_path = config.vector.buildings_pmtiles_uri  # type: ignore[attr-defined]
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
