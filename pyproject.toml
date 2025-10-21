@@ -17,6 +17,9 @@
 [tool.setuptools.packages.find]
     include = ["ocr*"]
 
+[tool.setuptools.package-data]
+    ocr = ["data/*.json"]
+
 [tool.setuptools_scm]
     fallback_version = "999"
     local_scheme     = "node-and-date"
