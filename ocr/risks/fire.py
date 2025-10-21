@@ -7,7 +7,7 @@ from odc.geo.xr import assign_crs, xr_reproject
 from scipy.ndimage import rotate
 
 from ocr import catalog
-from ocr.conus404 import geo_sel
+from ocr.utils import geo_sel
 
 CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
@@ -165,7 +165,13 @@ def apply_wind_directional_convolution(
     spread_results = xr.Dataset(
         data_vars={var_name: (da.dims, da.values) for var_name in weights_dict.keys()},
         coords=da.coords,
+        attrs=da.attrs,
     )
+    # Preserve any CRS-related coordinates
+    for coord in ['spatial_ref', 'crs']:
+        if coord in da.coords:
+            spread_results = spread_results.assign_coords({coord: da.coords[coord]})
+
     for direction, weights in weights_dict.items():
         arr = spread_results[direction].values
         for _ in range(iterations):
@@ -380,17 +386,15 @@ def create_wind_informed_burn_probability(
 
     Parameters
     ----------
-    climate_run_subset : xr.Dataset
-        Subset of the climate run dataset containing burn probability ('BP') data.
-    wind_direction_distribution : xr.DataArray
-        Wind direction distribution data array.
-    unburnable_mask_climate_run : xr.DataArray
-        Unburnable mask for the climate run dataset.
+    wind_direction_distribution_30m_4326 : xr.DataArray
+        Wind direction distribution data at 30m resolution in EPSG:4326 projection.
+    riley_270m_5070 : xr.DataArray
+        Riley et al. (2011) burn probability data at 270m resolution in EPSG:5070 projection.
 
     Returns
     -------
-    wind_informed_bp_float_corrected : xr.DataArray
-        Wind-informed burn probability data array with corrected coordinates.
+    smoothed_final_bp : xr.DataArray
+        Smoothed wind-informed burn probability data at 30m resolution in EPSG:4326 projection.
     """
     import cv2 as cv
 
@@ -433,6 +437,7 @@ def create_wind_informed_burn_probability(
             'longitude': wind_direction_distribution_30m_4326.longitude,
         }
     )
+
     blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
     wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
         blurred_bp_30m_4326, wind_direction_distribution_30m_4326
@@ -455,20 +460,18 @@ def create_wind_informed_burn_probability(
     )
 
     # smooth using a 21x21 Gaussian filter
-    smoothed_final_bp = cv.GaussianBlur(wind_informed_bp_combined.values, (21, 21), 0)
-    smoothed_final_bp_ds = xr.Dataset(
-        data_vars={
-            'BP': (
-                (
-                    wind_direction_distribution_30m_4326.sel(wind_direction=0).dims,
-                    smoothed_final_bp.astype(np.float32),
-                )
-            )
-        },
-        coords=wind_direction_distribution_30m_4326.coords,
-    )
+    smoothed_final_bp_data = cv.GaussianBlur(wind_informed_bp_combined.values, (21, 21), 0)
 
-    return smoothed_final_bp_ds['BP']
+    return xr.DataArray(
+        smoothed_final_bp_data.astype(np.float32),
+        dims=wind_direction_distribution_30m_4326.sel(wind_direction=0).dims,
+        coords=wind_direction_distribution_30m_4326.coords,
+        name='BP',
+        attrs={
+            'long_name': 'Wind-informed Burn Probability',
+            'description': 'Wind-informed Burn Probability created by applying directional convolution and weighted composite using wind direction distribution',
+        },
+    )
 
 
 def calculate_wind_adjusted_risk(
@@ -488,7 +491,8 @@ def calculate_wind_adjusted_risk(
     Returns
     -------
     fire_risk : xr.Dataset
-        Dataset containing wind-adjusted fire risk variables."""
+        Dataset containing wind-adjusted fire risk variables.
+    """
 
     riley_2011_30m_4326 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     riley_2047_30m_4326 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
