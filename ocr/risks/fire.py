@@ -460,18 +460,23 @@ def create_wind_informed_burn_probability(
     )
 
     # smooth using a 21x21 Gaussian filter
-    smoothed_final_bp_data = cv.GaussianBlur(wind_informed_bp_combined.values, (21, 21), 0)
-
-    return xr.DataArray(
-        smoothed_final_bp_data.astype(np.float32),
-        dims=wind_direction_distribution_30m_4326.sel(wind_direction=0).dims,
-        coords=wind_direction_distribution_30m_4326.coords,
-        name='BP',
-        attrs={
-            'long_name': 'Wind-informed Burn Probability',
-            'description': 'Wind-informed Burn Probability created by applying directional convolution and weighted composite using wind direction distribution',
-        },
+    smoothed_bp = xr.apply_ufunc(
+        cv.GaussianBlur,
+        wind_informed_bp_combined.chunk(latitude=-1, longitude=-1),
+        input_core_dims=[['latitude', 'longitude']],
+        output_core_dims=[['latitude', 'longitude']],
+        vectorize=True,
+        dask='parallelized',
+        output_dtypes=[np.float32],
+        kwargs={'ksize': (21, 21), 'sigmaX': 0},
     )
+    smoothed_bp.name = 'BP'
+
+    smoothed_bp.attrs = {
+        'long_name': 'Wind-informed Burn Probability',
+        'description': 'Wind-informed Burn Probability created by applying directional convolution and weighted composite using wind direction distribution',
+    }
+    return smoothed_bp
 
 
 def calculate_wind_adjusted_risk(
