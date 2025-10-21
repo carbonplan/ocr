@@ -894,6 +894,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
+    def block_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/block.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
     def tracts_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -939,11 +945,21 @@ class VectorConfig(pydantic_settings.BaseSettings):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
+    @property
+    def building_geoparquet_glob(self) -> str:
+        return f'{self.building_geoparquet_uri}/**/*.parquet'
+
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    @functools.cached_property
+    def block_summary_stats_uri(self) -> UPath:
+        """URI for the block summary statistics file."""
+        geo_table_name = 'block'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     @functools.cached_property
     def tracts_summary_stats_uri(self) -> UPath:
@@ -1038,9 +1054,11 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Region Geoparquet URI', str(self.region_geoparquet_uri)),
                 nv('Buildings Geoparquet URI', str(self.building_geoparquet_uri)),
                 nv('Region summary stats dir', str(self.region_summary_stats_prefix)),
+                nv('Block summary stats', str(self.block_summary_stats_uri)),
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
+                nv('Block PMTiles', str(self.block_pmtiles_uri)),
                 nv('Tracts PMTiles', str(self.tracts_pmtiles_uri)),
                 nv('Counties PMTiles', str(self.counties_pmtiles_uri)),
             ]

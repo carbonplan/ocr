@@ -12,6 +12,7 @@ def create_summary_stat_tmp_tables(
     con: duckdb.DuckDBPyConnection,
     counties_path: UPath,
     tracts_path: UPath,
+    block_path: UPath,
     consolidated_buildings_path: UPath,
 ):
     # Assume extensions & creds handled by caller.
@@ -38,10 +39,18 @@ def create_summary_stat_tmp_tables(
         FROM read_parquet('{tracts_path}')
         """)
 
+    # tmp table for block
+    con.execute(f"""
+        CREATE TEMP TABLE block AS
+        SELECT GEOID, geometry
+        FROM read_parquet('{block_path}')
+        """)
+
     # create spatial index on geom cols
     con.execute('CREATE INDEX buildings_spatial_idx ON buildings USING RTREE (geometry)')
     con.execute('CREATE INDEX counties_spatial_idx ON county USING RTREE (geometry)')
     con.execute('CREATE INDEX tracts_spatial_idx ON tract USING RTREE (geometry)')
+    con.execute('CREATE INDEX block_spatial_idx ON block USING RTREE (geometry)')
 
 
 def custom_histogram_query(
@@ -85,15 +94,19 @@ def custom_histogram_query(
 
 
 def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
+    block_summary_stats_path = config.vector.block_summary_stats_uri
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    consolidated_buildings_path = config.vector.building_geoparquet_uri
+    consolidated_buildings_path = config.vector.building_geoparquet_glob
 
     dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
 
     dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+
+    dataset = catalog.get_dataset('us-census-blocks')
+    block_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 0.01.
     hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
@@ -111,6 +124,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         con=connection,
         counties_path=counties_path,
         tracts_path=tracts_path,
+        block_path=block_path,
         consolidated_buildings_path=consolidated_buildings_path,
     )
 
@@ -130,6 +144,16 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         con=connection,
         geo_table_name='tract',
         summary_stats_path=tracts_summary_stats_path,
+        hist_bins=hist_bins,
+    )
+    if config.debug:
+        console.log(f'Wrote summary statistics for tract to {block_summary_stats_path}')
+    if config.debug:
+        console.log('Computing block summary statistics')
+    custom_histogram_query(
+        con=connection,
+        geo_table_name='block',
+        summary_stats_path=block_summary_stats_path,
         hist_bins=hist_bins,
     )
     if config.debug:
