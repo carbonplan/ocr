@@ -36,15 +36,16 @@ extra:
 
 extra_javascript:
     - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+    - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
     - Home: index.md
     - How-to Guides:
           - User Guides:
-                - Installation: how-to/installation.md
                 - Getting Started: how-to/getting-started.md
                 - Working with Data: how-to/work-with-data.ipynb
           - Developer Guides:
+                - Installation: how-to/installation.md
                 - Release Procedure: how-to/release-procedure.md
                 - Snapshot Testing: how-to/snapshot-testing.md
 
@@ -55,7 +56,7 @@ nav:
                 - Implementation: methods/fire-risk/implementation.ipynb
                 - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
                 - Caveats & Limitations: methods/fire-risk/limitations.md
-                - Region Atomization: methods/fire-risk/region-atomization.md
+                - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
 
     - Tutorials:
           - Data Pipeline: tutorials/data-pipeline.md
@@ -159,7 +160,8 @@ markdown_extensions:
     - def_list
     - footnotes
     - md_in_html
-    - pymdownx.arithmatex
+    - pymdownx.arithmatex:
+          generic: true
     - pymdownx.betterem
     - pymdownx.caret:
           insert: false

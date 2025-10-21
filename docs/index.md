@@ -102,9 +102,9 @@ If you use OCR data or methods in your research, please cite:
 }
 ```
 
-## License
+## License (TK)
 
-OCR is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details.
+OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details.
 
 ---
 
