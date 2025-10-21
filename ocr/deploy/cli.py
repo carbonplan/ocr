@@ -641,7 +641,7 @@ def write_aggregated_region_analysis_files(
 
 
 @app.command()
-def create_pmtiles(
+def create_building_pmtiles(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -671,8 +671,8 @@ def create_pmtiles(
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr create-pmtiles'
-        name = f'create-pmtiles-{config.environment.value}'
+        command = 'ocr create-building-pmtiles'
+        name = f'create-building-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -685,11 +685,11 @@ def create_pmtiles(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.create_pmtiles import create_pmtiles
+    from ocr.pipeline.create_building_pmtiles import create_building_pmtiles
 
     config = load_config(env_file)
 
-    create_pmtiles(config=config)
+    create_building_pmtiles(config=config)
 
 
 ocr = typer.main.get_command(

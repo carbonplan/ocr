@@ -10,7 +10,7 @@ from ocr.console import console
 from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
 
 
-def create_pmtiles(
+def create_building_pmtiles(
     config: OCRConfig,
 ):
     """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
