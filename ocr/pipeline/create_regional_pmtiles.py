@@ -76,10 +76,10 @@ def create_regional_pmtiles(
                         '6', wind_risk_2047,
                         '7', GEOID,
                         '8', [
-                                ST_XMin(geometry), # west
-                                ST_YMin(geometry), # south
-                                ST_XMax(geometry), # east
-                                ST_YMax(geometry) # north
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
                             ]
 
                     ) AS properties,
@@ -125,10 +125,10 @@ def create_regional_pmtiles(
                         '6', wind_risk_2047,
                         '7', GEOID,
                         '8', [
-                                ST_XMin(geometry), # west
-                                ST_YMin(geometry), # south
-                                ST_XMax(geometry), # east
-                                ST_YMax(geometry) # north
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
                             ]
 
                     ) AS properties,
@@ -176,10 +176,10 @@ def create_regional_pmtiles(
                         '7', GEOID,
                         '8', NAME,
                         '9', [
-                                ST_XMin(geometry), # west
-                                ST_YMin(geometry), # south
-                                ST_XMax(geometry), # east
-                                ST_YMax(geometry) # north
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
                             ]
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
