@@ -171,6 +171,8 @@ def geo_sel(
       Method to use for point selection, by default 'nearest'
     tolerance : float, optional
       Tolerance (in units of the dataset's CRS) for point selection, by default None
+    crs_wkt : str, optional
+      WKT string for the dataset's CRS. If None, attempts to read from ds.crs.attrs['crs_wkt'].
 
     Returns
     -------
@@ -180,7 +182,12 @@ def geo_sel(
       BBox: retains y, x subset
     """
     if crs_wkt is None:
-        wkt = ds.crs.attrs['crs_wkt']
+        try:
+            wkt = ds.crs.attrs['crs_wkt']
+        except KeyError:
+            raise ValueError(
+                'CRS WKT not found in dataset attributes. Please provide crs_wkt argument.'
+            )
     else:
         wkt = crs_wkt
     fwd, _ = _get_transformers(wkt)

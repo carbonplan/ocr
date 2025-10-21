@@ -198,6 +198,7 @@
     python                = "3.13.*"
     rasterio              = ">=1.4.3,<2"
     rich                  = ">=14.1.0,<15"
+    rioxarray             = ">=0.19.0,<0.20"
     s3fs                  = ">=2025.9.0,<2026"
     semver                = ">=3.0.4,<4"
     syrupy                = ">=5.0.0,<6"
@@ -207,7 +208,6 @@
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
-rioxarray = ">=0.19.0,<0.20"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
