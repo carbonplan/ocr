@@ -15,7 +15,7 @@ Usage examples:
       python .github/scripts/export_pixi_to_conda.py --output environment.yaml
 
   - Clean an existing YAML from stdin to stdout:
-      pixi project export conda-environment | \
+      pixi workspace export conda-environment | \
         python .github/scripts/export_pixi_to_conda.py --stdin --output -
 """
 
@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         '--stdin',
         action='store_true',
-        help="Read YAML from stdin instead of running 'pixi project export conda-environment'",
+        help="Read YAML from stdin instead of running 'pixi workspace export conda-environment'",
     )
     parser.add_argument(
         '--output',
