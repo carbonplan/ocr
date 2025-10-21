@@ -11,7 +11,7 @@ from ocr.utils import apply_s3_creds, install_load_extensions
 install_load_extensions()
 apply_s3_creds()
 
-release = '2025-03-19.1'
+release = '2025-09-24.0'
 
 # conus bbox
 bbox = (-125.354004, 24.413323, -66.555176, 49.196737)
