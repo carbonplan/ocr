@@ -134,9 +134,32 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         list
             List of valid region IDs (e.g., 'y1_x3', 'y2_x4', etc.)
         """
+        import json
+
+        # Use cache file in the package directory
+        cache_file = Path(__file__).parent / 'data' / 'valid_region_ids.json'
+
+        # Try to load from cache first
+        if cache_file.exists():
+            try:
+                with open(cache_file) as f:
+                    cached_data = json.load(f)
+                if self.debug:
+                    console.log(
+                        f'Loaded {len(cached_data)} valid region IDs from cache: {cache_file}'
+                    )
+                return cached_data
+            except Exception as e:
+                if self.debug:
+                    console.log(f'Failed to load cache file: {e}. Regenerating...')
+
+        # If cache doesn't exist or failed to load, compute valid region IDs
         chunk_info = self.chunk_info
         y_starts = chunk_info['y_starts']
         x_starts = chunk_info['x_starts']
+
+        if self.debug:
+            console.log('Computing valid region IDs (this may take a while)...')
 
         valid_region_ids = []
         for iy, _ in enumerate(y_starts):
@@ -147,6 +170,16 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
                 all_null = bool(subds.CRPS.isnull().all().values)
                 if not all_null:
                     valid_region_ids.append(region_id)
+
+        # Save to cache for future use
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(cache_file, 'w') as f:
+            json.dump(valid_region_ids, f, indent=2)
+
+        if self.debug:
+            console.log(
+                f'Computed and cached {len(valid_region_ids)} valid region IDs to {cache_file}'
+            )
 
         return valid_region_ids
 
