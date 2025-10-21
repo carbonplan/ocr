@@ -55,7 +55,7 @@ graph TB
 
     %% Section 02: Aggregation
     subgraph Section02["<b>Phase 02 - Aggregation</b>"]
-        AggregateGeo[["📊 <b>aggregate</b><br/>Command: ocr aggregate<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Creates GeoParquet"]]
+        AggregateGeo[["📊 <b>partition-buildings</b><br/>Command: ocr partition-buildings<br/>VM: c8g.8xlarge<br/>Scheduler: c8g.8xlarge<br/>Creates GeoParquet"]]
 
         CheckFailed -->|No| AggregateGeo
 

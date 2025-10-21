@@ -180,20 +180,20 @@ ocr process-region y10_x2 --risk-type fire
 ocr process-region y15_x7 --env-file production.env --risk-type wind
 ```
 
-#### `ocr aggregate` - Data Consolidation
+#### `ocr partition-buildings` - Data Consolidation
 
-Combine processed regional geoparquet files into a unified dataset.
+Partition processed geoparquet files by state and county FIPS codes.
 
 ```bash
-ocr aggregate --env-file .env
+ocr partition-buildings --env-file .env
 ```
 
-#### `ocr aggregate-regional-risk` - Statistical Summaries
+#### `ocr aggregate-region-risk-summary-stats` - Statistical Summaries
 
 Generate county and tract-level risk statistics.
 
 ```bash
-ocr aggregate-regional-risk --env-file .env
+ocr aggregate-region-risk-summary-stats --env-file .env
 ```
 
 #### `ocr create-regional-pmtiles` - Regional Tiles
