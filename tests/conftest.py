@@ -28,11 +28,11 @@ def cleanup_s3_directory():
 
 # Define test regions used across multiple test modules
 TEST_REGIONS = {
-    'california-coast': (slice(-120.0, -119.995), slice(35.005, 35.0)),
-    'colorado-rockies': (slice(-105.0, -104.995), slice(40.005, 40.0)),
-    'seattle-area': (slice(-122.5, -122.495), slice(47.605, 47.6)),
-    'georgia-piedmont': (slice(-84.4, -84.395), slice(33.755, 33.75)),
-    'arizona-desert': (slice(-111.9, -111.895), slice(33.455, 33.45)),
+    'california-coast': (slice(-120.0, -119.985), slice(35.005, 35.0)),
+    'colorado-rockies': (slice(-105.0, -104.985), slice(40.005, 40.0)),
+    'seattle-area': (slice(-122.5, -122.485), slice(47.605, 47.6)),
+    'georgia-piedmont': (slice(-84.4, -84.385), slice(33.755, 33.75)),
+    'arizona-desert': (slice(-111.9, -111.885), slice(33.455, 33.45)),
 }
 
 

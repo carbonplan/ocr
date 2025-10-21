@@ -510,12 +510,12 @@ def calculate_wind_adjusted_risk(
     riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice)
     riley_2011_270m_5070_subset = geo_sel(
         riley_2011_270m_5070,
-        bbox=[x_slice.start, y_slice.stop, x_slice.stop, y_slice.start],
+        bbox=(x_slice.start, y_slice.stop, x_slice.stop, y_slice.start),
         crs_wkt=riley_2011_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
     riley_2047_270m_5070_subset = geo_sel(
         riley_2047_270m_5070,
-        bbox=[x_slice.start, y_slice.stop, x_slice.stop, y_slice.start],
+        bbox=(x_slice.start, y_slice.stop, x_slice.stop, y_slice.start),
         crs_wkt=riley_2047_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
 
