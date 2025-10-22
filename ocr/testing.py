@@ -103,14 +103,30 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
         serialized_data: typing.Any,
         snapshot_data: typing.Any,
     ) -> bool:
-        """Check if serialized data matches snapshot using xarray.testing.assert_equal."""
+        """Check if serialized data matches snapshot using approximate comparison.
+
+        Uses assert_allclose instead of assert_equal to handle platform-specific
+        numerical differences from OpenCV and scipy operations between macOS and Linux.
+        """
         if snapshot_data is None:
             return False
         try:
-            xr.testing.assert_equal(serialized_data.compute(), snapshot_data.compute())
+            # Compute both datasets to ensure all lazy operations are materialized
+            serialized = serialized_data.compute()
+            snapshot = snapshot_data.compute()
+
+            # Use allclose for numerical tolerance (handles float32 precision + platform differences)
+            # rtol=1e-6 and atol=1e-8 are reasonable for float32 with accumulated operations
+            xr.testing.assert_allclose(serialized, snapshot, rtol=1e-6, atol=1e-8)
             return True
-        except AssertionError:
-            return False
+        except (AssertionError, TypeError):
+            # TypeError can occur if data types don't match (e.g., string vs numeric)
+            # Fall back to exact comparison for non-numeric data
+            try:
+                xr.testing.assert_equal(serialized_data.compute(), snapshot_data.compute())
+                return True
+            except AssertionError:
+                return False
 
     def read_snapshot_data_from_location(
         self, *, snapshot_location: str, snapshot_name: str, session_id: str
@@ -148,17 +164,30 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
     ) -> typing.Iterator[str]:
         """Generate diff lines for test output."""
         try:
-            xr.testing.assert_equal(serialized_data.compute(), snapshot_data.compute())
+            # Try approximate comparison first
+            serialized = serialized_data.compute()
+            snapshot = snapshot_data.compute()
+            xr.testing.assert_allclose(serialized, snapshot, rtol=1e-6, atol=1e-8)
             return iter([])
-        except AssertionError as e:
-            return iter(
-                ['Snapshot:']
-                + str(snapshot_data).split('\n')
-                + ['-------------------------------']
-                + ['Serialized:']
-                + str(serialized_data).split('\n')
-                + str(e).split('\n')
-            )
+        except (AssertionError, TypeError) as e:
+            # Provide detailed diff including both approximate and exact comparison attempts
+            diff_output = [
+                'Snapshot comparison failed (using rtol=1e-6, atol=1e-8 for numerical tolerance)',
+                '-------------------------------',
+                'Snapshot:',
+            ] + str(snapshot_data).split('\n')
+
+            diff_output += [
+                '-------------------------------',
+                'Serialized:',
+            ] + str(serialized_data).split('\n')
+
+            diff_output += [
+                '-------------------------------',
+                'Error:',
+            ] + str(e).split('\n')
+
+            return iter(diff_output)
 
 
 class GeoDataFrameSnapshotExtension(SingleFileSnapshotExtension):
