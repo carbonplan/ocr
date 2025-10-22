@@ -28,7 +28,7 @@ def create_regional_pmtiles(
 
     # Access vector config attributes (these exist on OCRConfig.vector)
     block_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
-    tracts_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri  # type: ignore[attr-defined]
     counties_summary_stats_path = config.vector.counties_summary_stats_uri  # type: ignore[attr-defined]
 
     block_pmtiles_output = config.vector.block_pmtiles_uri  # type: ignore[attr-defined]
