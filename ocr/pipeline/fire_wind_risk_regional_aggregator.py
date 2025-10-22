@@ -13,7 +13,7 @@ def create_summary_stat_tmp_tables(
     counties_path: UPath,
     tracts_path: UPath,
     block_path: UPath,
-    consolidated_buildings_path: UPath,
+    buildings_path_glob: str,
 ):
     # Assume extensions & creds handled by caller.
     # tmp table for buildings
@@ -22,7 +22,7 @@ def create_summary_stat_tmp_tables(
         SELECT geometry,
         wind_risk_2011 as wind_risk_2011,
         wind_risk_2047 as wind_risk_2047
-        FROM read_parquet('{consolidated_buildings_path}')
+        FROM read_parquet('{buildings_path_glob}')
         """)
 
     # tmp table for geoms
@@ -97,7 +97,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     block_summary_stats_path = config.vector.block_summary_stats_uri
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    consolidated_buildings_path = config.vector.building_geoparquet_glob
+    buildings_path_glob = config.vector.building_geoparquet_glob
 
     dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
@@ -112,7 +112,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
 
     if config.debug:
-        console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
+        console.log(f'Using buildings path: {buildings_path_glob}')
 
     connection = duckdb.connect(database=':memory:')
 
@@ -125,7 +125,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         counties_path=counties_path,
         tracts_path=tracts_path,
         block_path=block_path,
-        consolidated_buildings_path=consolidated_buildings_path,
+        buildings_path_glob=buildings_path_glob,
     )
 
     if config.debug:

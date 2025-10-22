@@ -17,9 +17,9 @@ The pipeline transforms raw climate data into risk assessments through four main
 
 ### Prerequisites
 
-- Python environment with OCR package installed (see [installation guide](../how-to/installation.md))
-- AWS credentials (for data access)
-- Coiled account (for cloud execution, optional)
+-   Python environment with OCR package installed (see [installation guide](../how-to/installation.md))
+-   AWS credentials (for data access)
+-   Coiled account (for cloud execution, optional)
 
 ### Tutorial: quick end-to-end (local)
 
@@ -86,21 +86,21 @@ ocr run --all-region-ids --platform coiled
 
 **Best for:** Development, testing, debugging, small datasets
 
-- Runs entirely on your local machine
-- Uses local temporary directories
-- No cloud costs or dependencies
-- Limited by local computational resources
-- Sequential processing only
+-   Runs entirely on your local machine
+-   Uses local temporary directories
+-   No cloud costs or dependencies
+-   Limited by local computational resources
+-   Sequential processing only
 
 ### Coiled Platform
 
 **Best for:** Production workloads, large-scale processing, parallel execution
 
-- Runs on AWS cloud infrastructure
-- Automatic resource scaling and management
-- Parallel job execution across multiple workers
-- Optimized VM types for different workloads
-- Built-in monitoring and cost tracking
+-   Runs on AWS cloud infrastructure
+-   Automatic resource scaling and management
+-   Parallel job execution across multiple workers
+-   Optimized VM types for different workloads
+-   Built-in monitoring and cost tracking
 
 ## Configuration
 
@@ -124,10 +124,10 @@ ocr run --env-file .env --region-id y10_x2
 
 ### Key Configuration Components
 
-- **Icechunk Store** - Version-controlled data storage backend
-- **Vector Output** - Location for processed geoparquet and PMTiles files
-- **Environment** - Data version/environment (prod, QA, etc.)
-- **Chunking** - Defines valid region boundaries and IDs
+-   **Icechunk Store** - Version-controlled data storage backend
+-   **Vector Output** - Location for processed geoparquet and PMTiles files
+-   **Environment** - Data version/environment (prod, QA, etc.)
+-   **Chunking** - Defines valid region boundaries and IDs
 
 ## CLI Commands
 
@@ -146,11 +146,11 @@ The main command that orchestrates the complete processing pipeline.
 
 **Key Options:**
 
-- `--region-id` - Process specific regions (can specify multiple)
-- `--all-region-ids` - Process all available regions
-- `--platform` - Choose `local` or `coiled` execution
-- `--risk-type` - Calculate `fire` or `wind` risk (default: fire)
-- `--write-region-files` - Write regional aggregated summary stats geospatial files.
+-   `--region-id` - Process specific regions (can specify multiple)
+-   `--all-region-ids` - Process all available regions
+-   `--platform` - Choose `local` or `coiled` execution
+-   `--risk-type` - Calculate `fire` or `wind` risk (default: fire)
+-   `--write-region-files` - Write regional aggregated summary stats geospatial files.
 
 **Examples:**
 
@@ -180,20 +180,20 @@ ocr process-region y10_x2 --risk-type fire
 ocr process-region y15_x7 --env-file production.env --risk-type wind
 ```
 
-#### `ocr aggregate` - Data Consolidation
+#### `ocr partition-buildings` - Data Consolidation
 
-Combine processed regional geoparquet files into a unified dataset.
+Partition processed geoparquet files by state and county FIPS codes.
 
 ```bash
-ocr aggregate --env-file .env
+ocr partition-buildings --env-file .env
 ```
 
-#### `ocr aggregate-regional-risk` - Statistical Summaries
+#### `ocr aggregate-region-risk-summary-stats` - Statistical Summaries
 
 Generate county and tract-level risk statistics.
 
 ```bash
-ocr aggregate-regional-risk --env-file .env
+ocr aggregate-region-risk-summary-stats --env-file .env
 ```
 
 #### `ocr create-regional-pmtiles` - Regional Tiles
@@ -204,12 +204,12 @@ Create PMTiles for county and tract-level visualizations.
 ocr create-regional-pmtiles --env-file .env
 ```
 
-#### `ocr create-pmtiles` - Primary Tiles
+#### `ocr create-building-pmtiles` - Building PMTiles
 
-Generate PMTiles from the main consolidated dataset.
+Generate PMTiles from the consolidated building dataset.
 
 ```bash
-ocr create-pmtiles --env-file .env
+ocr create-building-pmtiles --env-file .env
 ```
 
 #### `ocr write-aggregated-region-analysis-files` - Write Analysis Files
@@ -233,20 +233,20 @@ Error: Missing required environment variables
 
 **Solutions:**
 
-- Verify `.env` file exists and is properly formatted
-- Check all required AWS credentials are set
-- Ensure Coiled credentials are configured (for cloud platform)
+-   Verify `.env` file exists and is properly formatted
+-   Check all required AWS credentials are set
+-   Ensure Coiled credentials are configured (for cloud platform)
 
 ### Resource and access issues
 
 #### Local Platform
 
-- **Disk space:** Check available space in temp directory
-- **Memory:** Reduce dataset size or increase system RAM
-- **Permissions:** Verify file/directory access rights
+-   **Disk space:** Check available space in temp directory
+-   **Memory:** Reduce dataset size or increase system RAM
+-   **Permissions:** Verify file/directory access rights
 
 #### Coiled Platform
 
-- **Job failures:** Check Coiled credentials and account quotas
-- **AWS access:** Verify IAM permissions and credentials
-- **Network:** Confirm AWS region and connectivity
+-   **Job failures:** Check Coiled credentials and account quotas
+-   **AWS access:** Verify IAM permissions and credentials
+-   **Network:** Confirm AWS region and connectivity

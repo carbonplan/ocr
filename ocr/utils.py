@@ -1,11 +1,42 @@
 import shutil
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import geopandas as gpd
 import pyproj
 import xarray as xr
 from upath import UPath
+
+
+def get_temp_dir() -> Path | None:
+    """Get optimal temporary directory path for the current environment.
+
+    Returns the current working directory if running in /scratch (e.g., on Coiled
+    clusters), otherwise returns None to use the system default temp directory.
+
+    On Coiled clusters, /scratch is bind-mounted directly to the NVMe disk,
+    avoiding Docker overlay filesystem overhead and providing better I/O performance
+    and more available space compared to /tmp which sits on the Docker overlay.
+
+    Returns
+    -------
+    Path | None
+        Current working directory if in /scratch, None otherwise (uses system default).
+
+    Examples
+    --------
+    >>> import tempfile
+    >>> from ocr.utils import get_temp_dir
+    >>> with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
+    ...     # tmpdir will be in /scratch on Coiled, system temp otherwise
+    ...     pass
+    """
+    cwd = Path.cwd()
+    if cwd.parts[1:2] == ('scratch',):
+        # Return /scratch itself rather than a subdirectory within it
+        return Path('/scratch')
+    return None
 
 
 def apply_s3_creds(region: str = 'us-west-2', *, con: Any | None = None) -> None:

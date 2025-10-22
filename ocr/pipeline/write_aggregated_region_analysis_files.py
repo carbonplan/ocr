@@ -18,7 +18,7 @@ def write_stats_table(
     hist_bins: list | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
 ):
     region_analysis_path = config.vector.aggregated_region_analysis_uri
-    consolidated_buildings_path = config.vector.building_geoparquet_glob
+    buildings_path = config.vector.building_geoparquet_glob
 
     region_stats_path = region_analysis_path / stats_table_name
 
@@ -60,7 +60,7 @@ def write_stats_table(
             ST_Y(ST_Centroid(a.geometry)) AS centroid_latitude,
             a.geometry,
         FROM read_parquet('{region_path}') a
-        JOIN read_parquet('{consolidated_buildings_path}') b
+        JOIN read_parquet('{buildings_path}') b
             ON ST_Intersects(a.geometry, b.geometry)
         GROUP BY a.GEOID, a.geometry ;
     """)
