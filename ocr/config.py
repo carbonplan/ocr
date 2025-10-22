@@ -748,7 +748,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def block_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/block.pmtiles')
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/blocks.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 

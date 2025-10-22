@@ -52,13 +52,13 @@ def create_regional_pmtiles(
 
         with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
             tmp_path = UPath(tmpdir)
-            block_pmtiles = tmp_path / 'block.pmtiles'
-            tract_pmtiles = tmp_path / 'tract.pmtiles'
+            block_pmtiles = tmp_path / 'blocks.pmtiles'
+            tract_pmtiles = tmp_path / 'tracts.pmtiles'
             county_pmtiles = tmp_path / 'counties.pmtiles'
 
-            block_ndjson = Path(tmpdir) / 'block.ndjson'
-            tract_ndjson = Path(tmpdir) / 'tract.ndjson'
-            county_ndjson = Path(tmpdir) / 'county.ndjson'
+            block_ndjson = Path(tmpdir) / 'blocks.ndjson'
+            tract_ndjson = Path(tmpdir) / 'tracts.ndjson'
+            county_ndjson = Path(tmpdir) / 'counties.ndjson'
 
             if config.debug:
                 console.log(f'Creating block PMTiles from {block_summary_stats_path}')
