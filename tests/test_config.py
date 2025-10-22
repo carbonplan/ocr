@@ -427,10 +427,10 @@ class TestVectorConfig:
         expected_uri = f'{temp_dir}/intermediate/fire-risk/vector/qa/geoparquet-regions'
         assert str(config.region_geoparquet_uri) == expected_uri
 
-        # Test building_geoparquet_glob
+        # Test building_geoparquet_uri
         assert (
-            str(config.building_geoparquet_glob)
-            == f'{temp_dir}/output/fire-risk/vector/qa/geoparquet/buildings.parquet/**/*.parquet'
+            str(config.building_geoparquet_uri)
+            == f'{temp_dir}/output/fire-risk/vector/qa/geoparquet/buildings.parquet'
         )
 
         # Test pmtiles_prefix
@@ -478,29 +478,11 @@ class TestVectorConfig:
         test_file1.write_text('test data')
         test_file2.write_text('test data')
 
-        config.delete_region_gpqs()
+        config.wipe()
 
         # Files should be deleted
         assert not test_file1.exists()
         assert not test_file2.exists()
-
-    def test_delete_region_gpqs_invalid_prefix(self, temp_dir):
-        """Test delete_region_gpqs with invalid prefix - but since it adds /geoparquet-regions/, this won't raise."""
-        config = VectorConfig(storage_root=temp_dir, prefix='invalid-prefix')
-
-        # This actually works because the property adds '/geoparquet-regions/' to any non-None prefix
-        config.delete_region_gpqs()  # Should not raise
-
-    def test_delete_region_gpqs_none_prefix(self, temp_dir):
-        """Test delete_region_gpqs with None prefix - actually works because property returns string."""
-        config = VectorConfig(
-            storage_root=temp_dir, prefix='test-prefix', output_prefix='test-output'
-        )
-        config.prefix = None
-
-        # This doesn't raise because region_geoparquet_prefix returns "None/geoparquet-regions/"
-        # which still contains 'geoparquet-regions', so the check passes
-        config.delete_region_gpqs()  # Should not raise
 
     def test_pretty_paths_output_and_side_effects(self, temp_dir, capsys):
         """pretty_paths should print a readable table and create expected dirs."""
