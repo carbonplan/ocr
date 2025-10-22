@@ -10,7 +10,7 @@ def partition_buildings_by_geography(config: OCRConfig):
     connection = duckdb.connect(database=':memory:')
 
     input_path = config.vector.region_geoparquet_uri
-    output_path = config.vector.building_geoparquet_glob
+    output_path = config.vector.building_geoparquet_uri
     path = input_path / '*.parquet'
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])

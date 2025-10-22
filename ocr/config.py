@@ -727,10 +727,18 @@ class VectorConfig(pydantic_settings.BaseSettings):
         """Wipe the vector data storage."""
         if self.debug:
             console.log(
-                f'Wiping intermediate vector data storage at {self.storage_root}/{self.prefix}'
+                f'Wiping vector data storage at these locations:\n'
+                f'- {self.building_geoparquet_uri}\n'
+                f'- {self.buildings_pmtiles_uri.parent}\n'
+                f'- {self.region_geoparquet_uri}\n'
+                f'- {self.aggregated_region_analysis_uri}\n'
+                f'- {self.tracts_summary_stats_uri.parent}\n'
             )
-        self.delete_region_gpqs()
-        self.delete_region_analysis_files()
+        self.upath_delete(self.building_geoparquet_uri)
+        self.upath_delete(self.buildings_pmtiles_uri.parent)
+        self.upath_delete(self.region_geoparquet_uri)
+        self.upath_delete(self.aggregated_region_analysis_uri)
+        self.upath_delete(self.tracts_summary_stats_uri.parent)
 
     # ----------------------------
     # output pmtiles
@@ -789,14 +797,14 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def aggregated_region_analysis_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.aggregated_region_analysis_prefix}')
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents=True, exist_ok=True)
         return path
 
     @property
-    def building_geoparquet_glob(self) -> str:
+    def building_geoparquet_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.geoparquet_prefix}/buildings.parquet')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return f'{path}/**/*.parquet'
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
@@ -807,7 +815,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def block_summary_stats_uri(self) -> UPath:
         """URI for the block summary statistics file."""
-        geo_table_name = 'block'
+        geo_table_name = 'blocks'
         return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
     @functools.cached_property
@@ -849,28 +857,6 @@ class VectorConfig(pydantic_settings.BaseSettings):
             else:
                 path.unlink()
 
-    def delete_region_analysis_files(self):
-        """Deletes the region aggregated analysis files"""
-        if self.debug:
-            console.log(
-                f'Deleting region aggregated analysis files from {self.aggregated_region_analysis_uri}'
-            )
-        aggregated_region_path = UPath(self.aggregated_region_analysis_uri)
-        self.upath_delete(aggregated_region_path)
-
-    def delete_region_gpqs(self):
-        """Delete region geoparquet files from the storage."""
-        if self.debug:
-            console.log(f'Deleting region geoparquet files from {self.region_geoparquet_uri}')
-        if self.region_geoparquet_prefix is None:
-            raise ValueError('Region geoparquet prefix must be set before deletion.')
-        if 'geoparquet-regions' not in self.region_geoparquet_prefix:
-            raise ValueError(
-                'It seems like the prefix specified is not the region_id tagged geoparq files. [safety switch]'
-            )
-        region_path = UPath(self.region_geoparquet_uri)
-        self.upath_delete(region_path)
-
     def pretty_paths(self) -> None:
         """Pretty print key VectorConfig paths and URIs.
 
@@ -901,7 +887,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
         rows.extend(
             [
                 nv('Region Geoparquet URI', str(self.region_geoparquet_uri)),
-                nv('Buildings Geoparquet Glob', str(self.building_geoparquet_glob)),
+                nv('Buildings Geoparquet', str(self.building_geoparquet_uri)),
                 nv('Region summary stats dir', str(self.region_summary_stats_prefix)),
                 nv('Block summary stats', str(self.block_summary_stats_uri)),
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
