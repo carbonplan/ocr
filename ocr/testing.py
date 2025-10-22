@@ -107,7 +107,7 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
         if snapshot_data is None:
             return False
         try:
-            xr.testing.assert_equal(serialized_data, snapshot_data)
+            xr.testing.assert_equal(serialized_data.compute(), snapshot_data.compute())
             return True
         except AssertionError:
             return False
@@ -148,7 +148,7 @@ class XarraySnapshotExtension(SingleFileSnapshotExtension):
     ) -> typing.Iterator[str]:
         """Generate diff lines for test output."""
         try:
-            xr.testing.assert_equal(serialized_data, snapshot_data)
+            xr.testing.assert_equal(serialized_data.compute(), snapshot_data.compute())
             return iter([])
         except AssertionError as e:
             return iter(
