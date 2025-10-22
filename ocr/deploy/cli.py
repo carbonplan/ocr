@@ -212,8 +212,8 @@ def run(
         # ----------- 02 Aggregate -------------
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
@@ -267,8 +267,8 @@ def run(
 
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
@@ -297,11 +297,11 @@ def run(
             )
         manager.wait_for_completion(exit_on_failure=True)
 
-        # Aggregate geoparquet regions
+        # Partition buildings by geography
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
@@ -344,8 +344,8 @@ def run(
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
@@ -426,7 +426,7 @@ def process_region(
 
 
 @app.command()
-def aggregate(
+def partition_buildings(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -449,15 +449,15 @@ def aggregate(
     ),
 ):
     """
-    Aggregate geoparquet regions, reproject and write.
+    Partition buildings geoparquet by state and county FIPS codes.
     """
 
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr aggregate'
-        name = f'aggregate-geoparquet-{config.environment.value}'
+        command = 'ocr partition-buildings'
+        name = f'partition-buildings-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -470,10 +470,10 @@ def aggregate(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.aggregate import aggregated_gpq
+    from ocr.pipeline.partition import partition_buildings_by_geography
 
     config = load_config(env_file)
-    aggregated_gpq(config=config)
+    partition_buildings_by_geography(config=config)
 
 
 @app.command()
@@ -641,7 +641,7 @@ def write_aggregated_region_analysis_files(
 
 
 @app.command()
-def create_pmtiles(
+def create_building_pmtiles(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -671,8 +671,8 @@ def create_pmtiles(
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr create-pmtiles'
-        name = f'create-pmtiles-{config.environment.value}'
+        command = 'ocr create-building-pmtiles'
+        name = f'create-building-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -685,11 +685,11 @@ def create_pmtiles(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.create_pmtiles import create_pmtiles
+    from ocr.pipeline.create_building_pmtiles import create_building_pmtiles
 
     config = load_config(env_file)
 
-    create_pmtiles(config=config)
+    create_building_pmtiles(config=config)
 
 
 ocr = typer.main.get_command(

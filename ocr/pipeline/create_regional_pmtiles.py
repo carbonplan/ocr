@@ -7,7 +7,7 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
-from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
+from ocr.utils import apply_s3_creds, copy_or_upload, get_temp_dir, install_load_extensions
 
 
 def create_regional_pmtiles(
@@ -50,7 +50,7 @@ def create_regional_pmtiles(
             # Apply credentials so httpfs/aws can access objects; region optional (default us-west-2)
             apply_s3_creds(region='us-west-2', con=connection)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
             tmp_path = UPath(tmpdir)
             block_pmtiles = tmp_path / 'block.pmtiles'
             tract_pmtiles = tmp_path / 'tract.pmtiles'
@@ -62,6 +62,11 @@ def create_regional_pmtiles(
 
             if config.debug:
                 console.log(f'Creating block PMTiles from {block_summary_stats_path}')
+
+            if config.debug:
+                console.log(
+                    f'Exporting NDJSON features: {block_ndjson} from {block_summary_stats_path} for block PMTiles'
+                )
             duckdb_block_copy = f"""
             COPY (
                 SELECT
@@ -89,6 +94,9 @@ def create_regional_pmtiles(
             """
             connection.execute(duckdb_block_copy)
 
+            if config.debug:
+                console.log(f'Generating block PMTiles at {block_pmtiles}')
+
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -110,7 +118,9 @@ def create_regional_pmtiles(
                 console.log('block PMTiles created successfully')
 
             if config.debug:
-                console.log(f'Creating tract PMTiles from {tracts_summary_stats_path}')
+                console.log(
+                    f'Exporting tract PMTiles from {tracts_summary_stats_path} to {tract_ndjson}'
+                )
             duckdb_tract_copy = f"""
             COPY (
                 SELECT
@@ -138,6 +148,9 @@ def create_regional_pmtiles(
             """
             connection.execute(duckdb_tract_copy)
 
+            if config.debug:
+                console.log(f'Generating tract PMTiles at {tract_pmtiles} from {tract_ndjson}')
+
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -159,7 +172,9 @@ def create_regional_pmtiles(
                 console.log('Tract PMTiles created successfully')
 
             if config.debug:
-                console.log(f'Creating county PMTiles from {counties_summary_stats_path}')
+                console.log(
+                    f'Exporting county PMTiles from {counties_summary_stats_path} to {county_ndjson}'
+                )
             duckdb_county_copy = f"""
             COPY (
                 SELECT
@@ -187,6 +202,8 @@ def create_regional_pmtiles(
             ) TO '{county_ndjson.as_posix()}' (FORMAT json);
             """
             connection.execute(duckdb_county_copy)
+            if config.debug:
+                console.log(f'Generating county PMTiles at {county_pmtiles} from {county_ndjson}')
 
             tippecanoe_cmd = [
                 'tippecanoe',

@@ -7,10 +7,10 @@ from upath import UPath
 
 from ocr.config import OCRConfig
 from ocr.console import console
-from ocr.utils import apply_s3_creds, copy_or_upload, install_load_extensions
+from ocr.utils import apply_s3_creds, copy_or_upload, get_temp_dir, install_load_extensions
 
 
-def create_pmtiles(
+def create_building_pmtiles(
     config: OCRConfig,
 ):
     """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
@@ -34,13 +34,13 @@ def create_pmtiles(
         if needs_s3:
             apply_s3_creds(region='us-west-2', con=connection)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
             tmp_path = UPath(tmpdir)
             local_pmtiles = tmp_path / 'aggregated.pmtiles'
             ndjson_path = Path(tmpdir) / 'buildings.ndjson'
 
             if config.debug:
-                console.log(f'Exporting features from {input_path} to NDJSON')
+                console.log(f'Exporting features from {input_path} to NDJSON in {ndjson_path}')
 
             copy_sql = f"""
             COPY (
@@ -61,6 +61,10 @@ def create_pmtiles(
             """
             connection.execute(copy_sql)
 
+            if config.debug:
+                console.log('NDJSON export complete')
+                console.log(f'Generating PMTiles at {local_pmtiles}')
+
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -70,7 +74,7 @@ def create_pmtiles(
                 '-n',
                 'building',
                 '-f',
-                '-P',
+                '-P',  # Parallel processing
                 '--drop-smallest-as-needed',
                 '-q',
                 '--extend-zooms-if-still-dropping',

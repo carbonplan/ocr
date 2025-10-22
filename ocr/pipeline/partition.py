@@ -1,7 +1,7 @@
 from ocr.config import OCRConfig
 
 
-def aggregated_gpq(config: OCRConfig):
+def partition_buildings_by_geography(config: OCRConfig):
     import duckdb
 
     from ocr.console import console
@@ -10,7 +10,7 @@ def aggregated_gpq(config: OCRConfig):
     connection = duckdb.connect(database=':memory:')
 
     input_path = config.vector.region_geoparquet_uri
-    output_path = config.vector.building_geoparquet_uri
+    output_path = config.vector.building_geoparquet_glob
     path = input_path / '*.parquet'
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
@@ -19,7 +19,7 @@ def aggregated_gpq(config: OCRConfig):
     apply_s3_creds(region='us-west-2', con=connection)
 
     if config.debug:
-        console.log(f'Aggregating geoparquet regions from: {path}')
+        console.log(f'Partitioning geoparquet regions from: {path}')
 
     connection.execute(f"""
         SET preserve_insertion_order=false;
@@ -41,4 +41,4 @@ def aggregated_gpq(config: OCRConfig):
         );""")
 
     if config.debug:
-        console.log(f'Aggregation complete. Consolidated geoparquet written to: {output_path}')
+        console.log(f'Partitioned buildings written to: {output_path}')

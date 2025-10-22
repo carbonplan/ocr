@@ -26,9 +26,9 @@ graph TB
 
             OCR --> PIPELINE[⚙️ pipeline/]
             PIPELINE --> PROCESS[process_region.py]
-            PIPELINE --> AGG[aggregate.py]
+            PIPELINE --> PARTITION[partition.py]
             PIPELINE --> STATS[fire_wind_risk_regional_aggregator.py]
-            PIPELINE --> PMTILES[create_pmtiles.py + create_regional_pmtiles.py]
+            PIPELINE --> PMTILES[create_building_pmtiles.py + create_regional_pmtiles.py]
             PIPELINE --> WRITERS[write_*_analysis_files.py]
 
             OCR --> RISKS[🔥 risks/]
@@ -115,9 +115,9 @@ Orchestration layer for local and cloud execution:
 Internal processing modules coordinated by the CLI. These implement the data processing workflow:
 
 -   **`process_region.py`** - Sample risk values to building locations
--   **`aggregate.py`** - Aggregate GeoParquet outputs
+-   **`partition.py`** - Partition GeoParquet by geographic regions
 -   **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
--   **`create_pmtiles.py`** - Generate PMTiles for web visualization
+-   **`create_building_pmtiles.py`** - Generate PMTiles for building data visualization
 -   **`create_regional_pmtiles.py`** - Generate region-specific PMTiles
 -   **`write_aggregated_region_analysis_files.py`** - Write regional summary tables
 -   **`write_per_region_analysis_files.py`** - Write per-region analysis outputs (CSV/JSON)
