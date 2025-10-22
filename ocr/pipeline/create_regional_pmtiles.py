@@ -195,7 +195,7 @@ def create_regional_pmtiles(
                                 ST_XMax(geometry),
                                 ST_YMax(geometry)
                             ],
-                        '9', NAME,
+                        '9', NAME
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{counties_summary_stats_path}')
