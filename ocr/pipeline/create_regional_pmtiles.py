@@ -79,8 +79,13 @@ def create_regional_pmtiles(
                         '4', median_wind_risk_2047,
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
-                        '7', GEOID
-
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ]
 
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
@@ -128,8 +133,13 @@ def create_regional_pmtiles(
                         '4', median_wind_risk_2047,
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
-                        '7', GEOID
-
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ]
 
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
@@ -179,8 +189,13 @@ def create_regional_pmtiles(
                         '5', wind_risk_2011,
                         '6', wind_risk_2047,
                         '7', GEOID,
-                        '8', NAME
-
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ],
+                        '9', NAME,
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{counties_summary_stats_path}')
