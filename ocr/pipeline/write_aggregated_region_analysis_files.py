@@ -85,7 +85,7 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     tracts_path = UPath(f's3://{tracts_dataset.bucket}/{tracts_dataset.prefix}')
 
     block_dataset = catalog.get_dataset('us-census-blocks')
-    block_path = UPath(f's3://{block_dataset.bucket}/{tracts_dataset.prefix}')
+    block_path = UPath(f's3://{block_dataset.bucket}/{block_dataset.prefix}')
 
     connection = duckdb.connect(database=':memory:')
 
