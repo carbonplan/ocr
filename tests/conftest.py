@@ -100,7 +100,7 @@ def get_wind_informed_burn_probability(wind_informed_bp_cache):
             wind_informed_bp_cache[cache_key] = create_wind_informed_burn_probability(
                 wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
                 riley_270m_5070=riley_2011_270m_5070_subset,
-            )
+            ).compute()
 
         return wind_informed_bp_cache[cache_key]
 
@@ -154,7 +154,7 @@ def get_wind_adjusted_risk(wind_adjusted_risk_cache):
             # Compute and cache
             wind_adjusted_risk_cache[cache_key] = calculate_wind_adjusted_risk(
                 x_slice=x_slice, y_slice=y_slice
-            )
+            ).compute()
 
         return wind_adjusted_risk_cache[cache_key]
 
