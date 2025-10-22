@@ -728,13 +728,13 @@ class VectorConfig(pydantic_settings.BaseSettings):
         if self.debug:
             console.log(
                 f'Wiping vector data storage at these locations:\n'
-                f'- {self.building_geoparquet_uri}\n'
+                f'- {self.building_geoparquet_uri.parent}\n'
                 f'- {self.buildings_pmtiles_uri.parent}\n'
                 f'- {self.region_geoparquet_uri}\n'
                 f'- {self.aggregated_region_analysis_uri}\n'
                 f'- {self.tracts_summary_stats_uri.parent}\n'
             )
-        self.upath_delete(self.building_geoparquet_uri)
+        self.upath_delete(self.building_geoparquet_uri.parent)
         self.upath_delete(self.buildings_pmtiles_uri.parent)
         self.upath_delete(self.region_geoparquet_uri)
         self.upath_delete(self.aggregated_region_analysis_uri)
