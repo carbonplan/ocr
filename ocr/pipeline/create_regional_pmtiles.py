@@ -28,7 +28,7 @@ def create_regional_pmtiles(
 
     # Access vector config attributes (these exist on OCRConfig.vector)
     block_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
-    tracts_summary_stats_path = config.vector.block_summary_stats_uri  # type: ignore[attr-defined]
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri  # type: ignore[attr-defined]
     counties_summary_stats_path = config.vector.counties_summary_stats_uri  # type: ignore[attr-defined]
 
     block_pmtiles_output = config.vector.block_pmtiles_uri  # type: ignore[attr-defined]
@@ -52,13 +52,13 @@ def create_regional_pmtiles(
 
         with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
             tmp_path = UPath(tmpdir)
-            block_pmtiles = tmp_path / 'block.pmtiles'
-            tract_pmtiles = tmp_path / 'tract.pmtiles'
+            block_pmtiles = tmp_path / 'blocks.pmtiles'
+            tract_pmtiles = tmp_path / 'tracts.pmtiles'
             county_pmtiles = tmp_path / 'counties.pmtiles'
 
-            block_ndjson = Path(tmpdir) / 'block.ndjson'
-            tract_ndjson = Path(tmpdir) / 'tract.ndjson'
-            county_ndjson = Path(tmpdir) / 'county.ndjson'
+            block_ndjson = Path(tmpdir) / 'blocks.ndjson'
+            tract_ndjson = Path(tmpdir) / 'tracts.ndjson'
+            county_ndjson = Path(tmpdir) / 'counties.ndjson'
 
             if config.debug:
                 console.log(f'Creating block PMTiles from {block_summary_stats_path}')
@@ -195,7 +195,7 @@ def create_regional_pmtiles(
                                 ST_XMax(geometry),
                                 ST_YMax(geometry)
                             ],
-                        '9', NAME,
+                        '9', NAME
                     ) AS properties,
                     json(ST_AsGeoJson(geometry)) AS geometry
                 FROM read_parquet('{counties_summary_stats_path}')

@@ -97,7 +97,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     block_summary_stats_path = config.vector.block_summary_stats_uri
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    buildings_path_glob = config.vector.building_geoparquet_glob
+    buildings_path_glob = f'{config.vector.region_geoparquet_uri}/*.parquet'
 
     dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
@@ -138,6 +138,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     )
     if config.debug:
         console.log(f'Wrote summary statistics for county to {counties_summary_stats_path}')
+
     if config.debug:
         console.log('Computing tract summary statistics')
     custom_histogram_query(
@@ -147,7 +148,8 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         hist_bins=hist_bins,
     )
     if config.debug:
-        console.log(f'Wrote summary statistics for tract to {block_summary_stats_path}')
+        console.log(f'Wrote summary statistics for tract to {tracts_summary_stats_path}')
+
     if config.debug:
         console.log('Computing block summary statistics')
     custom_histogram_query(
@@ -157,7 +159,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         hist_bins=hist_bins,
     )
     if config.debug:
-        console.log(f'Wrote summary statistics for tract to {tracts_summary_stats_path}')
+        console.log(f'Wrote summary statistics for block to {block_summary_stats_path}')
 
     try:
         connection.close()
