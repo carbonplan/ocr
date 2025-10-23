@@ -59,6 +59,9 @@ def reproject(
     # fixes https://github.com/carbonplan/ocr/issues/247
     result = result.assign_coords(latitude=tgt.latitude, longitude=tgt.longitude)
 
+    # sort the coordinates to ensure ascending order
+    result = result.sortby(['latitude', 'longitude'])
+
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
 
@@ -411,7 +414,7 @@ def reproject_ffwi(
     _write_icechunk_store(
         out_path=distribution_output_path,
         dataset=reprojected_distribution,
-        commit_message='Reprojected wind direction distribution to 30m EPSG:4326 geobox.',
+        commit_message='Reprojected wind direction distribution to 30m EPSG:4326 geobox',
         overwrite=overwrite,
     )
 
