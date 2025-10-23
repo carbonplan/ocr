@@ -45,22 +45,20 @@ def reproject(
 
     src_crs = CRS(src_crs_wkt)
     src_dataset = assign_crs(src_dataset, crs=src_crs)
-    result = (
-        xr_reproject(
-            src_dataset,
-            geobox,
-            resampling='nearest',
-        )
-        .astype('float32')
-        .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
-    )
+    result = xr_reproject(
+        src_dataset,
+        geobox,
+        resampling='nearest',
+    ).astype('float32')
 
     # To avoid issues with floating point noise in coordinates, we directly adopt the target dataset's coords
     # fixes https://github.com/carbonplan/ocr/issues/247
     result = result.assign_coords(latitude=tgt.latitude, longitude=tgt.longitude)
 
     # sort the coordinates to ensure ascending order
-    result = result.sortby(['latitude', 'longitude'])
+    result = result.sortby(['latitude', 'longitude']).chunk(
+        {'latitude': chunk_lat, 'longitude': chunk_lon}
+    )
 
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
