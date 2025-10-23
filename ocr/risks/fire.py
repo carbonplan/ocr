@@ -529,7 +529,7 @@ def calculate_wind_adjusted_risk(
     )
 
     wind_direction_distribution_30m_4326 = (
-        catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
+        catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-30m-4326')
         .to_xarray()
         .wind_direction_distribution.sel(latitude=y_slice, longitude=x_slice)
         .load()
