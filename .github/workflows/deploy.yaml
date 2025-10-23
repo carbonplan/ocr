@@ -230,6 +230,7 @@ jobs:
                     --env-file "$ENV_FILE" \
                     --platform coiled \
                     --write-regional-stats \
+                    --create-pyramid \
                     --wipe
 
     manual:
@@ -412,6 +413,7 @@ jobs:
                     $REGION_ARGS \
                     --env-file ocr-coiled-s3-production.env \
                     --write-regional-stats \
+                    --create-pyramid \
                     --platform coiled
 
     production-rerun:

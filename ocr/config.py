@@ -691,9 +691,9 @@ class PyramidConfig(pydantic_settings.BaseSettings):
 
         if self.output_prefix is None:
             if self.version:
-                self.output_prefix = f'output/{common_part}/v{self.version}'
+                self.output_prefix = f'output/{common_part}/v{self.version}/pyramid.zarr'
             else:
-                self.output_prefix = f'output/{common_part}'
+                self.output_prefix = f'output/{common_part}/pyramid.zarr'
 
         if self.output_prefix and self.version:
             if f'v{self.version}' not in self.output_prefix:
@@ -710,8 +710,7 @@ class PyramidConfig(pydantic_settings.BaseSettings):
 
     @property
     def pyramid_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}/pyramid.zarr')
-        path.mkdir(parents=True, exist_ok=True)
+        path = UPath(f'{self.storage_root}/{self.output_prefix}')
         return path
 
     def wipe(self):

@@ -28,8 +28,6 @@ def create_pyramid(config: OCRConfig):
     from odc.geo.xr import assign_crs, xr_reproject
     from zarr.storage import ObjectStore
 
-    from ocr.console import console
-
     zarr.config.set({'async.concurrency': 128})
     dask.config.set(scheduler='threads', num_workers=64)
 
@@ -83,7 +81,9 @@ def create_pyramid(config: OCRConfig):
 
             return GeoBox((self.dim, self.dim), affine=self.get_affine(), crs=self.projection)
 
-    def get_dataset_encoding(ds: xr.Dataset, config: PyramidConfig) -> dict[str, dict[str, Any]]:
+    def get_dataset_encoding(
+        ds: xr.Dataset, pyramid_config: PyramidConfig
+    ) -> dict[str, dict[str, Any]]:
         encoding = {}
 
         for var_name in ds.variables:
@@ -95,29 +95,29 @@ def create_pyramid(config: OCRConfig):
                 chunks = tuple(var.sizes[dim] for dim in var.dims)
             else:
                 chunks = tuple(
-                    config.pixels_per_tile if dim in ['x', 'y'] else var.sizes[dim]
+                    pyramid_config.pixels_per_tile if dim in ['x', 'y'] else var.sizes[dim]
                     for dim in var.dims
                 )
 
             encoding[var_name] = {
-                'compressor': config.compressor,
+                'compressor': pyramid_config.compressor,
                 'dtype': str(var.dtype),
-                '_FillValue': config.fill_value,
+                '_FillValue': pyramid_config.fill_value,
                 'chunks': chunks,
             }
 
         return encoding
 
     def get_multiscales_attrs(
-        levels: list[int], config: PyramidConfig, is_datatree: bool = False
+        levels: list[int], pyramid_config: PyramidConfig, is_datatree: bool = False
     ) -> dict[str, Any]:
         if is_datatree:
             datasets = [
                 {
                     'path': str(level),
                     'level': level,
-                    'crs': config.projection,
-                    'pixels_per_tile': config.pixels_per_tile,
+                    'crs': pyramid_config.projection,
+                    'pixels_per_tile': pyramid_config.pixels_per_tile,
                 }
                 for level in levels
             ]
@@ -126,17 +126,17 @@ def create_pyramid(config: OCRConfig):
                 'title': 'multiscale data pyramid',
             }
         else:
-            datasets = [{'path': '.', 'level': levels[0], 'crs': config.projection}]
+            datasets = [{'path': '.', 'level': levels[0], 'crs': pyramid_config.projection}]
             attrs = {'multiscales': [{'datasets': datasets}]}
 
         return attrs
 
     def create_skeleton_tree(
-        datatree: xr.DataTree, config: PyramidConfig
+        datatree: xr.DataTree, pyramid_config: PyramidConfig
     ) -> tuple[xr.DataTree, dict]:
         skeleton_tree = xr.DataTree()
         encodings = {}
-        levels = list(range(config.level + 1))
+        levels = list(range(pyramid_config.level + 1))
 
         for group in levels:
             group_str = str(group)
@@ -148,19 +148,19 @@ def create_pyramid(config: OCRConfig):
                 empty_array = dask.array.empty(ds[var].shape, dtype=ds[var].dtype, chunks=-1)
                 group_ds[var] = xr.DataArray(empty_array, dims=ds[var].dims)
 
-            group_ds.attrs = get_multiscales_attrs([group], config, is_datatree=False)
+            group_ds.attrs = get_multiscales_attrs([group], pyramid_config, is_datatree=False)
             skeleton_tree[group_str] = xr.DataTree(group_ds)
 
-            encodings[f'/{group_str}'] = get_dataset_encoding(group_ds, config)
+            encodings[f'/{group_str}'] = get_dataset_encoding(group_ds, pyramid_config)
 
-        skeleton_tree.attrs = get_multiscales_attrs(levels, config, is_datatree=True)
+        skeleton_tree.attrs = get_multiscales_attrs(levels, pyramid_config, is_datatree=True)
 
         return skeleton_tree, encodings
 
-    def build_pyramid(ds: xr.Dataset, config: PyramidConfig) -> xr.DataTree:
-        level_ds_dict = {str(config.level): ds}
+    def build_pyramid(ds: xr.Dataset, pyramid_config: PyramidConfig) -> xr.DataTree:
+        level_ds_dict = {str(pyramid_config.level): ds}
 
-        for lvl in range(config.level - 1, -1, -1):
+        for lvl in range(pyramid_config.level - 1, -1, -1):
             higher_ds = level_ds_dict[str(lvl + 1)]
             lower_ds = higher_ds.coarsen(x=2, y=2).mean()
             level_ds_dict[str(lvl)] = lower_ds
@@ -171,14 +171,14 @@ def create_pyramid(config: OCRConfig):
 
     def write_pyramid_groups(
         datatree: xr.DataTree,
-        config: PyramidConfig,
+        pyramid_config: PyramidConfig,
         output_bucket: str,
         output_prefix: str,
         region: str = 'us-west-2',
     ):
-        for group in range(config.level, -1, -1):
-            if config.debug:
-                console.log(f'Writing pyramid group/level: {group}')
+        for group in range(pyramid_config.level, -1, -1):
+            # if config.debug:
+            #     console.log(f'Writing pyramid group/level: {group}')
             group_str = str(group)
 
             batch_store = S3Store(
@@ -190,17 +190,23 @@ def create_pyramid(config: OCRConfig):
 
             subset_ds = datatree[group_str].ds
 
-            if config.regional_subset:
+            if pyramid_config.regional_subset:
                 subset_ds = subset_ds.sel(
-                    x=slice(config.regional_subset.left, config.regional_subset.right),
-                    y=slice(config.regional_subset.top, config.regional_subset.bottom),
+                    x=slice(
+                        pyramid_config.regional_subset.left, pyramid_config.regional_subset.right
+                    ),
+                    y=slice(
+                        pyramid_config.regional_subset.top, pyramid_config.regional_subset.bottom
+                    ),
                 )
 
             # encoding = get_dataset_encoding(subset_ds, config)
-            subset_ds.attrs = get_multiscales_attrs([group], config, is_datatree=False)
+            subset_ds.attrs = get_multiscales_attrs([group], pyramid_config, is_datatree=False)
 
             with ProgressBar():
-                subset_ds.chunk({'x': config.pixels_per_tile, 'y': config.pixels_per_tile}).to_zarr(
+                subset_ds.chunk(
+                    {'x': pyramid_config.pixels_per_tile, 'y': pyramid_config.pixels_per_tile}
+                ).to_zarr(
                     batch_zstore,
                     consolidated=False,
                     align_chunks=True,
@@ -213,39 +219,40 @@ def create_pyramid(config: OCRConfig):
     # =========================================
 
     # BBOX subset for CONUS extent
-    # TODO: For QA runs, our bbox will be way smaller.
     # A PERFORMANT way to get the bounds of the valid data for the template would be great.
 
-    # REGIONAL_SUBSET = BoundingBox(
-    #     left=-13927438.0498,
-    #     bottom=2824695.1999,
-    #     right=-7430902.1418,
-    #     top=6280174.6103,
-    #     crs='EPSG:3857',
-    # )
+    REGIONAL_SUBSET = BoundingBox(
+        left=-13927438.0498,
+        bottom=2824695.1999,
+        right=-7430902.1418,
+        top=6280174.6103,
+        crs='EPSG:3857',
+    )
 
     # !!!!!!!!!!!!!!!
     # TEMP SUBSET OF CENTRAL/WESTERN WA FOR TESTING OF REGION Y2_X5
-    REGIONAL_SUBSET = BoundingBox(
-        left=-13539749.4423,
-        bottom=5824773.8598,
-        right=-13028538.5972,
-        top=6272621.1426,
-        crs='EPSG:3857',
-    )
+    # REGIONAL_SUBSET = BoundingBox(
+    #     left=-13539749.4423,
+    #     bottom=5824773.8598,
+    #     right=-13028538.5972,
+    #     top=6272621.1426,
+    #     crs='EPSG:3857',
+    # )
     # !!!!!!!!!!!!!!!
 
     TARGET_RESOLUTION = 30
     PIXELS_PER_TILE = 512
     AWS_REGION = 'us-west-2'
-    INPUT_RASTER_BUCKET = config.icechunk.storage_root
+    INPUT_RASTER_BUCKET = config.icechunk.storage_root.strip(
+        's3://'
+    )  # we should add bucket / prefix methods to the icechunk config
     INPUT_RASTER_PREFIX = config.icechunk.prefix
 
-    PYRAMID_BUCKET = config.pyramid.storage_root
-    PYRAMID_PREFIX = config.pyramid.prefix
-    # VAR_LIST = ['wind_risk_2011', 'wind_risk_2047']
+    PYRAMID_BUCKET = config.pyramid.storage_root.strip('s3://')
+    PYRAMID_PREFIX = config.pyramid.output_prefix
+    VAR_LIST = ['wind_risk_2011', 'wind_risk_2047']
 
-    config = PyramidConfig(
+    pyramid_config = PyramidConfig(
         target_resolution=TARGET_RESOLUTION,
         regional_subset=REGIONAL_SUBSET,
         pixels_per_tile=PIXELS_PER_TILE,
@@ -260,17 +267,17 @@ def create_pyramid(config: OCRConfig):
     )
     repo = icechunk.Repository.open(storage)
     session = repo.readonly_session('main')
-    ds = xr.open_zarr(session.store, consolidated=False)  # [VAR_LIST]
+    ds = xr.open_zarr(session.store, consolidated=False)[VAR_LIST]
     ds = assign_crs(ds, 'EPSG:4326')
 
-    dst_geobox = config.get_geobox()
-    odc_ds = xr_reproject(ds, dst_geobox, resampling=config.resampling)
-    regridded_ds = assign_crs(odc_ds, config.projection)
+    dst_geobox = pyramid_config.get_geobox()
+    odc_ds = xr_reproject(ds, dst_geobox, resampling=pyramid_config.resampling)
+    regridded_ds = assign_crs(odc_ds, pyramid_config.projection)
 
     highest_level_ds = regridded_ds.drop_vars('spatial_ref')
 
-    datatree = build_pyramid(highest_level_ds, config)
-    skeleton_tree, skeleton_encodings = create_skeleton_tree(datatree, config)
+    datatree = build_pyramid(highest_level_ds, pyramid_config)
+    skeleton_tree, skeleton_encodings = create_skeleton_tree(datatree, pyramid_config)
 
     template_store = S3Store(
         PYRAMID_BUCKET,
@@ -289,7 +296,10 @@ def create_pyramid(config: OCRConfig):
     )
 
     write_pyramid_groups(
-        datatree=datatree, config=config, output_bucket=PYRAMID_BUCKET, output_prefix=PYRAMID_PREFIX
+        datatree=datatree,
+        pyramid_config=pyramid_config,
+        output_bucket=PYRAMID_BUCKET,
+        output_prefix=PYRAMID_PREFIX,
     )
 
     zarr.consolidate_metadata(zstore_template)

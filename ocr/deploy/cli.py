@@ -164,6 +164,7 @@ def run(
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
+        config.pyramid.wipe()
 
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
@@ -752,7 +753,7 @@ def create_pyramid(
     ),
 ):
     """
-    Create PMTiles from the consolidated geoparquet file.
+    Create Pyramid
     """
 
     # Schedule if requested and not already inside a batch task
@@ -766,6 +767,7 @@ def create_pyramid(
             kwargs = {**_coiled_kwargs(config, env_file)}
             if vm_type:
                 kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = 'm8g.16xlarge'
         else:
             kwargs = {**_local_kwargs()}
 
