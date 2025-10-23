@@ -2,6 +2,15 @@ from ocr.config import OCRConfig
 
 
 def create_pyramid(config: OCRConfig):
+    """
+    Custom pyramid generation for the carbonplan/ocr project. For 30m CONUS raster data, standard methods of ndpyramid were breaking.
+    This takes a slightly different approach:
+    - Uses a single VM with the dask threaded scheduler to avoid huge distributed task graphs.
+    - Creates an empty pyramid "template" / "skeleton" of the global extent, slippy-map tile shape web-mercator pyramid.
+    - Trims the input data from a global extent to CONUS and then inserts it into the empty template/skeleton with xarray's region='auto'
+    - Uses Xarray's coarsen to successively coarsen each higher level instead of regrinding each higher level.
+    """
+
     import logging
     from dataclasses import dataclass, field
     from typing import Any
@@ -204,6 +213,8 @@ def create_pyramid(config: OCRConfig):
     # =========================================
 
     # BBOX subset for CONUS extent
+    # TODO: For QA runs, our bbox will be way smaller.
+    # A PERFORMANT way to get the bounds of the valid data for the template would be great.
     REGIONAL_SUBSET = BoundingBox(
         left=-13927438.0498,
         bottom=2824695.1999,
