@@ -215,13 +215,25 @@ def create_pyramid(config: OCRConfig):
     # BBOX subset for CONUS extent
     # TODO: For QA runs, our bbox will be way smaller.
     # A PERFORMANT way to get the bounds of the valid data for the template would be great.
+
+    # REGIONAL_SUBSET = BoundingBox(
+    #     left=-13927438.0498,
+    #     bottom=2824695.1999,
+    #     right=-7430902.1418,
+    #     top=6280174.6103,
+    #     crs='EPSG:3857',
+    # )
+
+    # !!!!!!!!!!!!!!!
+    # TEMP SUBSET OF CENTRAL/WESTERN WA FOR TESTING OF REGION Y2_X5
     REGIONAL_SUBSET = BoundingBox(
-        left=-13927438.0498,
-        bottom=2824695.1999,
-        right=-7430902.1418,
-        top=6280174.6103,
+        left=-13539749.4423,
+        bottom=5824773.8598,
+        right=-13028538.5972,
+        top=6272621.1426,
         crs='EPSG:3857',
     )
+    # !!!!!!!!!!!!!!!
 
     TARGET_RESOLUTION = 30
     PIXELS_PER_TILE = 512
