@@ -881,9 +881,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
-                nv('Block PMTiles', str(self.block_pmtiles_uri)),
-                nv('Tracts PMTiles', str(self.tracts_pmtiles_uri)),
-                nv('Counties PMTiles', str(self.counties_pmtiles_uri)),
+                nv('Region PMTiles', str(self.region_pmtiles_uri)),
             ]
         )
 
