@@ -755,20 +755,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
-    def block_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/blocks.pmtiles')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def tracts_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def counties_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/counties.pmtiles')
+    def region_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/regions.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
