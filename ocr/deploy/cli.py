@@ -164,7 +164,7 @@ def run(
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
-        config.pyramid.wipe()
+        # config.pyramid.wipe()
 
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
