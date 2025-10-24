@@ -218,6 +218,20 @@ def run(
             # small backoff
             time.sleep(5 * attempt)
 
+        # ----------- Pyramid   -------------
+        if pyramid:
+            manager = _get_manager(Platform.COILED, config.debug)
+            manager.submit_job(
+                command='ocr create-pyramid',
+                name=f'create-pyramid-{config.environment.value}',
+                kwargs={
+                    **_coiled_kwargs(config, env_file),
+                    'vm_type': 'm8g.16xlarge',
+                    'scheduler_vm_type': 'm8g.16xlarge',
+                    'software': COILED_SOFTWARE,
+                },
+            )
+
         # ----------- 02 Aggregate -------------
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
@@ -286,22 +300,6 @@ def run(
                 'disk_size': 250,
                 'software': COILED_SOFTWARE,
             },  # PMTiles creation needs more disk space
-        )
-
-        manager.wait_for_completion(exit_on_failure=True)
-
-        # ------------- 04  Pyramid ---------------
-
-        manager = _get_manager(Platform.COILED, config.debug)
-        manager.submit_job(
-            command='ocr create-pyramid',
-            name=f'create-pyramid-{config.environment.value}',
-            kwargs={
-                **_coiled_kwargs(config, env_file),
-                'vm_type': 'm8g.16xlarge',
-                'scheduler_vm_type': 'm8g.16xlarge',
-                'software': COILED_SOFTWARE,
-            },
         )
 
         manager.wait_for_completion(exit_on_failure=True)
