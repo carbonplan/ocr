@@ -240,7 +240,8 @@ def run(
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'scheduler_vm_type': 'm8g.4xlarge',
+                    'scheduler_vm_type': 'r8g.4xlarge',
+                    'vm_type': 'r8g.4xlarge',
                     'software': COILED_SOFTWARE,
                 },
             )
