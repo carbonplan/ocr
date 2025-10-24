@@ -8,7 +8,7 @@ from icechunk.xarray import to_icechunk
 from odc.geo.xr import assign_crs, xr_reproject
 
 cluster = coiled.Cluster(
-    name='ocr_RDS_2016-0034-3',
+    name='ocr-dillon-et-al-2023-30m-4326',
     region='us-west-2',
     n_workers=[2, 40],
     tags={'Project': 'OCR'},
@@ -56,12 +56,12 @@ ds_4326.attrs = {
 }
 
 # chunks to ~100MB
-ds_4326 = ds_4326.chunk({'latitude': 3500, 'longitude': 7000})
+ds_4326 = ds_4326.sortby(['latitude', 'longitude']).chunk({'latitude': 6000, 'longitude': 4500})
 
 # Write to icechunk
 storage = icechunk.s3_storage(
     bucket='carbonplan-ocr',
-    prefix='input/fire-risk/tensor/USFS/RDS-2016-0034-3-epsg_4326.icechunk',
+    prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023-30m-4326.icechunk',
     region='us-west-2',
 )
 repo = icechunk.Repository.open_or_create(storage)

@@ -28,7 +28,7 @@ def load_USFS_community_risk() -> xr.Dataset:
 def write_to_icechunk(ds: xr.Dataset):
     storage = icechunk.s3_storage(
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
+        prefix='input/fire-risk/tensor/USFS/scott-et-al-2024-30m-4326.icechunk',
         region='us-west-2',
     )
     repo = icechunk.Repository.open_or_create(storage)
@@ -43,6 +43,9 @@ def interpolate_and_reproject():
     # assign crs and reproject to lat/lon EPSG:4326
     rps_30 = assign_crs(rps_30, crs='EPSG:5070')
     rps_30_4326 = xr_reproject(rps_30, how='EPSG:4326')
+    rps_30_4326 = rps_30_4326.sortby(['latitude', 'longitude']).chunk(
+        {'latitude': 6000, 'longitude': 4500}
+    )
 
     # assign processing attributes
     rps_30.attrs = {

@@ -43,22 +43,23 @@ def interpolate_and_reproject(climate_run_year: str):
 
     # assign crs and reproject to lat/lon EPSG:4326
     climate_run_ds = assign_crs(climate_run_ds, crs='EPSG:5070')
-    climate_run_4326 = xr_reproject(climate_run_ds, how='EPSG:4326')
-
-    console.print(f'Post-reproject: {climate_run_4326}')
 
     # load target dataset for interpolation
     rps_30_4326 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()
+    rps_30_4326 = assign_crs(rps_30_4326, 'EPSG:4326')
+    climate_run_4326 = xr_reproject(climate_run_ds, how=rps_30_4326.odc.geobox)
 
-    # interpolate to 30m using the reprojected target
-    climate_run_4326 = climate_run_4326.interp_like(
-        rps_30_4326, kwargs={'fill_value': 'extrapolate', 'bounds_error': False}
+    # We are clipping to 0 as a min of burn probability.
+    climate_run_4326 = climate_run_4326.clip(min=0)
+    climate_run_4326 = climate_run_4326.sortby(['latitude', 'longitude']).chunk(
+        {'latitude': 6000, 'longitude': 4500}
     )
-    # interp_like produces values slightly less then 0, which causes downstream issues. We are clipping to 0 as a min of burn probability.
-    climate_run_4326 = climate_run_4326.clip(min=0).chunk({'latitude': 6000, 'longitude': 4500})
     climate_run_4326 = dask.base.optimize(climate_run_4326)[0]
 
-    console.print(f'Post-interpolate: {climate_run_4326}')
+    xr.testing.assert_equal(climate_run_4326.longitude, rps_30_4326.longitude)
+    xr.testing.assert_equal(climate_run_4326.latitude, rps_30_4326.latitude)
+
+    console.print(f'{climate_run_4326}')
 
     # assign processing attributes
     climate_run_4326.attrs = {
@@ -70,11 +71,8 @@ def interpolate_and_reproject(climate_run_year: str):
         'resolution': '30m',
     }
 
-    console.print(climate_run_4326)
-    climate_run_4326 = dask.base.optimize(climate_run_4326)[0]
-
     # Write to icechunk
-    write_to_icechunk(climate_run_4326, climate_run_year)
+    # write_to_icechunk(climate_run_4326, climate_run_year)
     console.print(f'Completed processing climate run year: {climate_run_year}')
 
 

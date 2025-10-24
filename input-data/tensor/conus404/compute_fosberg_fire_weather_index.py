@@ -40,6 +40,7 @@ def reproject(
     """Reproject the wind direction distributions to the geobox of a target dataset."""
     target_dataset_name = 'USFS-wildfire-risk-communities-4326'
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
+    tgt = tgt.sortby(['latitude', 'longitude'])
     tgt = assign_crs(tgt, crs='EPSG:4326')
     geobox = tgt.odc.geobox
 
@@ -59,6 +60,9 @@ def reproject(
     result = result.sortby(['latitude', 'longitude']).chunk(
         {'latitude': chunk_lat, 'longitude': chunk_lon}
     )
+
+    xr.testing.assert_equal(result.longitude.compute(), tgt.longitude.compute())
+    xr.testing.assert_equal(result.latitude.compute(), tgt.latitude.compute())
 
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
