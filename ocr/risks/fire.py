@@ -426,9 +426,10 @@ def create_wind_informed_burn_probability(
         gap_filled_riley_2011_270m_5070_subset, 'EPSG:5070'
     )
     ## reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
+    target_geobox = wind_direction_distribution_30m_4326.odc.geobox
     riley_30m_4326 = xr_reproject(
         gap_filled_riley_2011_270m_5070_subset,
-        how=wind_direction_distribution_30m_4326.odc.geobox,
+        how=target_geobox,
         resampling='nearest',
     )
     riley_30m_4326 = riley_30m_4326.assign_coords(
@@ -483,6 +484,7 @@ def calculate_wind_adjusted_risk(
     *,
     x_slice: slice,
     y_slice: slice,
+    buffer: float = 0.15,
 ) -> xr.Dataset:
     """Calculate wind-adjusted fire risk using climate run and wildfire risk datasets.
 
@@ -492,12 +494,20 @@ def calculate_wind_adjusted_risk(
         Slice object for selecting longitude range.
     y_slice : slice
         Slice object for selecting latitude range.
+    buffer : float, optional
+        Buffer size in degrees to add around the region for edge effect handling (default 0.15).
+        For 30m EPSG:4326 data, 0.15 degrees ≈ 16.7 km ≈ 540 pixels.
+        This buffer ensures neighborhood operations (convolution, Gaussian smoothing) have
+        adequate context at boundaries.
 
     Returns
     -------
     fire_risk : xr.Dataset
         Dataset containing wind-adjusted fire risk variables.
     """
+
+    buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
+    buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
 
     riley_2011_30m_4326 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
     riley_2047_30m_4326 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
@@ -514,24 +524,37 @@ def calculate_wind_adjusted_risk(
         ['BP', 'CRPS', 'RPS']
     ]
 
-    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
-    riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(latitude=y_slice, longitude=x_slice)
-    riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(latitude=y_slice, longitude=x_slice)
+    riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(
+        latitude=buffered_y_slice, longitude=buffered_x_slice
+    )
+    riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(
+        latitude=buffered_y_slice, longitude=buffered_x_slice
+    )
     riley_2011_270m_5070_subset = geo_sel(
         riley_2011_270m_5070,
-        bbox=(x_slice.start, y_slice.stop, x_slice.stop, y_slice.start),
+        bbox=(
+            buffered_x_slice.start,
+            buffered_y_slice.stop,
+            buffered_x_slice.stop,
+            buffered_y_slice.start,
+        ),
         crs_wkt=riley_2011_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
     riley_2047_270m_5070_subset = geo_sel(
         riley_2047_270m_5070,
-        bbox=(x_slice.start, y_slice.stop, x_slice.stop, y_slice.start),
+        bbox=(
+            buffered_x_slice.start,
+            buffered_y_slice.stop,
+            buffered_x_slice.stop,
+            buffered_y_slice.start,
+        ),
         crs_wkt=riley_2047_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
 
     wind_direction_distribution_30m_4326 = (
         catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
         .to_xarray()
-        .wind_direction_distribution.sel(latitude=y_slice, longitude=x_slice)
+        .wind_direction_distribution.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
         .load()
     )
 
@@ -539,14 +562,26 @@ def calculate_wind_adjusted_risk(
         wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
         riley_270m_5070=riley_2011_270m_5070_subset,
     )
+
     wind_informed_bp_combined_2047 = create_wind_informed_burn_probability(
         wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
         riley_270m_5070=riley_2047_270m_5070_subset,
     )
 
+    # clip to original x_slice, y_slice
+    wind_informed_bp_combined_2011 = wind_informed_bp_combined_2011.sel(
+        latitude=y_slice, longitude=x_slice
+    )
+    wind_informed_bp_combined_2047 = wind_informed_bp_combined_2047.sel(
+        latitude=y_slice, longitude=x_slice
+    )
+    riley_2011_30m_4326_subset = riley_2011_30m_4326_subset.sel(latitude=y_slice, longitude=x_slice)
+    riley_2047_30m_4326_subset = riley_2047_30m_4326_subset.sel(latitude=y_slice, longitude=x_slice)
+
     fire_risk = xr.Dataset()
 
     # Note: for QA. Remove in further production versions
+    rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     fire_risk['USFS_RPS'] = rps_30_subset['RPS']
 
     # wind_risk_2011 (our wind-informed RPS value)
