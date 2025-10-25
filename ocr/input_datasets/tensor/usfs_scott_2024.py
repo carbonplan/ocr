@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import coiled
+import dask.base
 import pooch
 import xarray as xr
 from odc.geo.xr import assign_crs, xr_reproject
@@ -108,17 +109,19 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
     @property
     def s3_tiff_prefix(self) -> str:
         """S3 prefix for raw TIFF files."""
-        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/input-tiffs'
+        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/raw-input-tiffs'
 
     @property
     def s3_icechunk_prefix(self) -> str:
         """S3 prefix for merged Icechunk store (EPSG:5070)."""
-        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}.icechunk'
+        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/processed.icechunk'
 
     @property
     def s3_icechunk_4326_prefix(self) -> str:
         """S3 prefix for reprojected Icechunk store (EPSG:4326)."""
-        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}-30m-4326.icechunk'
+        return (
+            f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/processed-30m-4326.icechunk'
+        )
 
     def get_coiled_cluster(self):
         """Get or create a Coiled cluster for distributed processing."""
@@ -127,16 +130,15 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
             self._coiled_cluster = coiled.Cluster(
                 name=f'ocr-{self.dataset_name}',
                 region=self.config.s3_region,
-                n_workers=self.COILED_WORKERS,
+                n_workers=[self.COILED_WORKERS, self.COILED_WORKERS, self.COILED_WORKERS * 10],
                 tags={'Project': 'OCR'},
                 worker_vm_types=[self.COILED_WORKER_VM],
                 scheduler_vm_types=[self.COILED_SCHEDULER_VM],
                 software=self.coiled_software,
                 idle_timeout='10 minutes',
                 spot_policy='spot_with_fallback',
-                worker_disk_size=200,
+                worker_disk_size=150,
             )
-            self._coiled_cluster.adapt(minimum=1, maximum=200)
             console.log(f'Coiled cluster created: {self._coiled_cluster.dashboard_link or "N/A"}')
         return self._coiled_cluster
 
@@ -330,8 +332,9 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
 
         # Rechunk for optimal storage
         merge_ds = merge_ds.chunk(self.CHUNK_SIZES)
+        merge_ds = dask.base.optimize(merge_ds)[0]
 
-        console.log(f'Merged dataset shape: {dict(merge_ds.dims)}')
+        console.log(f'Merged dataset shape: {dict(merge_ds.sizes)}')
         console.log(f'Variables: {list(merge_ds.data_vars)}')
 
         # Write to Icechunk
@@ -364,7 +367,7 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
 
         session = reader.repo.readonly_session('main')
         console.log('Loading dataset from Icechunk store...')
-        rps_30 = xr.open_zarr(session.store)
+        rps_30 = xr.open_zarr(session.store).persist()
 
         # Downcast to float32 for efficiency
         for var in list(rps_30):
@@ -397,7 +400,7 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
             'resolution': '30m',
         }
 
-        console.log(f'Reprojected dataset shape: {dict(rps_30_4326.dims)}')
+        console.log(f'Reprojected dataset shape: {dict(rps_30_4326.sizes)}')
 
         # Write to Icechunk
         writer = IcechunkWriter(

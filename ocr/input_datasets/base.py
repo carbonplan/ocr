@@ -152,15 +152,6 @@ class BaseDatasetProcessor(abc.ABC):
             console.log(f'[bold red]Failed to retrieve {url}: {e}[/bold red]')
             raise
 
-    def cleanup_temp(self):
-        """Remove temporary files created during processing."""
-        pass
-        # if self._temp_dir and self._temp_dir.exists():
-        #     import shutil
-
-        #     console.log(f'Cleaning up temporary directory: {self._temp_dir}')
-        #     shutil.rmtree(self._temp_dir)
-
     @abc.abstractmethod
     def download(self) -> None:
         """Download raw source data.
@@ -188,5 +179,4 @@ class BaseDatasetProcessor(abc.ABC):
             self.process()
             console.log(f'Completed {self.dataset_name} dataset processing')
         finally:
-            ...
-            # self.cleanup_temp()
+            console.log('Exiting processing...')

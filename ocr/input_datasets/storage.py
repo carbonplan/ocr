@@ -187,7 +187,7 @@ class IcechunkWriter:
                 session = self.repo.writable_session(branch=branch)
 
                 # Write the dataset
-                to_icechunk(dataset, session)
+                to_icechunk(dataset, session, mode='w')
 
                 # Commit with conflict detection and rebase
                 snapshot_id = session.commit(
