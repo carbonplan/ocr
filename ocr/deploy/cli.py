@@ -14,6 +14,14 @@ from ocr.types import Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
+# Import and mount the input dataset CLI as a subcommand
+try:
+    from ocr.input_datasets.cli import app as ingest_app
+
+    app.add_typer(ingest_app, name='ingest-data', help='Ingest and process input datasets')
+except ImportError:
+    pass  # Gracefully handle if input_datasets module is not available
+
 
 def _resolve_env_vars(env_file: Path | None) -> dict[str, str]:
     if env_file is None:
