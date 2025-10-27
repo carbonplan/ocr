@@ -667,6 +667,60 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         plt.show()
 
 
+class PyramidConfig(pydantic_settings.BaseSettings):
+    """Configuration for visualization pyramid / multiscales"""
+
+    environment: Environment = pydantic.Field(
+        default=Environment.QA, description='Environment for pyramid'
+    )
+    version: SemanticVersion | None = pydantic.Field(
+        default=None, description='Version of the pyramid processing pipeline'
+    )
+    storage_root: str = pydantic.Field(
+        ..., description='Root storage path for pyramid. can be a bucket name or local path'
+    )
+    output_prefix: str | None = pydantic.Field(
+        None, description='Sub-path within the storage root for pipeline output products'
+    )
+    debug: bool = pydantic.Field(default=False, description='Enable debugging mode')
+    model_config = {'env_prefix': 'ocr_vector_', 'case_sensitive': False}
+
+    def model_post_init(self, __context):
+        """Post-initialization to set up prefixes and URIs based on environment."""
+        common_part = f'fire-risk/pyramid/{self.environment.value}'
+
+        if self.output_prefix is None:
+            if self.version:
+                self.output_prefix = f'output/{common_part}/v{self.version}/pyramid.zarr'
+            else:
+                self.output_prefix = f'output/{common_part}/pyramid.zarr'
+
+        if self.output_prefix and self.version:
+            if f'v{self.version}' not in self.output_prefix:
+                # insert version right before the last part of the prefix
+                parts = self.output_prefix.rsplit('/', 1)
+                if len(parts) == 2:
+                    self.output_prefix = (
+                        f'{parts[0]}/{self.environment.value}/v{self.version}/{parts[1]}'
+                    )
+                else:
+                    self.output_prefix = (
+                        f'{self.environment.value}/v{self.version}/{self.output_prefix}'
+                    )
+
+    @property
+    def pyramid_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.output_prefix}')
+        return path
+
+    def wipe(self):
+        """Wipe the pyramid data storage."""
+        if self.debug:
+            console.log(f'Wiping pyramid data:\n- {self.pyramid_uri.parent}\n')
+
+        self.upath_delete(self.pyramid_uri.parent)
+
+
 class VectorConfig(pydantic_settings.BaseSettings):
     """Configuration for vector data processing."""
 
@@ -1221,6 +1275,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
 
     vector: VectorConfig | None = pydantic.Field(None, description='Vector configuration')
     icechunk: IcechunkConfig | None = pydantic.Field(None, description='Icechunk configuration')
+    pyramid: PyramidConfig | None = pydantic.Field(None, description='Pyramid configuration')
     chunking: ChunkingConfig | None = pydantic.Field(
         None, description='Chunking configuration for OCR processing'
     )
@@ -1247,6 +1302,17 @@ class OCRConfig(pydantic_settings.BaseSettings):
                 self,
                 'icechunk',
                 IcechunkConfig(
+                    storage_root=self.storage_root,
+                    environment=self.environment,
+                    debug=self.debug,
+                    version=self.version,
+                ),
+            )
+        if self.pyramid is None:
+            object.__setattr__(
+                self,
+                'pyramid',
+                PyramidConfig(
                     storage_root=self.storage_root,
                     environment=self.environment,
                     debug=self.debug,
