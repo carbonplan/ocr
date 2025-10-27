@@ -809,20 +809,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return path
 
     @functools.cached_property
-    def block_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/blocks.pmtiles')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def tracts_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/tracts.pmtiles')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @functools.cached_property
-    def counties_pmtiles_uri(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/counties.pmtiles')
+    def region_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/regions.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -947,9 +935,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
-                nv('Block PMTiles', str(self.block_pmtiles_uri)),
-                nv('Tracts PMTiles', str(self.tracts_pmtiles_uri)),
-                nv('Counties PMTiles', str(self.counties_pmtiles_uri)),
+                nv('Region PMTiles', str(self.region_pmtiles_uri)),
             ]
         )
 

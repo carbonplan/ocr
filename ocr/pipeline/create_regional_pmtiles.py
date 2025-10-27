@@ -31,10 +31,7 @@ def create_regional_pmtiles(
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri  # type: ignore[attr-defined]
     counties_summary_stats_path = config.vector.counties_summary_stats_uri  # type: ignore[attr-defined]
 
-    block_pmtiles_output = config.vector.block_pmtiles_uri  # type: ignore[attr-defined]
-    tract_pmtiles_output = config.vector.tracts_pmtiles_uri  # type: ignore[attr-defined]
-    county_pmtiles_output = config.vector.counties_pmtiles_uri  # type: ignore[attr-defined]
-
+    region_pmtiles_output = config.vector.region_pmtiles_uri  # type: ignore[attr-defined]
     # Determine if we need S3 credentials (basic heuristic: any input/output on s3)
     needs_s3 = any(
         str(p).startswith('s3://')
@@ -52,9 +49,7 @@ def create_regional_pmtiles(
 
         with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
             tmp_path = UPath(tmpdir)
-            block_pmtiles = tmp_path / 'blocks.pmtiles'
-            tract_pmtiles = tmp_path / 'tracts.pmtiles'
-            county_pmtiles = tmp_path / 'counties.pmtiles'
+            region_pmtiles = tmp_path / 'regions.pmtiles'
 
             block_ndjson = Path(tmpdir) / 'blocks.ndjson'
             tract_ndjson = Path(tmpdir) / 'tracts.ndjson'
@@ -95,29 +90,6 @@ def create_regional_pmtiles(
             connection.execute(duckdb_block_copy)
 
             if config.debug:
-                console.log(f'Generating block PMTiles at {block_pmtiles}')
-
-            tippecanoe_cmd = [
-                'tippecanoe',
-                '-o',
-                str(block_pmtiles),
-                '-l',
-                'risk',
-                '-n',
-                'block',
-                '-f',
-                '-P',  # input is newline-delimited features
-                '--drop-smallest-as-needed',
-                '-q',
-                '--extend-zooms-if-still-dropping',
-                '-zg',
-                str(block_ndjson),
-            ]
-            subprocess.run(tippecanoe_cmd, check=True)
-            if config.debug:
-                console.log('block PMTiles created successfully')
-
-            if config.debug:
                 console.log(
                     f'Exporting tract PMTiles from {tracts_summary_stats_path} to {tract_ndjson}'
                 )
@@ -148,33 +120,6 @@ def create_regional_pmtiles(
             """
             connection.execute(duckdb_tract_copy)
 
-            if config.debug:
-                console.log(f'Generating tract PMTiles at {tract_pmtiles} from {tract_ndjson}')
-
-            tippecanoe_cmd = [
-                'tippecanoe',
-                '-o',
-                str(tract_pmtiles),
-                '-l',
-                'risk',
-                '-n',
-                'tract',
-                '-f',
-                '-P',  # input is newline-delimited features
-                '--drop-smallest-as-needed',
-                '-q',
-                '--extend-zooms-if-still-dropping',
-                '-zg',
-                str(tract_ndjson),
-            ]
-            subprocess.run(tippecanoe_cmd, check=True)
-            if config.debug:
-                console.log('Tract PMTiles created successfully')
-
-            if config.debug:
-                console.log(
-                    f'Exporting county PMTiles from {counties_summary_stats_path} to {county_ndjson}'
-                )
             duckdb_county_copy = f"""
             COPY (
                 SELECT
@@ -203,39 +148,35 @@ def create_regional_pmtiles(
             """
             connection.execute(duckdb_county_copy)
             if config.debug:
-                console.log(f'Generating county PMTiles at {county_pmtiles} from {county_ndjson}')
+                console.log(f'Generating county PMTiles at {region_pmtiles}')
 
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
-                str(county_pmtiles),
-                '-l',
-                'risk',
+                str(region_pmtiles),
+                '-L',
+                f'counties:{county_ndjson}',
+                '-L',
+                f'tracts:{tract_ndjson}',
+                '-L',
+                f'blocks:{block_ndjson}',
                 '-n',
-                'county',
+                'regions',
                 '-f',
                 '-P',
                 '--drop-smallest-as-needed',
                 '-q',
                 '--extend-zooms-if-still-dropping',
                 '-zg',
-                str(county_ndjson),
             ]
+
             subprocess.run(tippecanoe_cmd, check=True)
-            if config.debug:
-                console.log('County PMTiles created successfully')
 
             if config.debug:
-                console.log(f'Uploading block PMTiles to {block_pmtiles_output}')
-            copy_or_upload(block_pmtiles, block_pmtiles_output)
-
-            if config.debug:
-                console.log(f'Uploading tract PMTiles to {tract_pmtiles_output}')
-            copy_or_upload(tract_pmtiles, tract_pmtiles_output)
-
-            if config.debug:
-                console.log(f'Uploading county PMTiles to {county_pmtiles_output}')
-            copy_or_upload(county_pmtiles, county_pmtiles_output)
+                console.log(
+                    f'Uploading region combined (tract, block, county) to {region_pmtiles_output}'
+                )
+            copy_or_upload(region_pmtiles, region_pmtiles_output)
 
             if config.debug:
                 console.log('PMTiles uploads completed successfully')
