@@ -6,6 +6,7 @@ from rich.table import Table
 
 from ocr.console import console
 from ocr.input_datasets.base import InputDatasetConfig
+from ocr.input_datasets.tensor.usfs_riley_2025 import RileyEtAl2025Processor
 from ocr.input_datasets.tensor.usfs_scott_2024 import ScottEtAl2024Processor
 
 app = typer.Typer(help='Ingest and process input datasets for OCR')
@@ -17,6 +18,11 @@ DATASET_REGISTRY = {
         'processor_class': ScottEtAl2024Processor,
         'type': 'tensor',
         'description': 'USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02)',
+    },
+    'riley-et-al-2025': {
+        'processor_class': RileyEtAl2025Processor,
+        'type': 'tensor',
+        'description': 'USFS Probabilistic Wildfire Risk - 2011 & 2047 Climate Runs (RDS-2025-0006)',
     },
 }
 

@@ -625,6 +625,50 @@ datasets = [
         prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk',
         data_format='zarr',
     ),
+    # USFS Scott et al. 2024 (RDS-2020-0016-02)
+    Dataset(
+        name='scott-et-al-2024',
+        description='USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02, EPSG:5070)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/scott-et-al-2024/processed.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='scott-et-al-2024-30m-4326',
+        description='USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02, EPSG:4326, 30m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/scott-et-al-2024/processed-30m-4326.icechunk',
+        data_format='zarr',
+    ),
+    # USFS Riley et al. 2025 (RDS-2025-0006)
+    Dataset(
+        name='riley-et-al-2025-2011',
+        description='USFS Riley et al. 2025 2011 Climate Run (EPSG:5070)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='riley-et-al-2025-2047',
+        description='USFS Riley et al. 2025 2047 Climate Run (EPSG:5070)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='riley-et-al-2025-2011-30m-4326',
+        description='USFS Riley et al. 2025 2011 Climate Run (EPSG:4326, 30m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-30m-4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='riley-et-al-2025-2047-30m-4326',
+        description='USFS Riley et al. 2025 2047 Climate Run (EPSG:4326, 30m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-30m-4326.icechunk',
+        data_format='zarr',
+    ),
 ]
 
 
