@@ -5,6 +5,9 @@ from ocr.pipeline.process_region import sample_risk_to_buildings
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.xfail(
+    reason='Currently broken until the underlying input data (riley, wind-direction-distribution) coordinates are fixed'
+)
 @pytest.mark.parametrize(
     'region_id',
     [

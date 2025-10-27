@@ -77,7 +77,12 @@ def get_wind_informed_burn_probability(wind_informed_bp_cache):
         # Check cache
         cache_key = f'{region_id}_{x_slice}_{y_slice}'
         if cache_key not in wind_informed_bp_cache:
-            # Load the required data
+            # Apply buffer to match calculate_wind_adjusted_risk behavior
+            buffer = 0.15
+            buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
+            buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
+
+            # Load the required data with buffered slices
             riley_2011_270m_5070 = catalog.get_dataset('2011-climate-run').to_xarray()[
                 ['BP', 'spatial_ref']
             ]
@@ -85,22 +90,34 @@ def get_wind_informed_burn_probability(wind_informed_bp_cache):
 
             riley_2011_270m_5070_subset = geo_sel(
                 riley_2011_270m_5070,
-                bbox=(x_slice.start, y_slice.stop, x_slice.stop, y_slice.start),
+                bbox=(
+                    buffered_x_slice.start,
+                    buffered_y_slice.stop,
+                    buffered_x_slice.stop,
+                    buffered_y_slice.start,
+                ),
                 crs_wkt=riley_2011_270m_5070.spatial_ref.attrs['crs_wkt'],
             )
 
             wind_direction_distribution_30m_4326 = (
                 catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
                 .to_xarray()
-                .wind_direction_distribution.sel(latitude=y_slice, longitude=x_slice)
+                .wind_direction_distribution.sel(
+                    latitude=buffered_y_slice, longitude=buffered_x_slice
+                )
                 .load()
             )
 
-            # Compute and cache
-            wind_informed_bp_cache[cache_key] = create_wind_informed_burn_probability(
+            # Compute wind-informed BP with buffered data
+            wind_informed_bp_full = create_wind_informed_burn_probability(
                 wind_direction_distribution_30m_4326=wind_direction_distribution_30m_4326,
                 riley_270m_5070=riley_2011_270m_5070_subset,
             ).compute()
+
+            # Clip to original (non-buffered) extent
+            wind_informed_bp_cache[cache_key] = wind_informed_bp_full.sel(
+                latitude=y_slice, longitude=x_slice
+            )
 
         return wind_informed_bp_cache[cache_key]
 
