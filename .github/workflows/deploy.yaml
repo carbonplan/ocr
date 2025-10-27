@@ -230,6 +230,7 @@ jobs:
                     --env-file "$ENV_FILE" \
                     --platform coiled \
                     --write-regional-stats \
+                    --create-pyramid \
                     --wipe
 
     manual:
@@ -324,6 +325,7 @@ jobs:
                     --env-file "$ENV_FILE" \
                     $WIPE_ARG \
                     --write-regional-stats \
+                    --create-pyramid \
                     --platform coiled
 
     production:
@@ -411,6 +413,7 @@ jobs:
                     $REGION_ARGS \
                     --env-file ocr-coiled-s3-production.env \
                     --write-regional-stats \
+                    --create-pyramid \
                     --platform coiled
 
     production-rerun:
@@ -512,4 +515,5 @@ jobs:
                     $REGION_ARGS \
                     --env-file ocr-coiled-s3-production.env \
                     --write-regional-stats \
+                    --create-pyramid \
                     --platform coiled

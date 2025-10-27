@@ -71,6 +71,12 @@ def run(
         help='Write aggregated statistical summaries for each region (one file per region type with stats like averages, medians, percentiles, and histograms)',
         show_default=True,
     ),
+    pyramid: bool = typer.Option(
+        False,
+        '--create-pyramid',
+        help='Create ndpyramid / multiscale zarr for web-visualization',
+        show_default=True,
+    ),
     platform: Platform = typer.Option(
         Platform.LOCAL,
         '-p',
@@ -118,6 +124,8 @@ def run(
         parts += ['--platform', platform.value]
         if write_regional_stats:
             parts += ['--write-regional-stats']
+        if pyramid:
+            parts += ['--create-pyramid']
         if wipe:
             parts += ['--wipe']
 
@@ -156,6 +164,7 @@ def run(
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
+        # config.pyramid.wipe()
 
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
@@ -208,6 +217,20 @@ def run(
             # Retry all values (could refine by inspecting logs later)
             # small backoff
             time.sleep(5 * attempt)
+
+        # ----------- Pyramid   -------------
+        if pyramid:
+            manager = _get_manager(Platform.COILED, config.debug)
+            manager.submit_job(
+                command='ocr create-pyramid',
+                name=f'create-pyramid-{config.environment.value}',
+                kwargs={
+                    **_coiled_kwargs(config, env_file),
+                    'vm_type': 'm8g.16xlarge',
+                    'scheduler_vm_type': 'm8g.16xlarge',
+                    'software': COILED_SOFTWARE,
+                },
+            )
 
         # ----------- 02 Aggregate -------------
         manager = _get_manager(Platform.COILED, config.debug)
@@ -352,6 +375,18 @@ def run(
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
+
+        # TODO: Should we run this locally? It will most likely break due to lack of resources
+        # # Create pyramid
+        # manager = _get_manager(Platform.LOCAL, config.debug)
+        # manager.submit_job(
+        #     command='ocr create-pyramid',
+        #     name=f'create-pyramid-{config.environment.value}',
+        #     kwargs={
+        #         **_local_kwargs(),
+        #     },
+        # )
+        # manager.wait_for_completion(exit_on_failure=True)
 
     if config.debug:
         # Print out the pretty paths
@@ -691,6 +726,59 @@ def create_building_pmtiles(
     config = load_config(env_file)
 
     create_building_pmtiles(config=config)
+
+
+@app.command()
+def create_pyramid(
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
+        show_default=True,
+        exists=True,
+        file_okay=True,
+        resolve_path=True,
+    ),
+    platform: Platform | None = typer.Option(
+        None,
+        '-p',
+        '--platform',
+        help='If set, schedule this command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+    ),
+):
+    """
+    Create Pyramid
+    """
+
+    # Schedule if requested and not already inside a batch task
+    if platform is not None and not _in_batch():
+        config = load_config(env_file)
+        manager = _get_manager(platform, config.debug)
+        command = 'ocr create-pyramid'
+        name = f'create-pyramid-{config.environment.value}'
+
+        if platform == Platform.COILED:
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            if vm_type:
+                kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = 'm8g.16xlarge'
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        manager.wait_for_completion(exit_on_failure=True)
+        return
+
+    from ocr.pipeline.create_pyramid import create_pyramid
+
+    config = load_config(env_file)
+
+    create_pyramid(config=config)
 
 
 ocr = typer.main.get_command(
