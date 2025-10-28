@@ -509,20 +509,18 @@ def calculate_wind_adjusted_risk(
     buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
     buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
 
-    riley_2011_30m_4326 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
-    riley_2047_30m_4326 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
-    riley_2011_270m_5070 = catalog.get_dataset('2011-climate-run').to_xarray()[
+    riley_2011_30m_4326 = catalog.get_dataset('riley-et-al-2025-2011-30m-4326').to_xarray()[['BP']]
+    riley_2047_30m_4326 = catalog.get_dataset('riley-et-al-2025-2047-30m-4326').to_xarray()[['BP']]
+    riley_2011_270m_5070 = catalog.get_dataset('riley-et-al-2025-2011-270m-5070').to_xarray()[
         ['BP', 'spatial_ref']
     ]
     riley_2011_270m_5070 = assign_crs(riley_2011_270m_5070, 'EPSG:5070')
-    riley_2047_270m_5070 = catalog.get_dataset('2047-climate-run').to_xarray()[
+    riley_2047_270m_5070 = catalog.get_dataset('riley-et-al-2025-2047-270m-5070').to_xarray()[
         ['BP', 'spatial_ref']
     ]
     riley_2047_270m_5070 = assign_crs(riley_2047_270m_5070, 'EPSG:5070')
 
-    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
-        ['BP', 'CRPS', 'RPS']
-    ]
+    rps_30 = catalog.get_dataset('scott-et-al-2025-30m-4326').to_xarray()[['BP', 'CRPS', 'RPS']]
 
     riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(
         latitude=buffered_y_slice, longitude=buffered_x_slice

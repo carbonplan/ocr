@@ -439,27 +439,6 @@ class Catalog(pydantic.BaseModel):
 
 datasets = [
     Dataset(
-        name='2011-climate-run',
-        description='USFS 2011 Climate Run',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/2011ClimateRun_Icechunk',
-        data_format='zarr',
-    ),
-    Dataset(
-        name='2047-climate-run',
-        description='USFS 2047 Climate Run',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/2047ClimateRun_Icechunk',
-        data_format='zarr',
-    ),
-    Dataset(
-        name='RDS-2016-0032-3',
-        description='Spatial datasets of probabilistic wildfire risk components for the United States (270m)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2016-0034-3-epsg_4326.icechunk',
-        data_format='zarr',
-    ),
-    Dataset(
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
         bucket='carbonplan-ocr',
@@ -511,20 +490,6 @@ datasets = [
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.parquet',
         data_format='geoparquet',
-    ),
-    Dataset(
-        name='USFS-wildfire-risk-communities',
-        description='Wildfire Risk to Communities - RDS-2020-0016-2',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_all_vars_merge_icechunk/',
-        data_format='zarr',
-    ),
-    Dataset(
-        name='USFS-wildfire-risk-communities-4326',
-        description='Wildfire Risk to Communities - RDS-2020-0016-2',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/RDS-2022-0016-02_EPSG_4326_icechunk_all_vars',
-        data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-Q2',
@@ -642,17 +607,17 @@ datasets = [
     ),
     # USFS Riley et al. 2025 (RDS-2025-0006)
     Dataset(
-        name='riley-et-al-2025-2011',
+        name='riley-et-al-2025-2011-270m-5070',
         description='USFS Riley et al. 2025 2011 Climate Run (EPSG:5070)',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run.icechunk',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-270m-5070.icechunk',
         data_format='zarr',
     ),
     Dataset(
-        name='riley-et-al-2025-2047',
+        name='riley-et-al-2025-2047-270m-5070',
         description='USFS Riley et al. 2025 2047 Climate Run (EPSG:5070)',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run.icechunk',
+        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-270m-5070.icechunk',
         data_format='zarr',
     ),
     Dataset(
@@ -667,6 +632,20 @@ datasets = [
         description='USFS Riley et al. 2025 2047 Climate Run (EPSG:4326, 30m)',
         bucket='carbonplan-ocr',
         prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-30m-4326.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='dillon-et-al-2023-270m-5070',
+        description='USFS Dillon et al. 2023 Wildfire Risk to Communities (EPSG:5070)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-270m-5070.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='dillon-et-al-2023-30m-4326',
+        description='USFS Dillon et al. 2023 Wildfire Risk to Communities (EPSG:4326, 30m)',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk',
         data_format='zarr',
     ),
 ]
