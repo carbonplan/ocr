@@ -11,7 +11,7 @@ on:
             region_id:
                 description: "Region ID (ignored if all_region_ids is true; for non-production/manual deploy)"
                 required: false
-                default: "y2_x5"
+                default: "y14_x5"
                 type: string
             all_region_ids:
                 description: "Process all region IDs (passes --all-region-ids) for non-production/manual deploy"
@@ -158,7 +158,7 @@ jobs:
                   DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
               run: |
                   echo "Starting automatic deploy to QA (PR to main)"
-                  REGION_ARGS="--region-id y2_x5 --region-id y2_x6 --region-id y2_x7"
+                  REGION_ARGS="--region-id y13_x5 --region-id y13_x6 --region-id y13_x7"
                   ENV_FILE="ocr-coiled-s3.env"
                   pixi run --environment deploy ocr run \
                     $REGION_ARGS \
@@ -219,11 +219,11 @@ jobs:
                   DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
               run: |
                   echo "Starting automatic deploy to staging (main branch push)"
-                  REGION_ARGS="--region-id y2_x3 --region-id y2_x4 --region-id y2_x5 --region-id y2_x6 --region-id y2_x7 --region-id y2_x8 --region-id y2_x9 --region-id y2_x10 --region-id y3_x3 --region-id y3_x4 --region-id y3_x5 --region-id y3_x6 --region-id y3_x7 --region-id y3_x8 --region-id y3_x9 --region-id y3_x10
-                  --region-id y6_x3 --region-id y6_x4 --region-id y7_x3 --region-id y7_x4 --region-id y8_x4 --region-id y8_x5 --region-id y9_x5 --region-id y9_x6 --region-id y9_x7 --region-id y10_x6 --region-id y10_x7 --region-id y10_x8 --region-id y9_x8
-                  --region-id y6_x16 --region-id y6_x17 --region-id y7_x16 --region-id y7_x17
-                  --region-id y2_x23 --region-id y2_x24 --region-id y2_x25
-                  --region-id y8_x31 --region-id y8_x32 --region-id y9_x31 --region-id y9_x32"
+                  REGION_ARGS="--region-id y14_x3 --region-id y14_x4 --region-id y14_x5 --region-id y14_x6 --region-id y14_x7 --region-id y14_x8 --region-id y14_x9 --region-id y14_x10 --region-id y12_x3 --region-id y12_x4 --region-id y12_x5 --region-id y12_x6 --region-id y12_x7 --region-id y12_x8 --region-id y12_x9 --region-id y12_x10
+                  --region-id y5_x3 --region-id y5_x4 --region-id y8_x3 --region-id y8_x4 --region-id y6_x4 --region-id y6_x5 --region-id y6_x5 --region-id y6_x6 --region-id y6_x7 --region-id y5_x6 --region-id y5_x7 --region-id y5_x8 --region-id y6_x8
+                  --region-id y5_x16 --region-id y5_x17 --region-id y8_x16 --region-id y8_x17
+                  --region-id y14_x23 --region-id y14_x24 --region-id y14_x25
+                  --region-id y6_x31 --region-id y6_x32 --region-id y6_x31 --region-id y6_x32"
                   ENV_FILE="ocr-coiled-s3-staging.env"
                   pixi run ocr run \
                     $REGION_ARGS \
