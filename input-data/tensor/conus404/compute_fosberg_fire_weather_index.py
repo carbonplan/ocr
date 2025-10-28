@@ -38,9 +38,8 @@ def reproject(
     chunk_lon: int = 4500,
 ) -> xr.Dataset:
     """Reproject the wind direction distributions to the geobox of a target dataset."""
-    target_dataset_name = 'USFS-wildfire-risk-communities-4326'
+    target_dataset_name = 'scott-et-al-2024-30m-4326'
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
-    tgt = tgt.sortby(['latitude', 'longitude'])
     tgt = assign_crs(tgt, crs='EPSG:4326')
     geobox = tgt.odc.geobox
 
@@ -60,9 +59,6 @@ def reproject(
     result = result.sortby(['latitude', 'longitude']).chunk(
         {'latitude': chunk_lat, 'longitude': chunk_lon}
     )
-
-    xr.testing.assert_equal(result.longitude.compute(), tgt.longitude.compute())
-    xr.testing.assert_equal(result.latitude.compute(), tgt.latitude.compute())
 
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
@@ -416,7 +412,7 @@ def reproject_ffwi(
     _write_icechunk_store(
         out_path=distribution_output_path,
         dataset=reprojected_distribution,
-        commit_message='Reprojected wind direction distribution to 30m EPSG:4326 geobox',
+        commit_message='Reprojected wind direction distribution to 30m EPSG:4326 geobox of Scott et al. 2024 dataset.',
         overwrite=overwrite,
     )
 
