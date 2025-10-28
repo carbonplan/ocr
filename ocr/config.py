@@ -100,9 +100,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def ds(self):
         dataset = (
-            catalog.get_dataset('USFS-wildfire-risk-communities-4326')
-            .to_xarray()
-            .astype('float32')[['CRPS']]
+            catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray().astype('float32')[['CRPS']]
         )
         dataset = dataset.odc.assign_crs('epsg:4326')
         return dataset
