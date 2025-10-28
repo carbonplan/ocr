@@ -63,7 +63,9 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
     ARCHIVE_URL: ClassVar[str] = (
         'https://usfs-public.box.com/shared/static/h55qel755s97nagdu97ebd4z6fzpp3w1.zip'
     )
-    ARCHIVE_HASH: ClassVar[str | None] = None  # TODO: Add hash after first download
+    ARCHIVE_HASH: ClassVar[str | None] = (
+        'a92b4f6ecb2c5f3c496851a82c5b65d38b7c97cfd6c16d433cafaa5905265825'
+    )
 
     def __init__(
         self,
@@ -85,16 +87,12 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
     @property
     def s3_icechunk_prefix_2011(self) -> str:
         """S3 prefix for 2011 climate run Icechunk store (EPSG:5070)."""
-        return (
-            f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/2011-climate-run.icechunk'
-        )
+        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/2011-climate-run-270m-5070.icechunk'
 
     @property
     def s3_icechunk_prefix_2047(self) -> str:
         """S3 prefix for 2047 climate run Icechunk store (EPSG:5070)."""
-        return (
-            f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/2047-climate-run.icechunk'
-        )
+        return f'{self.config.base_prefix}/tensor/USFS/{self.dataset_name}/2047-climate-run-270m-5070.icechunk'
 
     @property
     def s3_icechunk_4326_prefix_2011(self) -> str:
@@ -148,11 +146,6 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
         dict[str, list[str]]
             Mapping of climate run names to lists of S3 URIs
         """
-        from pathlib import Path
-
-        import pooch
-
-        from ocr.input_datasets.storage import S3Uploader
 
         # Download and extract using pooch
         cache_path = Path(tempfile.gettempdir())
@@ -229,46 +222,14 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
             console.log('Download and upload completed on Coiled')
         else:
             # Local execution
-            url = self.ARCHIVE_URL
-            hash_value = self.ARCHIVE_HASH
-
-            # Download and extract ZIP using pooch
-            extracted_files = self.retrieve(
-                url=url,
-                known_hash=hash_value,
-                fname=f'{self.rds_id}.zip',
-                processor=pooch.Unzip(),
+            s3_uris = self._download_and_upload_archive(
+                archive_url=self.ARCHIVE_URL,
+                archive_hash=self.ARCHIVE_HASH,
+                rds_id=self.rds_id,
+                s3_tiff_prefix=self.s3_tiff_prefix,
+                s3_bucket=self.config.s3_bucket,
+                s3_region=self.config.s3_region,
             )
-
-            # Find all TIFF files
-            if isinstance(extracted_files, str):
-                extracted_files = [extracted_files]
-
-            tiff_files = [Path(f) for f in extracted_files if f.endswith('.tif')]
-            if not tiff_files:
-                raise FileNotFoundError('No .tif files found in extracted archive')
-
-            # Upload TIFFs to S3, preserving directory structure
-            s3_uploader = S3Uploader(
-                self.config.s3_bucket, self.config.s3_region, dry_run=self.dry_run
-            )
-
-            uploaded_count = {}
-            for tiff_path in tiff_files:
-                # Extract climate run from path
-                parts = tiff_path.parts
-                if 'Data' in parts:
-                    data_idx = parts.index('Data')
-                    climate_run = parts[data_idx + 1]
-                    var_name = tiff_path.stem
-
-                    s3_key = f'{self.s3_tiff_prefix}/Data/{climate_run}/{var_name}.tif'
-                    s3_uploader.upload_file(tiff_path, s3_key)
-
-                    uploaded_count[climate_run] = uploaded_count.get(climate_run, 0) + 1
-
-            for climate_run, count in uploaded_count.items():
-                console.log(f'✓ {climate_run}: {count} files uploaded')
 
             console.log('Download and upload completed locally')
 
@@ -428,9 +389,9 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
             client = self.get_coiled_cluster().get_client()
             console.log(f'Using Coiled cluster: {client}')
 
-        # # Merge TIFFs for both climate runs
-        # for climate_run in self.CLIMATE_RUNS:
-        #     self.merge_tiffs_to_icechunk(climate_run)
+        # Merge TIFFs for both climate runs
+        for climate_run in self.CLIMATE_RUNS:
+            self.merge_tiffs_to_icechunk(climate_run)
 
         # Reproject both climate runs
         for year in ['2011', '2047']:
