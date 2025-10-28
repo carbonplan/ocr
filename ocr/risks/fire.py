@@ -520,7 +520,7 @@ def calculate_wind_adjusted_risk(
     ]
     riley_2047_270m_5070 = assign_crs(riley_2047_270m_5070, 'EPSG:5070')
 
-    rps_30 = catalog.get_dataset('scott-et-al-2025-30m-4326').to_xarray()[['BP', 'CRPS', 'RPS']]
+    rps_30 = catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray()[['BP', 'CRPS', 'RPS']]
 
     riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(
         latitude=buffered_y_slice, longitude=buffered_x_slice

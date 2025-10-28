@@ -302,4 +302,4 @@ def test_module_datasets():
 def test_module_catalog():
     """Test the module-level catalog instance."""
     assert len(catalog.datasets) >= 1
-    assert isinstance(catalog.get_dataset('2011-climate-run', version='v1'), Dataset)
+    assert isinstance(catalog.get_dataset('riley-et-al-2025-2011-270m-5070', version='v1'), Dataset)
