@@ -264,7 +264,9 @@ class RileyEtAl2025Processor(BaseDatasetProcessor):
         )
 
         # Remove 1D band dimension and chunk
-        combined_ds = combined_ds.squeeze().drop_vars('band').chunk(self.CHUNK_SIZES)
+        combined_ds = (
+            combined_ds.squeeze().drop_vars('band').sortby(['y', 'x']).chunk(self.CHUNK_SIZES)
+        )
 
         # Write to Icechunk
         icechunk_prefix = (

@@ -331,7 +331,7 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
         )
 
         # Rechunk for optimal storage
-        merge_ds = merge_ds.chunk(self.CHUNK_SIZES)
+        merge_ds = merge_ds.sortby(['y', 'x']).chunk(self.CHUNK_SIZES)
         merge_ds = dask.base.optimize(merge_ds)[0]
 
         console.log(f'Merged dataset shape: {dict(merge_ds.sizes)}')

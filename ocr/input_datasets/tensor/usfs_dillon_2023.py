@@ -220,17 +220,21 @@ class Dillon2023Processor(BaseDatasetProcessor):
 
         console.log(f'Opening datasets from S3: {fpath_dict}')
         # merge all the datasets and rename vars
-        merge_ds = xr.merge(
-            [
-                xr.open_dataset(fpath, engine='rasterio')
-                .squeeze()
-                .drop_vars('band')
-                .rename({'band_data': var_name})
-                for var_name, fpath in fpath_dict.items()
-            ],
-            compat='override',
-            join='override',
-        ).chunk(self.CHUNK_SIZES)
+        merge_ds = (
+            xr.merge(
+                [
+                    xr.open_dataset(fpath, engine='rasterio')
+                    .squeeze()
+                    .drop_vars('band')
+                    .rename({'band_data': var_name})
+                    for var_name, fpath in fpath_dict.items()
+                ],
+                compat='override',
+                join='override',
+            )
+            .sortby(['y', 'x'])
+            .chunk(self.CHUNK_SIZES)
+        )
 
         merge_ds = dask.base.optimize(merge_ds)[0]
         console.log(f'Merged dataset: {merge_ds}')
