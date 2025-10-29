@@ -224,9 +224,9 @@ jobs:
                   REGION_ARGS="--region-id y14_x3 --region-id y14_x4 --region-id y14_x5 --region-id y14_x6 --region-id y14_x7
                   --region-id y13_x3 --region-id y13_x4 --region-id y13_x5 --region-id y13_x6 --region-id y13_x7
                   --region-id y12_x3 --region-id y12_x4 --region-id y12_x5 --region-id y12_x6 --region-id y12_x7
-                  --region-id y8_x3 --region-id y8_x4 --region-id y6_x4 --region-id y6_x5 --region-id y6_x6
-                  --region-id y7_x4 --region-id y7_x5 --region-id y5_x6 --region-id y5_x7 --region-id y5_x8
-                  --region-id y6_x5 --region-id y6_x7 --region-id y6_x8 --region-id y6_x9
+                  --region-id y8_x3 --region-id y8_x4 --region-id y8_x5 --region-id y8_x6
+                  --region-id y7_x4 --region-id y7_x5 --region-id y7_x6 --region-id y7_x7 --region-id y7_x8
+                  --region-id y6_x5 --region-id y6_x6 --region-id y6_x7 --region-id y6_x8 --region-id y6_x9
                   --region-id y9_x14 --region-id y9_x15 --region-id y9_x16 --region-id y9_x17
                   --region-id y8_x14 --region-id y8_x15 --region-id y8_x16 --region-id y8_x17
                   --region-id y7_x31 --region-id y7_x32
