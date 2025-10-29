@@ -195,6 +195,7 @@
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
 rioxarray = ">=0.19.0,<0.20"
+seaborn = ">=0.13.2,<0.14"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
