@@ -215,8 +215,8 @@ class TestChunkingConfig:
         assert isinstance(region_ids, list)
         assert len(region_ids) > 0
         assert all(isinstance(rid, str) for rid in region_ids)
-        assert 'y1_x3' in region_ids
-        assert 'y2_x2' in region_ids
+        assert 'y1_x21' in region_ids
+        assert 'y2_x20' in region_ids
 
     def test_index_to_coords(self):
         """Test the index_to_coords method."""

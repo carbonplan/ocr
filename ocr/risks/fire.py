@@ -398,67 +398,68 @@ def create_wind_informed_burn_probability(
     """
     import cv2 as cv
 
-    ## gap fill riley 270 only filling NaN pixels which are surrounded by valid data on four sides
-    valid_pixels = riley_270m_5070['BP'] > 0
-    # shifting will introduce NaNs! So we need to clip along boundaries
-    surrounded_by_four_valid_values = (
-        valid_pixels.shift(x=1)
-        + valid_pixels.shift(x=-1)
-        + valid_pixels.shift(y=1)
-        + valid_pixels.shift(y=-1)
-    ) == 4
-    # 270m 5070 projection mask of every pixel which is surrounded by valid data on four sides
-    nans_surrounded_by_four_valid_values = xr.where(
-        (valid_pixels == 0) & surrounded_by_four_valid_values, 1, 0
-    )
-    # where nans_surrounded_by_four_valid_values is true, fill with a 3x3 moving window average of valid pixels
-    rolling_mean = riley_270m_5070.rolling({'x': 3, 'y': 3}, center=True, min_periods=1).mean(
-        skipna=True
-    )
-    gap_filled_riley_2011_270m_5070_subset = xr.where(
-        nans_surrounded_by_four_valid_values, rolling_mean, riley_270m_5070
-    )
+    with xr.set_options(arithmetic_join='exact'):
+        ## gap fill riley 270 only filling NaN pixels which are surrounded by valid data on four sides
+        valid_pixels = riley_270m_5070['BP'] > 0
+        # shifting will introduce NaNs! So we need to clip along boundaries
+        surrounded_by_four_valid_values = (
+            valid_pixels.shift(x=1)
+            + valid_pixels.shift(x=-1)
+            + valid_pixels.shift(y=1)
+            + valid_pixels.shift(y=-1)
+        ) == 4
+        # 270m 5070 projection mask of every pixel which is surrounded by valid data on four sides
+        nans_surrounded_by_four_valid_values = xr.where(
+            (valid_pixels == 0) & surrounded_by_four_valid_values, 1, 0
+        )
+        # where nans_surrounded_by_four_valid_values is true, fill with a 3x3 moving window average of valid pixels
+        rolling_mean = riley_270m_5070.rolling({'x': 3, 'y': 3}, center=True, min_periods=1).mean(
+            skipna=True
+        )
+        gap_filled_riley_2011_270m_5070_subset = xr.where(
+            nans_surrounded_by_four_valid_values, rolling_mean, riley_270m_5070
+        )
 
-    wind_direction_distribution_30m_4326 = assign_crs(
-        wind_direction_distribution_30m_4326, 'EPSG:4326'
-    )
-    gap_filled_riley_2011_270m_5070_subset = assign_crs(
-        gap_filled_riley_2011_270m_5070_subset, 'EPSG:5070'
-    )
-    ## reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
-    target_geobox = wind_direction_distribution_30m_4326.odc.geobox
-    riley_30m_4326 = xr_reproject(
-        gap_filled_riley_2011_270m_5070_subset,
-        how=target_geobox,
-        resampling='nearest',
-    )
-    riley_30m_4326 = riley_30m_4326.assign_coords(
-        {
-            'latitude': wind_direction_distribution_30m_4326.latitude,
-            'longitude': wind_direction_distribution_30m_4326.longitude,
-        }
-    )
+        wind_direction_distribution_30m_4326 = assign_crs(
+            wind_direction_distribution_30m_4326, 'EPSG:4326'
+        )
+        gap_filled_riley_2011_270m_5070_subset = assign_crs(
+            gap_filled_riley_2011_270m_5070_subset, 'EPSG:5070'
+        )
+        ## reproject to the 30m 4326 projection (use riley_30m_4326 as variable name)
+        target_geobox = wind_direction_distribution_30m_4326.odc.geobox
+        riley_30m_4326 = xr_reproject(
+            gap_filled_riley_2011_270m_5070_subset,
+            how=target_geobox,
+            resampling='nearest',
+        )
+        riley_30m_4326 = riley_30m_4326.assign_coords(
+            {
+                'latitude': wind_direction_distribution_30m_4326.latitude,
+                'longitude': wind_direction_distribution_30m_4326.longitude,
+            }
+        )
 
-    blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
-    wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
-        blurred_bp_30m_4326, wind_direction_distribution_30m_4326
-    )
-    wind_informed_bp_30m_4326 = assign_crs(wind_informed_bp_30m_4326, 'EPSG:4326')
+        blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
+        wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
+            blurred_bp_30m_4326, wind_direction_distribution_30m_4326
+        )
+        wind_informed_bp_30m_4326 = assign_crs(wind_informed_bp_30m_4326, 'EPSG:4326')
 
-    wind_informed_bp_30m_4326 = wind_informed_bp_30m_4326.assign_coords(
-        {
-            'latitude': wind_direction_distribution_30m_4326.latitude,
-            'longitude': wind_direction_distribution_30m_4326.longitude,
-        }
-    )
-    # gap fill any zeroes remaining in riley using the wind-smeared numbers
+        wind_informed_bp_30m_4326 = wind_informed_bp_30m_4326.assign_coords(
+            {
+                'latitude': wind_direction_distribution_30m_4326.latitude,
+                'longitude': wind_direction_distribution_30m_4326.longitude,
+            }
+        )
+        # gap fill any zeroes remaining in riley using the wind-smeared numbers
 
-    # retain original Riley et al. (2025) burn probability where there are valid numbers at a 270m scale (but based upon
-    # the dataset reprojected and interpolated to a 30m EPSG:4326 grid). anywhere there are no valid numbers use the
-    # wind smeared values
-    wind_informed_bp_combined = xr.where(
-        riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
-    )
+        # retain original Riley et al. (2025) burn probability where there are valid numbers at a 270m scale (but based upon
+        # the dataset reprojected and interpolated to a 30m EPSG:4326 grid). anywhere there are no valid numbers use the
+        # wind smeared values
+        wind_informed_bp_combined = xr.where(
+            riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
+        )
 
     # smooth using a 21x21 Gaussian filter
     smoothed_bp = xr.apply_ufunc(
@@ -509,20 +510,18 @@ def calculate_wind_adjusted_risk(
     buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
     buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
 
-    riley_2011_30m_4326 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()[['BP']]
-    riley_2047_30m_4326 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()[['BP']]
-    riley_2011_270m_5070 = catalog.get_dataset('2011-climate-run').to_xarray()[
+    riley_2011_30m_4326 = catalog.get_dataset('riley-et-al-2025-2011-30m-4326').to_xarray()[['BP']]
+    riley_2047_30m_4326 = catalog.get_dataset('riley-et-al-2025-2047-30m-4326').to_xarray()[['BP']]
+    riley_2011_270m_5070 = catalog.get_dataset('riley-et-al-2025-2011-270m-5070').to_xarray()[
         ['BP', 'spatial_ref']
     ]
     riley_2011_270m_5070 = assign_crs(riley_2011_270m_5070, 'EPSG:5070')
-    riley_2047_270m_5070 = catalog.get_dataset('2047-climate-run').to_xarray()[
+    riley_2047_270m_5070 = catalog.get_dataset('riley-et-al-2025-2047-270m-5070').to_xarray()[
         ['BP', 'spatial_ref']
     ]
     riley_2047_270m_5070 = assign_crs(riley_2047_270m_5070, 'EPSG:5070')
 
-    rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities-4326').to_xarray()[
-        ['BP', 'CRPS', 'RPS']
-    ]
+    rps_30 = catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray()[['BP', 'CRPS', 'RPS']]
 
     riley_2011_30m_4326_subset = riley_2011_30m_4326.sel(
         latitude=buffered_y_slice, longitude=buffered_x_slice
@@ -530,29 +529,28 @@ def calculate_wind_adjusted_risk(
     riley_2047_30m_4326_subset = riley_2047_30m_4326.sel(
         latitude=buffered_y_slice, longitude=buffered_x_slice
     )
+
+    # west, south, east, north = bbox
+
+    bbox = (
+        buffered_x_slice.start,
+        buffered_y_slice.start,
+        buffered_x_slice.stop,
+        buffered_y_slice.stop,
+    )
     riley_2011_270m_5070_subset = geo_sel(
         riley_2011_270m_5070,
-        bbox=(
-            buffered_x_slice.start,
-            buffered_y_slice.stop,
-            buffered_x_slice.stop,
-            buffered_y_slice.start,
-        ),
+        bbox=bbox,
         crs_wkt=riley_2011_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
     riley_2047_270m_5070_subset = geo_sel(
         riley_2047_270m_5070,
-        bbox=(
-            buffered_x_slice.start,
-            buffered_y_slice.stop,
-            buffered_x_slice.stop,
-            buffered_y_slice.start,
-        ),
+        bbox=bbox,
         crs_wkt=riley_2047_270m_5070.spatial_ref.attrs['crs_wkt'],
     )
 
     wind_direction_distribution_30m_4326 = (
-        catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
+        catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-30m-4326')
         .to_xarray()
         .wind_direction_distribution.sel(latitude=buffered_y_slice, longitude=buffered_x_slice)
         .load()
@@ -584,37 +582,38 @@ def calculate_wind_adjusted_risk(
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     fire_risk['USFS_RPS'] = rps_30_subset['RPS']
 
-    # wind_risk_2011 (our wind-informed RPS value)
-    fire_risk['wind_risk_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
-    fire_risk['wind_risk_2011'].attrs['description'] = (
-        'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
-    )
-    # wind_risk_2047 (our wind-informed RPS value)
-    fire_risk['wind_risk_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
-    fire_risk['wind_risk_2047'].attrs['description'] = (
-        'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
-    )
+    with xr.set_options(arithmetic_join='exact'):
+        # wind_risk_2011 (our wind-informed RPS value)
+        fire_risk['wind_risk_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
+        fire_risk['wind_risk_2011'].attrs['description'] = (
+            'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
+        )
+        # wind_risk_2047 (our wind-informed RPS value)
+        fire_risk['wind_risk_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
+        fire_risk['wind_risk_2047'].attrs['description'] = (
+            'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
+        )
 
-    # burn_probability_2011 (our wind-informed BP value)
-    fire_risk['burn_probability_2011'] = wind_informed_bp_combined_2011
-    fire_risk['burn_probability_2011'].attrs['description'] = (
-        'Wind-informed burn probability for 2011 calculated as wind-informed BP'
-    )
+        # burn_probability_2011 (our wind-informed BP value)
+        fire_risk['burn_probability_2011'] = wind_informed_bp_combined_2011
+        fire_risk['burn_probability_2011'].attrs['description'] = (
+            'Wind-informed burn probability for 2011 calculated as wind-informed BP'
+        )
 
-    # burn_probability_2047 (our wind-informed BP value)
-    fire_risk['burn_probability_2047'] = wind_informed_bp_combined_2047
-    fire_risk['burn_probability_2047'].attrs['description'] = (
-        'Wind-informed burn probability for 2047 calculated as wind-informed BP'
-    )
+        # burn_probability_2047 (our wind-informed BP value)
+        fire_risk['burn_probability_2047'] = wind_informed_bp_combined_2047
+        fire_risk['burn_probability_2047'].attrs['description'] = (
+            'Wind-informed burn probability for 2047 calculated as wind-informed BP'
+        )
 
-    # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
-    fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
+        # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
+        fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
 
-    # burn_probability_usfs_2011 (BP from Riley 2025 (RDS-2025-0006))
-    fire_risk['burn_probability_usfs_2011'] = riley_2011_30m_4326_subset['BP']
+        # burn_probability_usfs_2011 (BP from Riley 2025 (RDS-2025-0006))
+        fire_risk['burn_probability_usfs_2011'] = riley_2011_30m_4326_subset['BP']
 
-    # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
-    fire_risk['burn_probability_usfs_2047'] = riley_2047_30m_4326_subset['BP']
+        # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
+        fire_risk['burn_probability_usfs_2047'] = riley_2047_30m_4326_subset['BP']
 
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 

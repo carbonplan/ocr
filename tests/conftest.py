@@ -2,14 +2,10 @@ import os
 
 import pytest
 from odc.geo.xr import assign_crs
-from upath import UPath
 
 from ocr import catalog
-from ocr.config import OCRConfig
-from ocr.pipeline.process_region import calculate_risk
 from ocr.risks.fire import calculate_wind_adjusted_risk, create_wind_informed_burn_probability
 from ocr.testing import GeoDataFrameSnapshotExtension, XarraySnapshotExtension
-from ocr.types import RiskType
 from ocr.utils import geo_sel
 
 # Set default snapshot storage path to S3 if not already set
@@ -31,11 +27,11 @@ def cleanup_s3_directory():
 
 # Define test regions used across multiple test modules
 TEST_REGIONS = {
-    'california-coast': (slice(-120.0, -119.985), slice(35.005, 35.0)),
-    'colorado-rockies': (slice(-105.0, -104.985), slice(40.005, 40.0)),
-    'seattle-area': (slice(-122.5, -122.485), slice(47.605, 47.6)),
-    'georgia-piedmont': (slice(-84.4, -84.385), slice(33.755, 33.75)),
-    'arizona-desert': (slice(-111.9, -111.885), slice(33.455, 33.45)),
+    'california-coast': (slice(-120.0, -119.985), slice(35.0, 35.005)),
+    'colorado-rockies': (slice(-105.0, -104.985), slice(40.0, 40.005)),
+    'seattle-area': (slice(-122.5, -122.485), slice(47.6, 47.605)),
+    'georgia-piedmont': (slice(-84.4, -84.385), slice(33.75, 33.755)),
+    'arizona-desert': (slice(-111.9, -111.885), slice(33.45, 33.455)),
 }
 
 
@@ -83,24 +79,27 @@ def get_wind_informed_burn_probability(wind_informed_bp_cache):
             buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
 
             # Load the required data with buffered slices
-            riley_2011_270m_5070 = catalog.get_dataset('2011-climate-run').to_xarray()[
-                ['BP', 'spatial_ref']
-            ]
+            riley_2011_270m_5070 = catalog.get_dataset(
+                'riley-et-al-2025-2011-270m-5070'
+            ).to_xarray()[['BP', 'spatial_ref']]
             riley_2011_270m_5070 = assign_crs(riley_2011_270m_5070, 'EPSG:5070')
+
+            # west, south, east, north = bbox
+            bbox = (
+                buffered_x_slice.start,
+                buffered_y_slice.start,
+                buffered_x_slice.stop,
+                buffered_y_slice.stop,
+            )
 
             riley_2011_270m_5070_subset = geo_sel(
                 riley_2011_270m_5070,
-                bbox=(
-                    buffered_x_slice.start,
-                    buffered_y_slice.stop,
-                    buffered_x_slice.stop,
-                    buffered_y_slice.start,
-                ),
+                bbox=bbox,
                 crs_wkt=riley_2011_270m_5070.spatial_ref.attrs['crs_wkt'],
             )
 
             wind_direction_distribution_30m_4326 = (
-                catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-reprojected')
+                catalog.get_dataset('conus404-ffwi-p99-wind-direction-distribution-30m-4326')
                 .to_xarray()
                 .wind_direction_distribution.sel(
                     latitude=buffered_y_slice, longitude=buffered_x_slice
@@ -194,32 +193,3 @@ def geodataframe_snapshot(snapshot):
     Available to all tests - use for snapshotting GeoPandas GeoDataFrames.
     """
     return snapshot.use_extension(GeoDataFrameSnapshotExtension)
-
-
-@pytest.fixture(scope='session')
-def ocr_config(tmp_path_factory):
-    root = UPath(tmp_path_factory.mktemp('ocr_data'))
-    cfg = OCRConfig(
-        storage_root=str(root),
-        debug=True,
-        vector=None,
-        icechunk=None,
-        chunking=None,
-        coiled=None,
-    )
-    cfg.icechunk.init_repo()
-    return cfg
-
-
-@pytest.fixture(scope='session')
-def region_risk_parquet(ocr_config):
-    # Single region used by multiple tests
-    region_id = 'y2_x2'
-    out_file = ocr_config.vector.region_geoparquet_uri / f'{region_id}.parquet'
-    if not out_file.exists():
-        calculate_risk(ocr_config, region_id=region_id, risk_type=RiskType.FIRE)
-    return {
-        'config': ocr_config,
-        'region_id': region_id,
-        'path': out_file,
-    }

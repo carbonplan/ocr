@@ -297,9 +297,6 @@ class TestFosbergIndexSnapshot:
         assert xarray_snapshot == result
 
 
-@pytest.mark.xfail(
-    reason='Currently broken until the underlying input data (riley, wind-direction-distribution) coordinates are fixed'
-)
 class TestWindInformedBurnProbabilitySnapshot:
     """Snapshot tests for wind-informed burn probability creation."""
 
@@ -331,9 +328,6 @@ class TestWindInformedBurnProbabilitySnapshot:
         assert xarray_snapshot == result
 
 
-@pytest.mark.xfail(
-    reason='Currently broken until the underlying input data (riley, wind-direction-distribution) coordinates are fixed'
-)
 class TestWindAdjustedRiskSnapshot:
     """Snapshot tests for the complete wind-adjusted risk calculation pipeline."""
 

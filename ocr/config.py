@@ -100,9 +100,7 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def ds(self):
         dataset = (
-            catalog.get_dataset('USFS-wildfire-risk-communities-4326')
-            .to_xarray()
-            .astype('float32')[['CRPS']]
+            catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray().astype('float32')[['CRPS']]
         )
         dataset = dataset.odc.assign_crs('epsg:4326')
         return dataset
@@ -295,29 +293,25 @@ class ChunkingConfig(pydantic_settings.BaseSettings):
         """
         Get latitude and longitude slices from region_id
 
-        Parameters
-        ----------
-        region_id : str
-            The region_id for chunk_id lookup.
-
-        Returns
-        -------
-        latlon_slices : tuple
-            (lat_slice, lon_slice)
+        Returns (lat_slice, lon_slice) where lat_slice.start < lat_slice.stop
+        and lon_slice.start < lon_slice.stop (lower-left origin, lat ascending).
         """
         chunk_id = self.region_id_chunk_lookup(region_id)
-        # Get array slices for this chunk
-        y_slice, x_slice = self.chunk_id_to_slice(chunk_id)
+        # Get array index slices for this chunk (y, x)
+        y_slice_idx, x_slice_idx = self.chunk_id_to_slice(chunk_id)
 
         # Convert corners to coordinates
-        x_min, y_max = self.index_to_coords(x_slice.start, y_slice.start)  # upper-left
-        x_max, y_min = self.index_to_coords(x_slice.stop, y_slice.stop)  # lower-right
+        x_min, y_max = self.index_to_coords(x_slice_idx.start, y_slice_idx.start)  # upper-left
+        x_max, y_min = self.index_to_coords(x_slice_idx.stop, y_slice_idx.stop)  # lower-right
 
-        # Create and return the slices
-        y_slice = slice(y_max, y_min)
-        x_slice = slice(x_min, x_max)
+        # Ensure slices are ascending (lower-left origin)
+        lat_start, lat_stop = sorted((y_min, y_max))
+        lon_start, lon_stop = sorted((x_min, x_max))
 
-        return (y_slice, x_slice)
+        lat_slice = slice(lat_start, lat_stop)
+        lon_slice = slice(lon_start, lon_stop)
+
+        return (lat_slice, lon_slice)
 
     def get_chunk_mapping(self) -> dict[str, tuple[int, int]]:
         """Returns a dict of region_ids and their corresponding chunk_indexes.

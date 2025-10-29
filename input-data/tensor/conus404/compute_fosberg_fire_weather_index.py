@@ -14,21 +14,17 @@ import typer
 import upath
 import xarray as xr
 from odc.geo import CRS
-from odc.geo.xr import assign_crs
+from odc.geo.xr import assign_crs, xr_reproject
 
 from ocr import catalog
 from ocr.conus404 import (
     compute_relative_humidity,
     compute_wind_speed_and_direction,
-    geo_sel,
     load_conus404,
     rotate_winds_to_earth,
 )
-from ocr.risks.fire import (
-    compute_modal_wind_direction,
-    compute_wind_direction_distribution,
-    fosberg_fire_weather_index,
-)
+from ocr.risks.fire import fosberg_fire_weather_index
+from ocr.utils import geo_sel
 
 console = rich.console.Console()
 app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')
@@ -37,28 +33,32 @@ app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')
 def reproject(
     src_dataset: xr.Dataset,
     src_crs_wkt: str,
-    target_dataset_name: str,
     *,
     chunk_lat: int = 6000,
     chunk_lon: int = 4500,
 ) -> xr.Dataset:
     """Reproject the wind direction distributions to the geobox of a target dataset."""
+    target_dataset_name = 'scott-et-al-2024-30m-4326'
     tgt = catalog.get_dataset(target_dataset_name).to_xarray().astype('float32')
     tgt = assign_crs(tgt, crs='EPSG:4326')
     geobox = tgt.odc.geobox
 
     src_crs = CRS(src_crs_wkt)
     src_dataset = assign_crs(src_dataset, crs=src_crs)
-
-    result = (
-        src_dataset.odc.reproject(geobox, resampling='nearest')
-        .astype('float32')
-        .chunk({'latitude': chunk_lat, 'longitude': chunk_lon})
-    )
+    result = xr_reproject(
+        src_dataset,
+        geobox,
+        resampling='nearest',
+    ).astype('float32')
 
     # To avoid issues with floating point noise in coordinates, we directly adopt the target dataset's coords
     # fixes https://github.com/carbonplan/ocr/issues/247
     result = result.assign_coords(latitude=tgt.latitude, longitude=tgt.longitude)
+
+    # sort the coordinates to ensure ascending order
+    result = result.sortby(['latitude', 'longitude']).chunk(
+        {'latitude': chunk_lat, 'longitude': chunk_lon}
+    )
 
     result.attrs.update({'reprojected_to': target_dataset_name})
     return result
@@ -291,8 +291,7 @@ def postprocess_ffwi(
     output_base: str = typer.Option(
         's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi', help='Base output path.'
     ),
-    quantiles: list[float] = typer.Option([0.95, 0.99], help='Quantiles to compute and save.'),
-    mode: bool = typer.Option(True, help='If true, compute mode of FFWI.'),
+    quantiles: list[float] = typer.Option([0.99], help='Quantiles to compute and save.'),
     min_workers: int = typer.Option(10, help='Minimum number of Coiled workers'),
     max_workers: int = typer.Option(70, help='Maximum number of Coiled workers'),
     worker_vm_types: str = typer.Option('m8g.2xlarge', help='Worker VM type'),
@@ -325,10 +324,6 @@ def postprocess_ffwi(
     console.log(f'Loading FFWI from {ffwi_path}...')
     ffwi = _open_icechunk_dataset(ffwi_path)
 
-    winds_path = f'{output_base}/winds.icechunk'
-    console.log(f'Loading winds from {winds_path}...')
-    wind_ds = _open_icechunk_dataset(winds_path)
-
     # Quantiles and optional mode
     console.log(f'Postprocessing FFWI: {ffwi}')
     for quantile in quantiles:
@@ -349,34 +344,6 @@ def postprocess_ffwi(
         )
         console.log(f'Saved {quantile} quantile to {q_out_path}.')
 
-        if mode:
-            console.log('Computing and saving mode of FFWI...')
-            fire_weather_mask = ffwi.FFWI > ffwi_quantile.FFWI
-            distribution = compute_wind_direction_distribution(
-                wind_ds['sfcWindfromdir'], fire_weather_mask
-            )
-            console.log(
-                f'Computed wind direction distribution for FFWI > {quantile} quantile: {distribution}'
-            )
-            path = f'{output_base}/fosberg-fire-weather-index-p{int(quantile * 100)}-wind-direction-distribution.icechunk'
-            _write_icechunk_store(
-                out_path=path,
-                dataset=dask.base.optimize(distribution)[0],
-                commit_message=f'Add wind direction distribution for Fosberg Fire Weather Index (FFWI) > {quantile} quantile.',
-                overwrite=overwrite,
-            )
-
-            console.log(f'Saved wind direction distribution to {path}.')
-            ffwi_mode = compute_modal_wind_direction(distribution.wind_direction_distribution)
-            path = f'{output_base}/fosberg-fire-weather-index-p{int(quantile * 100)}-wind-direction-mode.icechunk'
-            _write_icechunk_store(
-                out_path=path,
-                dataset=dask.base.optimize(ffwi_mode.chunk({'x': -1, 'y': -1}))[0],
-                commit_message=f'Add Fosberg Fire Weather Index mode for > {quantile} quantile.',
-                overwrite=overwrite,
-            )
-            console.log(f'Saved mode to {path}.')
-
     if cluster is not None:
         console.log('Closing Coiled cluster')
         cluster.close()
@@ -387,20 +354,12 @@ def postprocess_ffwi(
 
 @app.command('reproject')
 def reproject_ffwi(
-    input_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode.icechunk',
-        help='Input path to the wind direction mode Icechunk repository.',
-    ),
     distribution_input_path: str = typer.Option(
         's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
-        help='Input path to the wind direction distribution Icechunk repository (matching the mode).',
-    ),
-    output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-mode-reprojected.icechunk',
-        help='Output path for the reprojected wind direction mode Icechunk repository.',
+        help='Input path to the wind direction distribution Icechunk repository.',
     ),
     distribution_output_path: str = typer.Option(
-        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-reprojected.icechunk',
+        's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk',
         help='Output path for the reprojected wind direction distribution Icechunk repository.',
     ),
     overwrite: bool = typer.Option(False, help='If true, overwrite existing output.'),
@@ -436,10 +395,6 @@ def reproject_ffwi(
         console.log(f'Dask client: {client}')
         console.log('Waiting 60 seconds for cluster to stabilize...')
 
-    console.log(f'Loading FFWI mode from {input_path}...')
-    ffwi_mode = _open_icechunk_dataset(input_path)
-    console.log(f'Loaded FFWI mode: {ffwi_mode}')
-
     console.log(f'Loading wind direction distribution from {distribution_input_path}...')
     wind_dir_distribution = _open_icechunk_dataset(distribution_input_path)
     console.log(f'Loaded wind direction distribution: {wind_dir_distribution}')
@@ -448,32 +403,16 @@ def reproject_ffwi(
     src_crs_wkt = conus404['crs'].attrs['crs_wkt']
     console.log(f'CONUS404 CRS WKT: {src_crs_wkt}')
 
-    target_dataset_name = 'USFS-wildfire-risk-communities-4326'
-
-    reprojected_mode = reproject(
-        ffwi_mode,
-        src_crs_wkt,
-        target_dataset_name,
-    )
-    console.log(f'Reprojected wind direction mode: {reprojected_mode}')
-
     reprojected_distribution = reproject(
         wind_dir_distribution,
         src_crs_wkt,
-        target_dataset_name,
     )
     console.log(f'Reprojected wind direction distribution: {reprojected_distribution}')
 
     _write_icechunk_store(
-        out_path=output_path,
-        dataset=reprojected_mode,
-        commit_message=f'Reprojected wind direction mode to {target_dataset_name} geobox and ensure coords match.',
-        overwrite=overwrite,
-    )
-    _write_icechunk_store(
         out_path=distribution_output_path,
         dataset=reprojected_distribution,
-        commit_message=f'Reprojected wind direction distribution to {target_dataset_name} geobox and ensure coords match.',
+        commit_message='Reprojected wind direction distribution to 30m EPSG:4326 geobox of Scott et al. 2024 dataset.',
         overwrite=overwrite,
     )
 
