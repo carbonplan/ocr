@@ -229,7 +229,7 @@ jobs:
                   --region-id y6_x5 --region-id y6_x7 --region-id y6_x8 --region-id y6_x9
                   --region-id y9_x14 --region-id y9_x15 --region-id y9_x16 --region-id y9_x17
                   --region-id y8_x14 --region-id y8_x15 --region-id y8_x16 --region-id y8_x17
-                  --region-id y7_31 --region-id y7_32
+                  --region-id y7_x31 --region-id y7_x32
                   --region-id y13_x24 --region-id y13_x25 --region-id y13_x26
                   --region-id y12_x24 --region-id y12_x25"
                   ENV_FILE="ocr-coiled-s3-staging.env"
