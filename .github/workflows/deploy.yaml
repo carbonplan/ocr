@@ -221,7 +221,7 @@ jobs:
                   DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
               run: |
                   echo "Starting automatic deploy to staging (main branch push)"
-                   REGION_ARGS="--region-id y14_x3 --region-id y14_x4 --region-id y14_x5 --region-id y14_x6 --region-id y14_x7
+                  REGION_ARGS="--region-id y14_x3 --region-id y14_x4 --region-id y14_x5 --region-id y14_x6 --region-id y14_x7
                   --region-id y13_x3 --region-id y13_x4 --region-id y13_x5 --region-id y13_x6 --region-id y13_x7
                   --region-id y12_x3 --region-id y12_x4 --region-id y12_x5 --region-id y12_x6 --region-id y12_x7
                   --region-id y8_x3 --region-id y8_x4 --region-id y6_x4 --region-id y6_x5 --region-id y6_x6
