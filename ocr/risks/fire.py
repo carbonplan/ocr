@@ -486,6 +486,7 @@ def calculate_wind_adjusted_risk(
     x_slice: slice,
     y_slice: slice,
     buffer: float = 0.15,
+    validate: bool = True,
 ) -> xr.Dataset:
     """Calculate wind-adjusted fire risk using climate run and wildfire risk datasets.
 
@@ -500,6 +501,8 @@ def calculate_wind_adjusted_risk(
         For 30m EPSG:4326 data, 0.15 degrees ≈ 16.7 km ≈ 540 pixels.
         This buffer ensures neighborhood operations (convolution, Gaussian smoothing) have
         adequate context at boundaries.
+    validate : bool, optional
+        Whether to validate that data has proper coverage using Scott et al. 2024 as benchmark.
 
     Returns
     -------
@@ -615,6 +618,21 @@ def calculate_wind_adjusted_risk(
         # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
         fire_risk['burn_probability_usfs_2047'] = riley_2047_30m_4326_subset['BP']
 
+    if validate:
+        results = {}
+        for variable in [
+            'wind_risk_2011',
+            'wind_risk_2047',
+        ]:
+            results[variable] = validate_data_coverage(
+                fire_risk[variable], y_slice=y_slice, x_slice=x_slice, visualize=False
+            )
+        # check if any validation failed and raise error
+        failed_vars = [var for var, passed in results.items() if not passed]
+        if failed_vars:
+            raise ValueError(
+                f'Data coverage validation failed for variables: {failed_vars}. {results.values()}'
+            )
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 
 
@@ -807,3 +825,182 @@ def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
         }
     )
     return mode.to_dataset()
+
+
+def validate_data_coverage(
+    data_to_validate: xr.DataArray,
+    *,
+    y_slice: slice,
+    x_slice: slice,
+    benchmark_var: str = 'RPS',
+    visualize: bool = True,
+) -> dict:
+    """
+    Validate that data has proper coverage using Scott RPS as benchmark.
+
+    Parameters
+    ----------
+    data_to_validate : xr.DataArray
+        The data array to validate for NaN coverage
+    y_slice : slice
+        Latitude slice for the region
+    x_slice : slice
+        Longitude slice for the region
+    benchmark_var : str, default='RPS'
+        Which Scott variable to use as benchmark ('RPS', 'CRPS', or 'BP')
+    visualize : bool, default=True
+        Whether to show visualization if validation fails
+
+    Returns
+    -------
+    dict
+        Validation results with keys:
+        - 'passed': bool
+        - 'domain_strategy': str ('nan' or 'zero')
+        - 'missing_count': int
+        - 'total_pixels': int
+        - 'benchmark_valid_pixels': int (if nan strategy)
+    """
+    # Load Scott benchmark data
+    scott = catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray()[[benchmark_var]]
+    scott = scott.sel(latitude=y_slice, longitude=x_slice)
+    benchmark = scott[benchmark_var]
+
+    # Analyze benchmark pattern
+    has_nans = benchmark.isnull()
+    is_zero = benchmark == 0
+
+    total_pixels = benchmark.size
+    nan_pixels = has_nans.sum().values
+    zero_pixels = is_zero.sum().values
+    valid_pixels = ((~has_nans) & (~is_zero)).sum().values
+
+    print(f'{"=" * 70}')
+    print(f'BENCHMARK: Scott {benchmark_var}')
+    print(f'{"=" * 70}')
+    print(f'Total pixels: {total_pixels:,}')
+    print(f'NaN pixels: {nan_pixels:,}')
+    print(f'Zero pixels: {zero_pixels:,}')
+    print(f'Valid (non-NaN, non-zero) pixels: {valid_pixels:,}')
+
+    # Determine domain strategy
+    if nan_pixels > 0:
+        print('\n→ Using NaN-based domain (NaNs mark areas outside domain)')
+        domain_strategy = 'nan'
+    else:
+        print('\n→ Using zero-based domain (no NaNs in benchmark)')
+        domain_strategy = 'zero'
+
+    # Validate data
+    print(f'\n{"=" * 70}')
+    print(f'VALIDATING: {data_to_validate.name}')
+    print(f'{"=" * 70}')
+    print(f'Data shape: {data_to_validate.shape}')
+
+    data_nans = data_to_validate.isnull()
+    data_nan_count = data_nans.sum().values
+    print(f'NaN pixels in data: {data_nan_count:,}')
+
+    # Perform validation based on strategy
+    if domain_strategy == 'nan':
+        benchmark_domain_mask = ~has_nans
+        data_missing_in_domain = data_nans & benchmark_domain_mask
+        missing_count = data_missing_in_domain.sum().values
+        benchmark_valid = benchmark_domain_mask.sum().values
+
+        print(f'\n{"=" * 70}')
+        print('VALIDATION RESULTS (NaN-based domain)')
+        print(f'{"=" * 70}')
+        print(f'Benchmark valid domain pixels: {benchmark_valid:,}')
+        print(f"Data NaN pixels within benchmark's valid domain: {missing_count:,}")
+
+        passed = missing_count == 0
+
+        if passed:
+            print('\n✅ PASS: Data has valid values everywhere in benchmark domain')
+        else:
+            print(
+                f'\n❌ FAIL: Data has {missing_count:,} NaN pixels where benchmark has valid data'
+            )
+            print('   → These pixels should have valid values, not NaN')
+
+            # Visualize if requested
+            if visualize:
+                import matplotlib.pyplot as plt
+
+                fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+                axes[0].imshow(benchmark_domain_mask, cmap='gray', interpolation='nearest')
+                axes[0].set_title(f'Benchmark Valid Domain\n({benchmark_valid:,} pixels)')
+                axes[0].set_xlabel('Longitude')
+                axes[0].set_ylabel('Latitude')
+
+                axes[1].imshow(data_nans, cmap='Reds', interpolation='nearest')
+                axes[1].set_title(f'Data NaN Locations\n({data_nan_count:,} pixels)')
+                axes[1].set_xlabel('Longitude')
+                axes[1].set_ylabel('Latitude')
+
+                axes[2].imshow(data_missing_in_domain, cmap='Reds', interpolation='nearest')
+                axes[2].set_title(f'Missing in Domain\n({missing_count:,} pixels)')
+                axes[2].set_xlabel('Longitude')
+                axes[2].set_ylabel('Latitude')
+
+                plt.tight_layout()
+                plt.show()
+
+                print('\nSample coordinates where data is NaN but benchmark is valid:')
+                problem_lats, problem_lons = np.where(data_missing_in_domain.values)
+                for i in range(min(5, len(problem_lats))):
+                    lat_idx, lon_idx = problem_lats[i], problem_lons[i]
+                    lat = data_to_validate.latitude.values[lat_idx]
+                    lon = data_to_validate.longitude.values[lon_idx]
+                    benchmark_val = benchmark.values[lat_idx, lon_idx]
+                    print(f'  Lat: {lat:.4f}, Lon: {lon:.4f} | Benchmark: {benchmark_val:.6f}')
+
+        return {
+            'passed': passed,
+            'domain_strategy': domain_strategy,
+            'missing_count': int(missing_count),
+            'total_pixels': int(total_pixels),
+            'benchmark_valid_pixels': int(benchmark_valid),
+            'data_nan_pixels': int(data_nan_count),
+        }
+
+    else:  # zero strategy
+        print(f'\n{"=" * 70}')
+        print('VALIDATION RESULTS (Zero-based domain)')
+        print(f'{"=" * 70}')
+
+        passed = data_nan_count == 0
+
+        if passed:
+            print('✅ PASS: Data has zero NaN pixels (matching benchmark pattern)')
+        else:
+            print(f'❌ FAIL: Data has {data_nan_count:,} NaN pixels')
+            print('   → Benchmark has no NaNs, so this data should also have no NaNs')
+
+            if visualize:
+                import matplotlib.pyplot as plt
+
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+                axes[0].imshow(benchmark.values, cmap='viridis', interpolation='nearest')
+                axes[0].set_title('Benchmark (no NaNs)')
+                axes[0].set_xlabel('Longitude')
+                axes[0].set_ylabel('Latitude')
+
+                axes[1].imshow(data_nans, cmap='Reds', interpolation='nearest')
+                axes[1].set_title(f'Data NaN Locations\n({data_nan_count:,} pixels)')
+                axes[1].set_xlabel('Longitude')
+                axes[1].set_ylabel('Latitude')
+
+                plt.tight_layout()
+                plt.show()
+
+        return {
+            'passed': passed,
+            'domain_strategy': domain_strategy,
+            'missing_count': 0,
+            'total_pixels': int(total_pixels),
+            'data_nan_pixels': int(data_nan_count),
+        }
