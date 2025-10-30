@@ -30,11 +30,11 @@ The schemas for each of the full datasets are described on the [data schema](./d
 
 ### Links
 
-|                                     | CSV                                                                                                      | GeoJSON                                                                                                          |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Statistics across **counties**      | [`stats.csv`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/counties/stats.csv) | [`stats.geojson`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/counties/stats.geojson) |
-| Statistics across **census tracts** | [`stats.csv`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.csv)   | [`stats.geojson`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.geojson)   |
-| Statistics across **census blocks** | [`stats.csv`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/block/stats.csv)    | [`stats.geojson`](s3://carbonplan-ocr/output/fire-risk/production/v0.8.0/region-analysis/block/stats.geojson)    |
+|                                     | CSV                                                                                                                                           | GeoJSON                                                                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Statistics across **counties**      | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.8.0/region-analysis/counties/stats.csv) | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/counties/stats.geojson) |
+| Statistics across **census tracts** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.csv)          | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.geojson)   |
+| Statistics across **census blocks** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/block/stats.csv)           | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/block/stats.geojson)    |
 
 TODO: update/finalize version pointers
 
