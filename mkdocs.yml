@@ -46,6 +46,7 @@ nav:
                 - Working with Data: how-to/work-with-data.ipynb
           - Developer Guides:
                 - Installation: how-to/installation.md
+                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
                 - Release Procedure: how-to/release-procedure.md
                 - Snapshot Testing: how-to/snapshot-testing.md
 
