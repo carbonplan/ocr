@@ -38,7 +38,7 @@ class OvertureProcessor(BaseDatasetProcessor):
     OVERTURE_REGION: ClassVar[str] = 'us-west-2'
 
     # Coiled configuration
-    COILED_WORKER_VM: ClassVar[str] = 'c8g.8xlarge'
+    COILED_WORKER_VM: ClassVar[str] = 'r8g.8xlarge'
     COILED_SCHEDULER_VM: ClassVar[str] = 'm8g.xlarge'
     COILED_WORKERS: ClassVar[int] = 1
     COILED_SOFTWARE: ClassVar[str | None] = None
@@ -100,6 +100,11 @@ class OvertureProcessor(BaseDatasetProcessor):
     def s3_addresses_key(self) -> str:
         """S3 key for addresses parquet file."""
         return f'{self.config.base_prefix}/vector/{self.dataset_name}/CONUS-overture-addresses-{self.version}.parquet'
+
+    @property
+    def s3_region_tagged_buildings_key(self) -> str:
+        """S3 key for region-tagged buildings parquet file."""
+        return f'{self.config.base_prefix}/vector/{self.dataset_name}/CONUS-overture-region-tagged-buildings-{self.version}.parquet'
 
     @staticmethod
     def _subset_buildings(
@@ -185,6 +190,95 @@ class OvertureProcessor(BaseDatasetProcessor):
         duckdb.sql(query)
         console.log(f'Successfully wrote addresses to {output_s3_uri}')
 
+    @staticmethod
+    def _create_region_tagged_buildings(
+        buildings_s3_uri: str,
+        blocks_s3_uri: str,
+        output_s3_uri: str,
+        dry_run: bool = False,
+    ) -> None:
+        """Tag Overture buildings with census block information via spatial join.
+
+        Performs a spatial join between Overture buildings and US Census blocks,
+        adding geographic identifiers at multiple administrative levels (state,
+        county, tract, block group, block).
+        """
+        import duckdb
+
+        from ocr.console import console
+        from ocr.utils import apply_s3_creds, install_load_extensions
+
+        console.log('Creating region-tagged buildings dataset...')
+
+        if dry_run:
+            console.log(f'[DRY RUN] Would read buildings from {buildings_s3_uri}')
+            console.log(f'[DRY RUN] Would read census blocks from {blocks_s3_uri}')
+            console.log(f'[DRY RUN] Would write to {output_s3_uri}')
+            return
+
+        install_load_extensions()
+        apply_s3_creds()
+
+        console.log('Loading census FIPS lookup table...')
+        duckdb.sql("""
+            CREATE TEMP TABLE fips_lookup AS
+                SELECT
+                    column0 AS STATE,
+                    lpad(column1, 2, '0') AS state_fips,
+                    lpad(column2, 3, '0') AS county_fips,
+                    column3 AS county
+                FROM read_csv_auto(
+                    'http://www2.census.gov/geo/docs/reference/codes/files/national_county.txt',
+                    header=False
+                );
+        """)
+
+        console.log('Creating spatial indexes...')
+        duckdb.sql(f"""
+            CREATE TEMP TABLE buildings AS
+                SELECT bbox, geometry FROM read_parquet('{buildings_s3_uri}');
+        """)
+        duckdb.sql('CREATE INDEX buildings_idx ON buildings USING RTREE (geometry);')
+
+        duckdb.sql(f"""
+            CREATE TEMP TABLE blocks AS
+                SELECT GEOID, bbox, geometry FROM read_parquet('{blocks_s3_uri}');
+        """)
+        duckdb.sql('CREATE INDEX blocks_idx ON blocks USING RTREE (geometry);')
+
+        console.log('Performing spatial join...')
+        query = f"""
+        COPY (
+            SELECT
+                a.geometry,
+                a.bbox,
+                b.GEOID as block_geoid,
+                SUBSTRING(b.GEOID, 1, 12) as block_group_geoid,
+                SUBSTRING(b.GEOID, 1, 11) as tract_geoid,
+                SUBSTRING(b.GEOID, 1, 5) as county_geoid,
+                SUBSTRING(b.GEOID, 1, 2) as state_fips,
+                SUBSTRING(b.GEOID, 3, 3) as county_fips,
+                SUBSTRING(b.GEOID, 5, 6) as tract_fips,
+                SUBSTRING(b.GEOID, 11, 1) as block_group_fips,
+                SUBSTRING(b.GEOID, 12, 4) as block_fips,
+                c.STATE as state_abbrev,
+                c.county as county_name
+            FROM buildings a
+            JOIN blocks b
+                ON a.bbox.xmin <= b.bbox.xmax
+                AND a.bbox.xmax >= b.bbox.xmin
+                AND a.bbox.ymin <= b.bbox.ymax
+                AND a.bbox.ymax >= b.bbox.ymin
+                AND ST_Intersects(a.geometry, b.geometry)
+            LEFT JOIN fips_lookup c
+                ON SUBSTRING(b.GEOID, 1, 2) = c.state_fips
+                AND SUBSTRING(b.GEOID, 3, 3) = c.county_fips
+        ) TO '{output_s3_uri}' (FORMAT 'parquet', OVERWRITE_OR_IGNORE true, COMPRESSION 'zstd');
+        """
+
+        duckdb.sql(query)
+        console.log(f'Successfully wrote region-tagged buildings to {output_s3_uri}')
+
     def download(self) -> None:
         """Download is not needed - data is queried directly from Overture S3."""
         console.log('Skipping download - Overture data is queried directly from S3')
@@ -237,6 +331,37 @@ class OvertureProcessor(BaseDatasetProcessor):
                     bbox=self.CONUS_BBOX,
                     overture_bucket=self.OVERTURE_BUCKET,
                     output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_addresses_key}',
+                    dry_run=self.dry_run,
+                )
+
+        # Create region-tagged buildings if we processed buildings
+        if self.data_type in ('buildings', 'both'):
+            console.log('Creating region-tagged buildings dataset...')
+
+            from ocr import catalog
+
+            buildings_s3_uri = f's3://{self.config.s3_bucket}/{self.s3_buildings_key}'
+
+            blocks_dataset = catalog.get_dataset('us-census-blocks')
+            blocks_s3_uri = f's3://{blocks_dataset.bucket}/{blocks_dataset.prefix}'
+
+            output_s3_uri = f's3://{self.config.s3_bucket}/{self.s3_region_tagged_buildings_key}'
+
+            if client:
+                future = client.submit(
+                    self._create_region_tagged_buildings,
+                    buildings_s3_uri=buildings_s3_uri,
+                    blocks_s3_uri=blocks_s3_uri,
+                    output_s3_uri=output_s3_uri,
+                    dry_run=self.dry_run,
+                )
+                result = future.result()
+                console.log(f'Region tagging complete: {result}')
+            else:
+                self._create_region_tagged_buildings(
+                    buildings_s3_uri=buildings_s3_uri,
+                    blocks_s3_uri=blocks_s3_uri,
+                    output_s3_uri=output_s3_uri,
                     dry_run=self.dry_run,
                 )
 

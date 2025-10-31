@@ -156,39 +156,65 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 -   **Source**: [Overture Maps Foundation](https://overturemaps.org)
 -   **Format**: GeoParquet (WKB geometry, zstd compression)
 -   **Coverage**: CONUS (spatially filtered from global dataset)
--   **Data Types**: Buildings (bbox + geometry), Addresses (full attributes)
+-   **Data Types**: Buildings (bbox + geometry), Addresses (full attributes), Region-Tagged Buildings (buildings + census identifiers)
 
 **Pipeline**:
 
 1. Query Overture S3 bucket directly (no download step)
 2. Filter by CONUS bounding box using DuckDB
 3. Write subsetted data to carbonplan-ocr S3 bucket
+4. (If buildings processed) Perform spatial join with US Census blocks to add geographic identifiers
+
+**Region-Tagged Buildings Processing**:
+
+When buildings are processed, an additional dataset is automatically created that tags each building with census geographic identifiers:
+
+-   Loads census FIPS lookup table for state/county names
+-   Creates spatial indexes on buildings and census blocks
+-   Performs bbox-filtered spatial join using `ST_Intersects`
+-   Adds identifiers at multiple administrative levels: state, county, tract, block group, and block
 
 **Usage**:
 
 ```bash
 # Both buildings and addresses (default)
+# Also creates region-tagged buildings automatically
 pixi run ocr ingest-data run-all overture-maps
 
-# Only buildings
+# Only buildings (also creates region-tagged buildings)
 pixi run ocr ingest-data process overture-maps --overture-data-type buildings
 
-# Only addresses
+# Only addresses (no region tagging)
 pixi run ocr ingest-data process overture-maps --overture-data-type addresses
 
 # Dry run
 pixi run ocr ingest-data run-all overture-maps --dry-run
+
+# Use Coiled for distributed processing
+pixi run ocr ingest-data run-all overture-maps --use-coiled
 ```
 
 **Outputs**:
 
--   Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS-overture-buildings-2025-09-24.0.parquet`
--   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS-overture-addresses-2025-09-24.0.parquet`
+-   Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-buildings-2025-09-24.0.parquet`
+-   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet`
+-   Region-Tagged Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet`
 
-**Processing Time**:
+**Region-Tagged Buildings Schema**:
 
--   Buildings: ~14 minutes (c8g.2xlarge)
--   Addresses: ~4 minutes (c8g.xlarge)
+-   `geometry`: Building geometry (WKB)
+-   `bbox`: Building bounding box
+-   `block_geoid`: Full 15-digit census block GEOID
+-   `block_group_geoid`: 12-digit block group GEOID
+-   `tract_geoid`: 11-digit tract GEOID
+-   `county_geoid`: 5-digit county GEOID
+-   `state_fips`: 2-digit state FIPS code
+-   `county_fips`: 3-digit county FIPS code
+-   `tract_fips`: 6-digit tract FIPS code
+-   `block_group_fips`: 1-digit block group code
+-   `block_fips`: 4-digit block code
+-   `state_abbrev`: State abbreviation (e.g., "CA")
+-   `county_name`: County name
 
 ---
 
