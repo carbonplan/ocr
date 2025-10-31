@@ -200,22 +200,6 @@ pixi run ocr ingest-data run-all overture-maps --use-coiled
 -   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet`
 -   Region-Tagged Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet`
 
-**Region-Tagged Buildings Schema**:
-
--   `geometry`: Building geometry (WKB)
--   `bbox`: Building bounding box
--   `block_geoid`: Full 15-digit census block GEOID
--   `block_group_geoid`: 12-digit block group GEOID
--   `tract_geoid`: 11-digit tract GEOID
--   `county_geoid`: 5-digit county GEOID
--   `state_fips`: 2-digit state FIPS code
--   `county_fips`: 3-digit county FIPS code
--   `tract_fips`: 6-digit tract FIPS code
--   `block_group_fips`: 1-digit block group code
--   `block_fips`: 4-digit block code
--   `state_abbrev`: State abbreviation (e.g., "CA")
--   `county_name`: County name
-
 ---
 
 #### census-tiger
@@ -257,12 +241,6 @@ pixi run ocr ingest-data run-all census-tiger --dry-run
 -   Tracts (per-state): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/FIPS/FIPS_*.parquet`
 -   Tracts (aggregated): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
 -   Counties: `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
-
-**Processing Time**:
-
--   Blocks: ~20-30 minutes (all 49 states)
--   Tracts: ~15-20 minutes (all 49 states + aggregation)
--   Counties: ~2 minutes
 
 ## CLI Reference
 
