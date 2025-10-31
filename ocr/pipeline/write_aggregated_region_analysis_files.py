@@ -44,7 +44,7 @@ def write_stats_table(
             MEDIAN(b.burn_probability_2047) as median_burn_probability_2047,
             MEDIAN(b.conditional_risk_usfs) as median_conditional_risk_usfs,
             MEDIAN(b.burn_probability_usfs_2011) as median_burn_probability_usfs_2011,
-            MEDIAN(b.burn_probability_usfs_2047) as medin_burn_probability_usfs_2047,
+            MEDIAN(b.burn_probability_usfs_2047) as median_burn_probability_usfs_2047,
 
             -- we have to cast the histogram from HUGEINT[] to array_json since gdal/json does not support HUGEINT[]
 
