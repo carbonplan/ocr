@@ -470,20 +470,6 @@ datasets = [
         version='v2025-03-19.1',
     ),
     Dataset(
-        name='alexandre-2016-digitized-buildings',
-        description='Data from: Factors related to building loss due to wildfires in the conterminous United States',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/alexandre-2016/digitized_buildings_2000_2010.parquet',
-        data_format='geoparquet',
-    ),
-    Dataset(
-        name='cal-fire-damage-inspection',
-        description='CAL FIRE Damage Inspection (DINS) dataset',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/cal-fire-structures-destroyed/cal-fire-structures-destroyed.parquet',
-        data_format='geoparquet',
-    ),
-    Dataset(
         name='conus404-hourly-Q2',
         description='Q2 variable from CONUS404 hourly data in Icechunk format',
         bucket='carbonplan-ocr',
@@ -527,23 +513,23 @@ datasets = [
     ),
     Dataset(
         name='us-census-blocks',
-        description='US Census Tracts',
+        description='US Census Blocks',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet',
+        prefix='input/fire-risk/vector/census-tiger/blocks/blocks.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-tracts',
         description='US Census Tracts',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet',
+        prefix='input/fire-risk/vector/census-tiger/tracts/tracts.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-counties',
         description='US Census Counties',
         bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/aggregated_regions/counties/counties.parquet',
+        prefix='input/fire-risk/vector/census-tiger/counties/counties.parquet',
         data_format='geoparquet',
     ),
     # CONUS404 Fosberg Fire Weather Index (FFWI) datasets

@@ -85,7 +85,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
     blocks_version: str = '2025'  # Blocks use 2025 vintage
 
     # Coiled configuration
-    COILED_WORKER_VM: ClassVar[str] = 'c8g.4xlarge'
+    COILED_WORKER_VM: ClassVar[str] = 'c8g.8xlarge'
     COILED_SCHEDULER_VM: ClassVar[str] = 'm8g.xlarge'
     COILED_WORKERS: ClassVar[int] = 1
     COILED_SOFTWARE: ClassVar[str | None] = None
