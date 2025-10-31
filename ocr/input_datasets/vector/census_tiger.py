@@ -198,7 +198,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         for state, fips in tqdm(fips_codes.items(), desc='Processing blocks'):
             block_url = f'https://www2.census.gov/geo/tiger/TIGER{blocks_version}/TABBLOCKSUFX/tl_{blocks_version}_{fips}_tabblocksufx.zip'
             console.log(f'Reading {state} blocks from {block_url}')
-            gdf = gpd.read_file(block_url, columns=['GEOID', 'geometry'])
+            gdf = gpd.read_file(block_url)
             gdfs.append(gdf)
 
         console.log('Combining all blocks into single GeoDataFrame...')
@@ -238,7 +238,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
             output_path = f'{output_prefix}/FIPS_{fips}.parquet'
 
             console.log(f'Reading {state} tracts from {tract_url}')
-            gdf = gpd.read_file(tract_url, columns=['TRACTCE', 'GEOID', 'NAME', 'geometry'])
+            gdf = gpd.read_file(tract_url)
 
             console.log(f'Writing to {output_path}')
             gdf.to_parquet(
@@ -306,7 +306,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         county_url = f'https://www2.census.gov/geo/tiger/TIGER{counties_version}/COUNTY/tl_{counties_version}_us_county.zip'
 
         console.log(f'Reading counties from {county_url}')
-        gdf = gpd.read_file(county_url, columns=['NAME', 'geometry'])
+        gdf = gpd.read_file(county_url)
 
         console.log(f'Writing {len(gdf)} counties to {output_s3_uri}')
         gdf.to_parquet(
