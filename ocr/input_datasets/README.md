@@ -1,27 +1,44 @@
 # Input Dataset Processing
 
-This directory contains the infrastructure for ingesting and processing input datasets for the OCR project.
+This directory contains the unified infrastructure for ingesting and processing input datasets for the OCR project.
 
-## Quick Start
+## Documentation
 
-List available datasets:
+For comprehensive documentation on using the input dataset ingestion system, see:
+
+**[Input Dataset Ingestion Guide](../../docs/how-to/input-dataset-ingestion.md)**
+
+## Quick Reference
+
+List all available datasets:
 
 ```bash
 ocr ingest-data list-datasets
 ```
 
-Process a dataset (dry run first to preview):
+Process a dataset:
 
 ```bash
-# Preview operations
-ocr ingest-data run-all scott-et-al-2024 --dry-run
-
-# Actually run
-ocr ingest-data run-all scott-et-al-2024
-
-# Use Coiled for distributed processing
-ocr ingest-data run-all scott-et-al-2024 --use-coiled
+ocr ingest-data run-all <dataset> --dry-run  # Preview first
+ocr ingest-data run-all <dataset>            # Execute
 ```
+
+## Architecture Overview
+
+-   **Base Classes**: `BaseDatasetProcessor`, `InputDatasetConfig`
+-   **Storage Utilities**: `IcechunkWriter`, `S3Uploader`
+-   **Tensor Datasets**: USFS fire risk data (scott-et-al-2024, riley-et-al-2025, dillon-et-al-2023)
+-   **Vector Datasets**: Overture Maps, Census TIGER/Line
+
+## Developer Guide
+
+See the [full documentation](../../docs/how-to/input-dataset-ingestion.md) for:
+
+-   Adding new datasets
+-   Using static methods for distributed processing
+-   Registering datasets in CLI
+-   Configuration options
+-   Troubleshooting
 
 ## Architecture
 
@@ -52,93 +69,88 @@ ocr ingest-data run-all scott-et-al-2024 --use-coiled
     -   Pattern-based file filtering
     -   Dry-run mode
 
-## Adding a New Dataset
+## Developer Guide
+
+### Adding a New Dataset
 
 1. **Create a processor class** in `ocr/input_datasets/tensor/` or `ocr/input_datasets/vector/`:
 
 ```python
-from ocr.input_datasets.base import BaseDatasetProcessor
+from ocr.input_datasets.base import BaseDatasetProcessor, InputDatasetConfig
 
 class MyDatasetProcessor(BaseDatasetProcessor):
-    dataset_name = 'my-dataset'
-    dataset_type = 'tensor'
-    description = 'My dataset description'
+    """Processor for My Dataset."""
 
-    # Dataset-specific configuration
+    dataset_name: str = 'my-dataset'
+    dataset_type = 'tensor'  # or 'vector'
+    description: str = 'Brief description of the dataset'
+    source_url: str = 'https://source.org/dataset'
+    version: str = '2024'
+
+    # Dataset-specific configuration (optional)
     COILED_WORKERS = 10
     VARIABLES = {'var1': 'https://...', 'var2': 'https://...'}
 
-    def download(self):
-        # Download logic
-        pass
+    def __init__(
+        self,
+        config: InputDatasetConfig | None = None,
+        *,
+        dry_run: bool = False,
+        use_coiled: bool = False,  # if applicable
+    ):
+        super().__init__(config=config, dry_run=dry_run)
+        self.use_coiled = use_coiled
 
-    def process(self):
-        # Processing logic
-        pass
+    def download(self) -> None:
+        """Download raw source data.
+
+        Use self.retrieve() for downloading with pooch (caching + hash verification).
+        For vector datasets that query S3 directly, this can be a no-op.
+        """
+        console.log('Downloading...')
+        # Implementation
+
+    def process(self) -> None:
+        """Process and upload data to S3/Icechunk.
+
+        Use static methods for processing logic that can be distributed.
+        """
+        console.log(f'Processing {self.dataset_name}...')
+        # Implementation
 ```
 
-2. **Register in CLI** (`ocr/input_datasets/cli.py`):
+2. **Use static methods for distributed processing**:
+
+Static methods can be serialized and sent to Coiled workers:
 
 ```python
+@staticmethod
+def _process_chunk(
+    input_path: str,
+    output_path: str,
+    dry_run: bool = False,
+) -> None:
+    """Process a single chunk (can be distributed)."""
+    if dry_run:
+        console.log(f'[DRY RUN] Would process {input_path}')
+        return
+    # Actual processing logic
+```
+
+3. **Register in CLI** (`ocr/input_datasets/cli.py`):
+
+```python
+from ocr.input_datasets.vector.my_dataset import MyDatasetProcessor
+
 DATASET_REGISTRY = {
     'my-dataset': {
         'processor_class': MyDatasetProcessor,
-        'type': 'tensor',
-        'description': 'My dataset description',
+        'type': 'vector',
+        'description': 'Brief description matching processor',
     },
 }
 ```
 
-3. **Add tests** in `tests/test_input_datasets.py`
+4. **Add dataset-specific CLI options** (if needed):
 
-## Current Datasets
-
-### scott-et-al-2024
-
-USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02)
-
--   **Type**: Tensor (raster)
--   **Variables**: BP, CRPS, CFL, Exposure, FLEP4, FLEP8, RPS, WHP
--   **Pipeline**:
-    1. Download 8 TIFF files from USFS Box
-    2. Merge TIFFs into Icechunk (EPSG:5070)
-    3. Reproject to EPSG:4326
-
-**Usage**:
-
-```bash
-# Download only
-ocr ingest-data download scott-et-al-2024
-
-# Process only (assumes data is downloaded)
-ocr ingest-data process scott-et-al-2024
-
-# Full pipeline
-ocr ingest-data run-all scott-et-al-2024 --use-coiled
-```
-
-## CLI Reference
-
-### Commands
-
--   **`list-datasets`**: Show all available datasets
--   **`download <dataset>`**: Download raw source data
--   **`process <dataset>`**: Process and upload to S3/Icechunk
--   **`run-all <dataset>`**: Complete pipeline (download + process + cleanup)
-
-### Options
-
--   **`--dry-run`**: Preview operations without executing
--   **`--use-coiled`**: Use Coiled for distributed processing (where supported)
--   **`--debug`**: Enable debug logging
-
-## Migration from `input-data/`
-
-The old `input-data/` directory contained standalone scripts with significant code duplication. These have been migrated to the package for:
-
--   ✅ **Shared infrastructure**: Reusable base classes and utilities
--   ✅ **Testability**: Unit and integration tests
--   ✅ **Consistency**: Unified CLI interface
--   ✅ **Maintainability**: Single source of truth for common patterns
-
-Old scripts in `input-data/` are deprecated and contain migration notices pointing to the new locations.
+For custom parameters like `--overture-data-type`, update both `process` and `run_all` commands in `cli.py`.
