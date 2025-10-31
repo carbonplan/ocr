@@ -4,12 +4,12 @@ OCR provides a few different ways to access the data, in addition to exploration
 
 ## Download options
 
-| Option                            | Description                                                                         | Formats                           | Access               |
-| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------- | -------------------- |
-| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based)             | S3                   |
-| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet (schema version 1.1.0) | S3                   |
-| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON                      | S3                   |
-| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage                   | Web tool (see below) |
+| Option                            | Description                                                                         | Formats               | Access               |
+| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------- | -------------------- |
+| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based) | S3                   |
+| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet            | S3                   |
+| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON          | S3                   |
+| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage       | Web tool (see below) |
 
 ## Full dataset downloads
 
