@@ -9,6 +9,7 @@ from ocr.input_datasets.base import InputDatasetConfig
 from ocr.input_datasets.tensor.usfs_dillon_2023 import Dillon2023Processor
 from ocr.input_datasets.tensor.usfs_riley_2025 import RileyEtAl2025Processor
 from ocr.input_datasets.tensor.usfs_scott_2024 import ScottEtAl2024Processor
+from ocr.input_datasets.vector.census_tiger import CensusTigerProcessor
 from ocr.input_datasets.vector.overture import OvertureProcessor
 
 app = typer.Typer(help='Ingest and process input datasets for OCR')
@@ -35,6 +36,11 @@ DATASET_REGISTRY = {
         'processor_class': OvertureProcessor,
         'type': 'vector',
         'description': 'Overture Maps building and address data for CONUS (release 2025-09-24.0)',
+    },
+    'census-tiger': {
+        'processor_class': CensusTigerProcessor,
+        'type': 'vector',
+        'description': 'US Census TIGER/Line geographic boundaries (blocks, tracts, counties)',
     },
 }
 
@@ -103,6 +109,16 @@ def process(
         '--overture-data-type',
         help='For overture-maps: which data to process (buildings, addresses, or both)',
     ),
+    census_geography_type: str = typer.Option(
+        'all',
+        '--census-geography-type',
+        help='For census-tiger: which geography to process (blocks, tracts, counties, or all)',
+    ),
+    census_subset_states: list[str] = typer.Option(
+        None,
+        '--census-subset-states',
+        help='For census-tiger: subset of states to process (e.g., California Oregon)',
+    ),
 ):
     """Process downloaded data and upload to S3/Icechunk."""
     if dataset not in DATASET_REGISTRY:
@@ -113,19 +129,15 @@ def process(
     config = InputDatasetConfig(debug=debug)
     processor_class = DATASET_REGISTRY[dataset]['processor_class']
 
-    # Check if processor supports Coiled
-    if use_coiled and not hasattr(processor_class, 'use_coiled'):
-        console.print(
-            f'[bold yellow]Warning:[/] {dataset} does not support Coiled processing, ignoring --use-coiled flag'
-        )
-        use_coiled = False
-
     # Build processor kwargs
     processor_kwargs = {'config': config, 'dry_run': dry_run}
 
     # Add dataset-specific parameters
     if dataset == 'overture-maps':
         processor_kwargs['data_type'] = overture_data_type
+    elif dataset == 'census-tiger':
+        processor_kwargs['geography_type'] = census_geography_type
+        processor_kwargs['subset_states'] = census_subset_states
 
     processor_kwargs['use_coiled'] = use_coiled
     processor_kwargs['coiled_software'] = coiled_software
@@ -166,6 +178,16 @@ def run_all(
         '--overture-data-type',
         help='For overture-maps: which data to process (buildings, addresses, or both)',
     ),
+    census_geography_type: str = typer.Option(
+        'all',
+        '--census-geography-type',
+        help='For census-tiger: which geography to process (blocks, tracts, counties, or all)',
+    ),
+    census_subset_states: list[str] = typer.Option(
+        None,
+        '--census-subset-states',
+        help='For census-tiger: subset of states to process (e.g., California Oregon)',
+    ),
 ):
     """Run the complete pipeline: download, process, and cleanup."""
     if dataset not in DATASET_REGISTRY:
@@ -178,8 +200,12 @@ def run_all(
 
     processor_kwargs = {'config': config, 'dry_run': dry_run}
 
+    # Add dataset-specific parameters
     if dataset == 'overture-maps':
         processor_kwargs['data_type'] = overture_data_type
+    elif dataset == 'census-tiger':
+        processor_kwargs['geography_type'] = census_geography_type
+        processor_kwargs['subset_states'] = census_subset_states
 
     processor_kwargs['use_coiled'] = use_coiled
 
