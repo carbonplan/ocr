@@ -9,6 +9,7 @@ from ocr.input_datasets.base import InputDatasetConfig
 from ocr.input_datasets.tensor.usfs_dillon_2023 import Dillon2023Processor
 from ocr.input_datasets.tensor.usfs_riley_2025 import RileyEtAl2025Processor
 from ocr.input_datasets.tensor.usfs_scott_2024 import ScottEtAl2024Processor
+from ocr.input_datasets.vector.overture import OvertureProcessor
 
 app = typer.Typer(help='Ingest and process input datasets for OCR')
 
@@ -29,6 +30,11 @@ DATASET_REGISTRY = {
         'processor_class': Dillon2023Processor,
         'type': 'tensor',
         'description': 'USFS Spatial datasets of probabilistic wildfire risk components for the United States (270m) (3rd Edition) (RDS-2016-0034-3)',
+    },
+    'overture-maps': {
+        'processor_class': OvertureProcessor,
+        'type': 'vector',
+        'description': 'Overture Maps building and address data for CONUS (release 2025-09-24.0)',
     },
 }
 
@@ -88,8 +94,15 @@ def process(
     use_coiled: bool = typer.Option(
         False, '--use-coiled', help='Use Coiled for distributed processing'
     ),
-    coiled_software: str = typer.Option(..., '--software', help='Software environment to use'),
+    coiled_software: str | None = typer.Option(
+        None, '--software', help='Software environment to use (required if --use-coiled is set)'
+    ),
     debug: bool = typer.Option(False, '--debug', help='Enable debug logging'),
+    overture_data_type: str = typer.Option(
+        'both',
+        '--overture-data-type',
+        help='For overture-maps: which data to process (buildings, addresses, or both)',
+    ),
 ):
     """Process downloaded data and upload to S3/Icechunk."""
     if dataset not in DATASET_REGISTRY:
@@ -107,9 +120,17 @@ def process(
         )
         use_coiled = False
 
-    processor = processor_class(
-        config, dry_run=dry_run, use_coiled=use_coiled, coiled_software=coiled_software
-    )
+    # Build processor kwargs
+    processor_kwargs = {'config': config, 'dry_run': dry_run}
+
+    # Add dataset-specific parameters
+    if dataset == 'overture-maps':
+        processor_kwargs['data_type'] = overture_data_type
+
+    processor_kwargs['use_coiled'] = use_coiled
+    processor_kwargs['coiled_software'] = coiled_software
+
+    processor = processor_class(**processor_kwargs)
 
     console.print(
         Panel(
@@ -129,7 +150,7 @@ def process(
         console.print(f'[bold red]✗[/] Processing failed: {e}')
         raise typer.Exit(1)
     finally:
-        processor.cleanup_temp()
+        console.log('Exiting processing command.')
 
 
 @app.command()
@@ -140,6 +161,11 @@ def run_all(
         False, '--use-coiled', help='Use Coiled for distributed processing'
     ),
     debug: bool = typer.Option(False, '--debug', help='Enable debug logging'),
+    overture_data_type: str = typer.Option(
+        'both',
+        '--overture-data-type',
+        help='For overture-maps: which data to process (buildings, addresses, or both)',
+    ),
 ):
     """Run the complete pipeline: download, process, and cleanup."""
     if dataset not in DATASET_REGISTRY:
@@ -150,7 +176,14 @@ def run_all(
     config = InputDatasetConfig(debug=debug)
     processor_class = DATASET_REGISTRY[dataset]['processor_class']
 
-    processor = processor_class(config, dry_run=dry_run, use_coiled=use_coiled)
+    processor_kwargs = {'config': config, 'dry_run': dry_run}
+
+    if dataset == 'overture-maps':
+        processor_kwargs['data_type'] = overture_data_type
+
+    processor_kwargs['use_coiled'] = use_coiled
+
+    processor = processor_class(**processor_kwargs)
 
     console.print(
         Panel(
