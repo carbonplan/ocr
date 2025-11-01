@@ -227,6 +227,7 @@ jobs:
                   --region-id y8_x3 --region-id y8_x4 --region-id y8_x5 --region-id y8_x6
                   --region-id y7_x4 --region-id y7_x5 --region-id y7_x6 --region-id y7_x7 --region-id y7_x8
                   --region-id y6_x5 --region-id y6_x6 --region-id y6_x7 --region-id y6_x8 --region-id y6_x9
+                  --region-id y5_x7 --region-id y5_x8 --region-id y5_x9
                   --region-id y9_x14 --region-id y9_x15 --region-id y9_x16 --region-id y9_x17
                   --region-id y8_x14 --region-id y8_x15 --region-id y8_x16 --region-id y8_x17
                   --region-id y7_x31 --region-id y7_x32
