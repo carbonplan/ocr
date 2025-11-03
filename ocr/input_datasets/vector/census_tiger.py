@@ -13,10 +13,11 @@ from typing import ClassVar, Literal
 
 import coiled
 import geopandas as gpd
+import pandas as pd
+from tqdm import tqdm
 
 from ocr.console import console
 from ocr.input_datasets.base import BaseDatasetProcessor, InputDatasetConfig
-from ocr.utils import apply_s3_creds, install_load_extensions
 
 # FIPS codes for CONUS states + DC (excludes Alaska and Hawaii)
 FIPS_CODES: dict[str, str] = {
@@ -153,10 +154,10 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         """S3 base path for tracts (contains FIPS/ subdirectory)."""
         return f'{self.config.base_prefix}/vector/{self.dataset_name}/tracts'
 
-    @property
-    def s3_tracts_fips_prefix(self) -> str:
-        """S3 prefix for per-state tract files."""
-        return f'{self.s3_tracts_base}/FIPS'
+    # @property
+    # def s3_tracts_fips_prefix(self) -> str:
+    #     """S3 prefix for per-state tract files."""
+    #     return f'{self.s3_tracts_base}/FIPS'
 
     @property
     def s3_tracts_aggregated_key(self) -> str:
@@ -182,9 +183,6 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         dry_run: bool = False,
     ) -> None:
         """Process Census blocks for all states into a single GeoParquet file."""
-        import pandas as pd
-        from tqdm import tqdm
-
         from ocr.console import console
 
         console.log(f'Processing Census blocks (TIGER {blocks_version})...')
@@ -215,76 +213,42 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         console.log(f'Successfully wrote blocks to {output_s3_uri}')
 
     @staticmethod
-    def _process_tracts_per_state(
+    def _process_tracts(
         fips_codes: dict[str, str],
         tracts_version: str,
-        output_prefix: str,
-        dry_run: bool = False,
-    ) -> None:
-        """Process Census tracts for each state into separate GeoParquet files."""
-        from tqdm import tqdm
-
-        from ocr.console import console
-
-        console.log(f'Processing Census tracts per state (TIGER {tracts_version})...')
-
-        if dry_run:
-            console.log(f'[DRY RUN] Would download tracts for {len(fips_codes)} states')
-            console.log(f'[DRY RUN] Would write per-state files to {output_prefix}/FIPS_*.parquet')
-            return
-
-        for state, fips in tqdm(fips_codes.items(), desc='Processing tracts'):
-            tract_url = f'https://www2.census.gov/geo/tiger/TIGER{tracts_version}/TRACT/tl_{tracts_version}_{fips}_tract.zip'
-            output_path = f'{output_prefix}/FIPS_{fips}.parquet'
-
-            console.log(f'Reading {state} tracts from {tract_url}')
-            gdf = gpd.read_file(tract_url)
-
-            console.log(f'Writing to {output_path}')
-            gdf.to_parquet(
-                output_path,
-                compression='zstd',
-                geometry_encoding='WKB',
-                write_covering_bbox=True,
-                schema_version='1.1.0',
-            )
-
-        console.log(f'Successfully wrote {len(fips_codes)} per-state tract files')
-
-    @staticmethod
-    def _aggregate_tracts(
-        input_glob: str,
         output_s3_uri: str,
         dry_run: bool = False,
     ) -> None:
-        """Aggregate per-state tract files into a single GeoParquet file using DuckDB."""
-        import duckdb
+        """Process Census blocks for all states into a single GeoParquet file."""
 
         from ocr.console import console
 
-        console.log('Aggregating per-state tract files...')
+        console.log(f'Processing Census tracts (TIGER {tracts_version})...')
 
         if dry_run:
-            console.log(f'[DRY RUN] Would aggregate {input_glob}')
+            console.log(f'[DRY RUN] Would download tracts for {len(fips_codes)} states')
             console.log(f'[DRY RUN] Would write to {output_s3_uri}')
             return
 
-        install_load_extensions()
-        apply_s3_creds()
+        gdfs = []
+        for state, fips in tqdm(fips_codes.items(), desc='Processing tracts'):
+            tract_url = f'https://www2.census.gov/geo/tiger/TIGER{tracts_version}/TRACT/tl_{tracts_version}_{fips}_tract.zip'
+            console.log(f'Reading {state} tracts from {tract_url}')
+            gdf = gpd.read_file(tract_url)
+            gdfs.append(gdf)
 
-        console.log(f'Aggregating {input_glob} -> {output_s3_uri}')
-        duckdb.query(
-            f"""
-            COPY (
-                SELECT * FROM read_parquet('{input_glob}')
-            ) TO '{output_s3_uri}' (
-                FORMAT 'parquet',
-                COMPRESSION 'zstd',
-                OVERWRITE_OR_IGNORE true
-            )
-            """
+        console.log('Combining all tracts into single GeoDataFrame.')
+        combined_gdf = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True))
+
+        console.log(f'Writing {len(combined_gdf)} tracts to {output_s3_uri}')
+        combined_gdf.to_parquet(
+            output_s3_uri,
+            compression='zstd',
+            geometry_encoding='WKB',
+            write_covering_bbox=True,
+            schema_version='1.1.0',
         )
-        console.log('Successfully aggregated tracts')
+        console.log(f'Successfully wrote tracts to {output_s3_uri}')
 
     @staticmethod
     def _process_counties(
@@ -361,7 +325,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
                     self._process_tracts_per_state,
                     fips_codes=fips_codes,
                     tracts_version=self.version,
-                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_fips_prefix}',
+                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}',
                     dry_run=self.dry_run,
                 )
                 future.result()
@@ -369,7 +333,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
                 self._process_tracts_per_state(
                     fips_codes=fips_codes,
                     tracts_version=self.version,
-                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_fips_prefix}',
+                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}',
                     dry_run=self.dry_run,
                 )
 
@@ -378,7 +342,7 @@ class CensusTigerProcessor(BaseDatasetProcessor):
                 console.log('Submitting tract aggregation to Coiled cluster...')
                 future = client.submit(
                     self._aggregate_tracts,
-                    input_glob=f's3://{self.config.s3_bucket}/{self.s3_tracts_fips_prefix}/*.parquet',
+                    input_glob=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}/*.parquet',
                     output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_aggregated_key}',
                     dry_run=self.dry_run,
                 )
