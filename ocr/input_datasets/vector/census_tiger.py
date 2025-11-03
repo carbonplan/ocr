@@ -150,19 +150,9 @@ class CensusTigerProcessor(BaseDatasetProcessor):
         return f'{self.config.base_prefix}/vector/{self.dataset_name}/blocks/blocks.parquet'
 
     @property
-    def s3_tracts_base(self) -> str:
-        """S3 base path for tracts (contains FIPS/ subdirectory)."""
-        return f'{self.config.base_prefix}/vector/{self.dataset_name}/tracts'
-
-    # @property
-    # def s3_tracts_fips_prefix(self) -> str:
-    #     """S3 prefix for per-state tract files."""
-    #     return f'{self.s3_tracts_base}/FIPS'
-
-    @property
-    def s3_tracts_aggregated_key(self) -> str:
-        """S3 key for aggregated tracts parquet file."""
-        return f'{self.s3_tracts_base}/tracts.parquet'
+    def s3_tracts_key(self) -> str:
+        """S3 base path for tracts parquet file."""
+        return f'{self.config.base_prefix}/vector/{self.dataset_name}/tracts/tracts.parquet'
 
     @property
     def s3_counties_key(self) -> str:
@@ -319,38 +309,18 @@ class CensusTigerProcessor(BaseDatasetProcessor):
 
         if self.geography_type in ('tracts', 'all'):
             if client:
-                console.log('Submitting tract processing to Coiled cluster...')
-                # Step 1: Process per-state tract files
+                console.log('Submitting tracts processing to Coiled cluster...')
                 future = client.submit(
-                    self._process_tracts_per_state,
-                    fips_codes=fips_codes,
-                    tracts_version=self.version,
-                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}',
+                    self._process_tracts,
+                    counties_version=self.version,
+                    output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_key}',
                     dry_run=self.dry_run,
                 )
                 future.result()
             else:
-                self._process_tracts_per_state(
-                    fips_codes=fips_codes,
-                    tracts_version=self.version,
-                    output_prefix=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}',
-                    dry_run=self.dry_run,
-                )
-
-            # Step 2: Aggregate all tract files
-            if client:
-                console.log('Submitting tract aggregation to Coiled cluster...')
-                future = client.submit(
-                    self._aggregate_tracts,
-                    input_glob=f's3://{self.config.s3_bucket}/{self.s3_tracts_base}/*.parquet',
-                    output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_aggregated_key}',
-                    dry_run=self.dry_run,
-                )
-                future.result()
-            else:
-                self._aggregate_tracts(
-                    input_glob=f's3://{self.config.s3_bucket}/{self.s3_tracts_fips_prefix}/*.parquet',
-                    output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_aggregated_key}',
+                self._process_tracts(
+                    counties_version=self.version,
+                    output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_key}',
                     dry_run=self.dry_run,
                 )
 
