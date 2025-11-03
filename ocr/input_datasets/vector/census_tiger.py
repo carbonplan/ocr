@@ -312,14 +312,14 @@ class CensusTigerProcessor(BaseDatasetProcessor):
                 console.log('Submitting tracts processing to Coiled cluster...')
                 future = client.submit(
                     self._process_tracts,
-                    counties_version=self.version,
+                    tracts_version=self.version,
                     output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_key}',
                     dry_run=self.dry_run,
                 )
                 future.result()
             else:
                 self._process_tracts(
-                    counties_version=self.version,
+                    tracts_version=self.version,
                     output_s3_uri=f's3://{self.config.s3_bucket}/{self.s3_tracts_key}',
                     dry_run=self.dry_run,
                 )
