@@ -626,6 +626,14 @@ datasets = [
         prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk',
         data_format='zarr',
     ),
+    # Validation datasets (nan-count per region)
+    Dataset(
+        name='ocr-adjusted-wind-fire-risk-nan-counts-per-region',
+        description='Count of NaN values per region in the OCR Adjusted Wind Fire Risk dataset. Used for validation purposes.',
+        bucket='carbonplan-ocr',
+        prefix='evaluation/conus-wide-nan-count-per-region-v0.9.0.zarr',
+        data_format='zarr',
+    ),
 ]
 
 

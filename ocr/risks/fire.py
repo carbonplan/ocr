@@ -488,8 +488,9 @@ def calculate_wind_adjusted_risk(
     *,
     x_slice: slice,
     y_slice: slice,
+    region_id: str | None = None,
     buffer: float = 0.15,
-    validate: bool = True,
+    validate: bool = False,
 ) -> xr.Dataset:
     """Calculate wind-adjusted fire risk using climate run and wildfire risk datasets.
 
@@ -499,13 +500,16 @@ def calculate_wind_adjusted_risk(
         Slice object for selecting longitude range.
     y_slice : slice
         Slice object for selecting latitude range.
+    region_id : str, optional
+        Region identifier for validation against benchmark NaN counts.
+        Required if validate=True.
     buffer : float, optional
         Buffer size in degrees to add around the region for edge effect handling (default 0.15).
         For 30m EPSG:4326 data, 0.15 degrees ≈ 16.7 km ≈ 540 pixels.
         This buffer ensures neighborhood operations (convolution, Gaussian smoothing) have
         adequate context at boundaries.
     validate : bool, optional
-        Whether to validate that data has proper coverage using Scott et al. 2024 as benchmark.
+        Whether to validate that data has proper coverage using precomputed benchmark.
 
     Returns
     -------
@@ -515,8 +519,12 @@ def calculate_wind_adjusted_risk(
     Raises
     ------
     ValueError
-        If data coverage validation fails for any variable.
+        If data coverage validation fails for any variable or if region_id is not provided when validate=True.
     """
+
+    if validate:
+        if region_id is None:
+            raise ValueError('region_id must be provided when validate=True')
 
     buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
     buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
@@ -627,12 +635,15 @@ def calculate_wind_adjusted_risk(
         fire_risk['burn_probability_usfs_2047'] = riley_2047_30m_4326_subset['BP']
 
     if validate:
-        # Ensure benchmark data is properly aligned
-        rps_30_subset_bp = rps_30_subset['BP']
+        benchmark = (
+            catalog.get_dataset('ocr-adjusted-wind-fire-risk-nan-counts-per-region')
+            .to_xarray()
+            .sel(region_id=region_id)
+        )
 
         console.print(
             Panel(
-                '[bold cyan]Starting data coverage validation[/bold cyan]',
+                f'[bold cyan]Starting data coverage validation for region {region_id}[/bold cyan]',
                 border_style='cyan',
                 expand=False,
             )
@@ -644,7 +655,7 @@ def calculate_wind_adjusted_risk(
         for variable in variables_to_validate:
             console.print(f'\n[bold]Validating variable: {variable}[/bold]')
             results[variable] = validate_data_coverage(
-                fire_risk[variable], scott=rps_30_subset_bp, visualize=False
+                fire_risk[variable], benchmark=benchmark, variable_name=variable, visualize=False
             )
 
         # Create summary table
@@ -653,8 +664,8 @@ def calculate_wind_adjusted_risk(
         )
         summary_table.add_column('Variable', style='cyan')
         summary_table.add_column('Status', justify='center')
-        summary_table.add_column('Domain Strategy', style='dim')
-        summary_table.add_column('Missing Count', justify='right', style='magenta')
+        summary_table.add_column('Expected NaNs', justify='right', style='dim')
+        summary_table.add_column('Actual NaNs', justify='right', style='magenta')
         summary_table.add_column('Total Pixels', justify='right', style='dim')
 
         for var_name, result in results.items():
@@ -663,8 +674,8 @@ def calculate_wind_adjusted_risk(
             summary_table.add_row(
                 var_name,
                 f'{status_style}{status}[/{status_style.strip("[]")}]',
-                result['domain_strategy'],
-                f'{result["missing_count"]:,}',
+                f'{result["expected_nans"]:,}',
+                f'{result["actual_nans"]:,}',
                 f'{result["total_pixels"]:,}',
             )
 
@@ -898,18 +909,22 @@ def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
 def validate_data_coverage(
     data_to_validate: xr.DataArray,
     *,
-    scott: xr.DataArray,
+    benchmark: xr.Dataset,
+    variable_name: str,
     visualize: bool = True,
 ) -> dict:
     """
-    Validate that data has proper coverage using Scott RPS as benchmark.
+    Validate that data has proper NaN coverage using precomputed benchmark.
 
     Parameters
     ----------
     data_to_validate : xr.DataArray
         The data array to validate for NaN coverage
-    scott : xr.DataArray
-        Scott et al. benchmark RPS data
+    benchmark : xr.Dataset
+        Precomputed benchmark dataset containing expected NaN counts per variable.
+        Should have variables matching variable_name with NaN counts and total_cells.
+    variable_name : str
+        Name of the variable being validated (e.g., 'wind_risk_2011', 'wind_risk_2047')
     visualize : bool, default=True
         Whether to show visualization if validation fails
 
@@ -918,288 +933,196 @@ def validate_data_coverage(
     dict
         Validation results with keys:
         - 'passed': bool
-        - 'domain_strategy': str ('nan' or 'zero')
-        - 'missing_count': int
+        - 'expected_nans': int
+        - 'actual_nans': int
         - 'total_pixels': int
-        - 'scott_valid_pixels': int (if nan strategy)
     """
+    # Extract expected values from benchmark
+    if variable_name not in benchmark:
+        raise ValueError(f"Variable '{variable_name}' not found in benchmark dataset")
 
-    has_nans = scott.isnull()
-    is_zero = scott == 0
-
-    total_pixels = scott.size
-    nan_pixels = has_nans.sum().values
-    zero_pixels = is_zero.sum().values
-    valid_pixels = ((~has_nans) & (~is_zero)).sum().values
+    expected_nan_count = int(benchmark[variable_name].values)
+    total_cells = int(benchmark['total_cells'].values)
 
     # Create benchmark statistics table
     benchmark_table = Table(
-        title=f'Benchmark: Scott {scott.name}', show_header=True, header_style='bold cyan'
+        title=f'Benchmark for {variable_name}', show_header=True, header_style='bold cyan'
     )
     benchmark_table.add_column('Metric', style='dim')
-    benchmark_table.add_column('Count', justify='right', style='magenta')
-    benchmark_table.add_column('Percentage', justify='right', style='cyan')
+    benchmark_table.add_column('Value', justify='right', style='magenta')
 
-    benchmark_table.add_row('Total pixels', f'{total_pixels:,}', '100.0%')
+    benchmark_table.add_row('Expected NaN count', f'{expected_nan_count:,}')
+    benchmark_table.add_row('Total cells', f'{total_cells:,}')
     benchmark_table.add_row(
-        'NaN pixels', f'{nan_pixels:,}', f'{nan_pixels / total_pixels * 100:.2f}%'
-    )
-    benchmark_table.add_row(
-        'Zero pixels', f'{zero_pixels:,}', f'{zero_pixels / total_pixels * 100:.2f}%'
-    )
-    benchmark_table.add_row(
-        'Valid pixels', f'{valid_pixels:,}', f'{valid_pixels / total_pixels * 100:.2f}%'
+        'Expected NaN ratio',
+        f'{expected_nan_count / total_cells * 100:.4f}%' if total_cells > 0 else 'N/A',
     )
 
     console.print(benchmark_table)
 
-    # Determine domain strategy
-    if nan_pixels > 0:
-        strategy_msg = (
-            '→ Using [bold cyan]NaN-based domain[/bold cyan] (NaNs mark areas outside domain)'
-        )
-        domain_strategy = 'nan'
-    else:
-        strategy_msg = '→ Using [bold cyan]zero-based domain[/bold cyan] (no NaNs in Scott; zeros mark areas outside domain)'
-        domain_strategy = 'zero'
-
-    console.print(Panel(strategy_msg, border_style='cyan', expand=False))
-
-    # Validate data
+    # Validate actual data
     data_nans = data_to_validate.isnull()
-    data_nan_count = data_nans.sum().values
+    actual_nan_count = int(data_nans.sum().values)
+    actual_total_pixels = data_to_validate.size
 
     # Create data statistics table
     data_table = Table(
-        title=f'Data: {data_to_validate.name}', show_header=True, header_style='bold yellow'
+        title=f'Actual Data: {data_to_validate.name or variable_name}',
+        show_header=True,
+        header_style='bold yellow',
     )
     data_table.add_column('Metric', style='dim')
     data_table.add_column('Value', justify='right', style='magenta')
 
     data_table.add_row('Shape', str(data_to_validate.shape))
-    data_table.add_row('Total pixels', f'{data_to_validate.size:,}')
-    data_table.add_row('NaN pixels', f'{data_nan_count:,}')
+    data_table.add_row('Total pixels', f'{actual_total_pixels:,}')
+    data_table.add_row('Actual NaN count', f'{actual_nan_count:,}')
+    data_table.add_row(
+        'Actual NaN ratio',
+        f'{actual_nan_count / actual_total_pixels * 100:.4f}%'
+        if actual_total_pixels > 0
+        else 'N/A',
+    )
 
     console.print(data_table)
 
-    # Perform validation based on strategy
-    if domain_strategy == 'nan':
-        scott_domain_mask = ~has_nans
-        data_missing_in_domain = data_nans & scott_domain_mask
-        missing_count = data_missing_in_domain.sum().values
-        scott_valid = scott_domain_mask.sum().values
-
-        # Create validation results table
-        validation_table = Table(
-            title='Validation Results (NaN-based domain)',
-            show_header=True,
-            header_style='bold green',
+    # Perform validation
+    # Check if total pixels match
+    if actual_total_pixels != total_cells:
+        console.print(
+            Panel(
+                f'[bold yellow]WARNING[/bold yellow]: Total pixel mismatch\n'
+                f'Expected: {total_cells:,}\nActual: {actual_total_pixels:,}',
+                border_style='yellow',
+                expand=False,
+            )
         )
-        validation_table.add_column('Metric', style='dim')
-        validation_table.add_column('Count', justify='right', style='magenta')
-        validation_table.add_column('Percentage', justify='right', style='cyan')
 
+    # Main validation: compare NaN counts
+    passed = actual_nan_count == expected_nan_count
+
+    # Create validation results table
+    validation_table = Table(
+        title='Validation Results',
+        show_header=True,
+        header_style='bold green' if passed else 'bold red',
+    )
+    validation_table.add_column('Metric', style='dim')
+    validation_table.add_column('Expected', justify='right', style='cyan')
+    validation_table.add_column('Actual', justify='right', style='magenta')
+    validation_table.add_column('Match', justify='center')
+
+    validation_table.add_row(
+        'NaN count',
+        f'{expected_nan_count:,}',
+        f'{actual_nan_count:,}',
+        '✅' if passed else '❌',
+    )
+
+    if expected_nan_count > 0 or actual_nan_count > 0:
+        expected_ratio = expected_nan_count / total_cells * 100 if total_cells > 0 else 0
+        actual_ratio = (
+            actual_nan_count / actual_total_pixels * 100 if actual_total_pixels > 0 else 0
+        )
         validation_table.add_row(
-            'Scott valid domain pixels',
-            f'{scott_valid:,}',
-            f'{scott_valid / total_pixels * 100:.2f}%',
-        )
-        validation_table.add_row(
-            "Data NaN pixels within Scott's valid domain",
-            f'{missing_count:,}',
-            f'{missing_count / scott_valid * 100:.4f}%' if scott_valid > 0 else 'N/A',
+            'NaN ratio (%)',
+            f'{expected_ratio:.4f}',
+            f'{actual_ratio:.4f}',
+            '✅' if abs(expected_ratio - actual_ratio) < 0.001 else '❌',
         )
 
-        console.print(validation_table)
+    console.print(validation_table)
 
-        passed = missing_count == 0
+    if passed:
+        result_msg = (
+            f'✅ [bold green]PASS[/bold green]: NaN count matches benchmark exactly\n'
+            f'Expected: {expected_nan_count:,} | Actual: {actual_nan_count:,}'
+        )
+    else:
+        diff = actual_nan_count - expected_nan_count
+        result_msg = (
+            f'❌ [bold red]FAIL[/bold red]: NaN count mismatch\n'
+            f'Expected: {expected_nan_count:,}\n'
+            f'Actual: {actual_nan_count:,}\n'
+            f'Difference: {diff:+,} ({"more" if diff > 0 else "fewer"} NaNs than expected)'
+        )
 
-        if passed:
-            result_msg = (
-                '✅ [bold green]PASS[/bold green]: Data has valid values everywhere in Scott domain'
-            )
-        else:
-            result_msg = f'❌ [bold red]FAIL[/bold red]: Data has {missing_count:,} NaN pixels where Scott has valid data\n→ These pixels should have valid values, not NaN'
+    console.print(Panel(result_msg, border_style='green' if passed else 'red', expand=True))
 
-        console.print(Panel(result_msg, border_style='green' if passed else 'red', expand=True))
+    # Visualize if requested and validation failed
+    if not passed and visualize:
+        import matplotlib.pyplot as plt
 
-        # Visualize if requested
-        if not passed and visualize:
-            import matplotlib.pyplot as plt
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        fig.suptitle(
+            f'NaN Coverage Validation Failed: {data_to_validate.name or variable_name}\n'
+            f'Expected: {expected_nan_count:,} NaNs | Actual: {actual_nan_count:,} NaNs | '
+            f'Difference: {actual_nan_count - expected_nan_count:+,}',
+            fontsize=13,
+            fontweight='bold',
+            color='darkred',
+        )
 
-            # Create a more informative 4-panel figure
-            fig, axes = plt.subplots(2, 2, figsize=(16, 14))
-            fig.suptitle(
-                f'Data Coverage Validation Failed: {data_to_validate.name}\n'
-                f'{missing_count:,} NaN pixels found in valid domain ({missing_count / scott_valid * 100:.2f}%)',
-                fontsize=14,
-                fontweight='bold',
-                color='darkred',
-            )
+        # Panel 1: Data values (masked where NaN)
+        data_values_masked = data_to_validate.values.copy()
+        data_values_masked[data_nans.values] = np.nan
+        im0 = axes[0].imshow(data_values_masked, cmap='YlOrRd', interpolation='nearest')
+        axes[0].set_title(
+            f'Data Values\n{actual_total_pixels - actual_nan_count:,} valid pixels',
+            fontsize=11,
+            fontweight='bold',
+        )
+        axes[0].set_xlabel('Longitude (pixels)')
+        axes[0].set_ylabel('Latitude (pixels)')
+        cbar0 = plt.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
+        cbar0.set_label(str(data_to_validate.name or variable_name), rotation=270, labelpad=15)
 
-            # Panel 1: Scott benchmark data (actual values)
-            im0 = axes[0, 0].imshow(scott.values, cmap='YlOrRd', interpolation='nearest')
-            axes[0, 0].set_title(
-                'Scott Benchmark Data (BP)\nDomain mask reference',
-                fontsize=11,
-                fontweight='bold',
-            )
-            axes[0, 0].set_xlabel('Longitude (pixels)')
-            axes[0, 0].set_ylabel('Latitude (pixels)')
-            cbar0 = plt.colorbar(im0, ax=axes[0, 0], fraction=0.046, pad=0.04)
-            cbar0.set_label('Burn Probability', rotation=270, labelpad=15)
+        # Panel 2: NaN mask
+        axes[1].imshow(data_nans.values, cmap='RdYlGn_r', interpolation='nearest', vmin=0, vmax=1)
+        axes[1].set_title(
+            f'NaN Mask\n{actual_nan_count:,} NaN pixels (expected {expected_nan_count:,})',
+            fontsize=11,
+            fontweight='bold',
+        )
+        axes[1].set_xlabel('Longitude (pixels)')
+        axes[1].set_ylabel('Latitude (pixels)')
+        axes[1].text(
+            0.5,
+            -0.12,
+            'Red = NaN | Green = Valid',
+            transform=axes[1].transAxes,
+            ha='center',
+            fontsize=9,
+            style='italic',
+        )
 
-            # Panel 2: Scott valid domain mask
-            axes[0, 1].imshow(
-                scott_domain_mask, cmap='RdYlGn', interpolation='nearest', vmin=0, vmax=1
-            )
-            axes[0, 1].set_title(
-                f'Scott Valid Domain Mask\n{scott_valid:,} valid pixels ({scott_valid / total_pixels * 100:.1f}%)',
-                fontsize=11,
-                fontweight='bold',
-            )
-            axes[0, 1].set_xlabel('Longitude (pixels)')
-            axes[0, 1].set_ylabel('Latitude (pixels)')
-            axes[0, 1].text(
-                0.5,
-                -0.15,
-                'Green = Valid domain where data MUST exist\nRed = Outside domain (NaN expected)',
-                transform=axes[0, 1].transAxes,
-                ha='center',
-                fontsize=9,
-                style='italic',
-            )
+        plt.tight_layout()
+        plt.show()
 
-            # Panel 3: Data being validated (actual values where not NaN)
-            data_values_masked = data_to_validate.values.copy()
-            data_values_masked[data_nans.values] = np.nan
-            im2 = axes[1, 0].imshow(data_values_masked, cmap='YlOrRd', interpolation='nearest')
-            axes[1, 0].set_title(
-                f'Data: {data_to_validate.name}\n{data_to_validate.size - data_nan_count:,} valid pixels',
-                fontsize=11,
-                fontweight='bold',
-            )
-            axes[1, 0].set_xlabel('Longitude (pixels)')
-            axes[1, 0].set_ylabel('Latitude (pixels)')
-            cbar2 = plt.colorbar(im2, ax=axes[1, 0], fraction=0.046, pad=0.04)
-            cbar2.set_label(str(data_to_validate.name or 'Value'), rotation=270, labelpad=15)
-
-            # Panel 4: Missing data in valid domain (the problem!)
-            # Create RGB image for better visualization
-            missing_rgb = np.zeros((*data_missing_in_domain.shape, 3))
-            # Red for missing in domain
-            missing_rgb[data_missing_in_domain.values, 0] = 1.0
-            # Green for valid data in domain
-            valid_in_domain = scott_domain_mask.values & ~data_nans.values
-            missing_rgb[valid_in_domain, 1] = 0.5
-            # Gray for outside domain
-            outside_domain = ~scott_domain_mask.values
-            missing_rgb[outside_domain] = [0.7, 0.7, 0.7]
-
-            axes[1, 1].imshow(missing_rgb, interpolation='nearest')
-            axes[1, 1].set_title(
-                f'✗ Problem Areas\n{missing_count:,} pixels missing where data should exist',
-                fontsize=11,
-                fontweight='bold',
-                color='darkred',
-            )
-            axes[1, 1].set_xlabel('Longitude (pixels)')
-            axes[1, 1].set_ylabel('Latitude (pixels)')
-
-            # Add legend
-            from matplotlib.patches import Patch
-
-            legend_elements = [
-                Patch(facecolor='red', label=f'Missing in domain ({missing_count:,} pixels) ✗'),
-                Patch(
-                    facecolor='green',
-                    alpha=0.5,
-                    label=f'Valid data ({(valid_in_domain).sum():,} pixels) ✓',
-                ),
-                Patch(facecolor='gray', label='Outside domain (NaN expected)'),
-            ]
-            axes[1, 1].legend(handles=legend_elements, loc='upper right', fontsize=9)
-
-            plt.tight_layout()
-            plt.show()
-
-            # Create table for problem coordinates
-            problem_lats, problem_lons = np.where(data_missing_in_domain.values)
-            if len(problem_lats) > 0:
+        # Show sample NaN locations if there are any
+        if actual_nan_count > 0:
+            nan_lats, nan_lons = np.where(data_nans.values)
+            if len(nan_lats) > 0:
                 coord_table = Table(
-                    title='Sample coordinates where data is NaN but Scott is valid',
+                    title=f'Sample NaN locations (showing up to 10 of {actual_nan_count:,})',
                     show_header=True,
-                    header_style='bold red',
+                    header_style='bold yellow',
                 )
                 coord_table.add_column('Index', style='dim')
                 coord_table.add_column('Latitude', justify='right', style='cyan')
                 coord_table.add_column('Longitude', justify='right', style='cyan')
-                coord_table.add_column('Scott Value', justify='right', style='magenta')
 
-                for i in range(min(10, len(problem_lats))):
-                    lat_idx, lon_idx = problem_lats[i], problem_lons[i]
+                for i in range(min(10, len(nan_lats))):
+                    lat_idx, lon_idx = nan_lats[i], nan_lons[i]
                     lat = data_to_validate.latitude.values[lat_idx]
                     lon = data_to_validate.longitude.values[lon_idx]
-                    scott_val = scott.values[lat_idx, lon_idx]
-                    coord_table.add_row(str(i + 1), f'{lat:.4f}', f'{lon:.4f}', f'{scott_val:.6f}')
+                    coord_table.add_row(str(i + 1), f'{lat:.4f}', f'{lon:.4f}')
 
                 console.print(coord_table)
 
-        return {
-            'passed': passed,
-            'domain_strategy': domain_strategy,
-            'missing_count': int(missing_count),
-            'total_pixels': int(total_pixels),
-            'scott_valid_pixels': int(scott_valid),
-            'data_nan_pixels': int(data_nan_count),
-        }
-
-    else:  # zero strategy
-        # Create validation results table
-        validation_table = Table(
-            title='Validation Results (Zero-based domain)',
-            show_header=True,
-            header_style='bold green',
-        )
-        validation_table.add_column('Metric', style='dim')
-        validation_table.add_column('Count', justify='right', style='magenta')
-
-        validation_table.add_row('Data NaN pixels', f'{data_nan_count:,}')
-        validation_table.add_row('Expected NaN pixels', '0')
-
-        console.print(validation_table)
-
-        passed = data_nan_count == 0
-
-        if passed:
-            result_msg = '✅ [bold green]PASS[/bold green]: Data has zero NaN pixels (matching Scott pattern)'
-        else:
-            result_msg = f'❌ [bold red]FAIL[/bold red]: Data has {data_nan_count:,} NaN pixels\n→ Scott has no NaNs, so this data should also have no NaNs'
-
-        console.print(Panel(result_msg, border_style='green' if passed else 'red', expand=False))
-
-        if not passed and visualize:
-            import matplotlib.pyplot as plt
-
-            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-            axes[0].imshow(scott.values, cmap='viridis', interpolation='nearest')
-            axes[0].set_title('Scott (no NaNs)')
-            axes[0].set_xlabel('Longitude')
-            axes[0].set_ylabel('Latitude')
-
-            axes[1].imshow(data_nans, cmap='Reds', interpolation='nearest')
-            axes[1].set_title(f'Data NaN Locations\n({data_nan_count:,} pixels)')
-            axes[1].set_xlabel('Longitude')
-            axes[1].set_ylabel('Latitude')
-
-            plt.tight_layout()
-            plt.show()
-
-        return {
-            'passed': passed,
-            'domain_strategy': domain_strategy,
-            'missing_count': 0,
-            'total_pixels': int(total_pixels),
-            'data_nan_pixels': int(data_nan_count),
-        }
+    return {
+        'passed': passed,
+        'expected_nans': expected_nan_count,
+        'actual_nans': actual_nan_count,
+        'total_pixels': actual_total_pixels,
+    }
