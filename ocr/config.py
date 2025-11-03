@@ -844,7 +844,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     @functools.cached_property
     def region_summary_stats_prefix(self) -> UPath:
-        path = UPath(f'{self.storage_root}/{self.output_prefix}/region-summary-stats/')
+        path = UPath(f'{self.storage_root}/{self.prefix}/region-summary-stats/')
         path.mkdir(parents=True, exist_ok=True)
         return path
 
