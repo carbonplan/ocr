@@ -17,6 +17,9 @@
 [tool.setuptools.packages.find]
     include = ["ocr*"]
 
+[tool.setuptools.package-data]
+    ocr = ["data/*.json"]
+
 [tool.setuptools_scm]
     fallback_version = "999"
     local_scheme     = "node-and-date"
@@ -94,11 +97,15 @@
         "--verbose",
     ]
     console_output_style = "count"
+    markers = [
+        "integration: marks tests that require external resources or complex setups",
+        "unit: marks tests that are fast and isolated from external systems",
+    ]
 
 [tool.uv.sources]
     ocr = { workspace = true }
 
-[tool.pixi.project]
+[tool.pixi.workspace]
     channels  = ["conda-forge"]
     name      = "ocr"
     platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
@@ -117,10 +124,11 @@
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
-    format         = { cmd = "ruff format" }
-    lint           = { cmd = "pre-commit run --all-files" }
-    run-ruff-check = { cmd = "ruff check" }
-    tests          = { cmd = "pytest" }
+    format            = { cmd = "ruff format" }
+    lint              = { cmd = "pre-commit run --all-files" }
+    run-ruff-check    = { cmd = "ruff check" }
+    tests             = { cmd = "pytest -m 'not integration'" }
+    tests-integration = { cmd = "pytest -m 'integration'" }
 
 [tool.pixi.feature.docs.tasks]
     docs-build = { cmd = "mkdocs build" }
@@ -148,15 +156,22 @@
 
 # Docs feature dependencies (conda-forge)
 [tool.pixi.feature.docs.dependencies]
-    mkdocs              = ">=1.6.1,<2"
-    mkdocs-click        = ">=0.9.0,<0.10"
-    mkdocs-material     = ">=9.6.20,<10"
-    mkdocstrings        = ">=0.30.0,<0.31"
-    mkdocstrings-python = ">=1.18.2,<2"
-    ruff                = ">=0.12.12,<0.14"
+    cairosvg                    = ">=2.8.2,<3"
+    griffe-inherited-docstrings = ">=1.1.1,<2"
+    mike                        = ">=2.1.3,<3"
+    mkdocs                      = ">=1.6.1,<2"
+    mkdocs-click                = ">=0.9.0,<0.10"
+    mkdocs-jupyter              = ">=0.25.1,<0.26"
+    mkdocs-material             = ">=9.6.20,<10"
+    mkdocstrings                = ">=0.30.0,<0.31"
+    mkdocstrings-python         = ">=1.18.2,<2"
+    pillow                      = ">=11.3.0,<12"
+    ruff                        = ">=0.12.12,<0.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
-    markdown-exec = ">=1.11.0, <2"
+    markdown-exec             = ">=1.11.0, <2"
+    material-plausible-plugin = ">=0.3.0,<0.4"
+    mkdocs-panzoom-plugin     = ">=0.4.2,<0.5"
 
 [tool.pixi.feature.coiled-deploy.dependencies]
     coiled               = ">=1.120.0,<2"
@@ -167,6 +182,7 @@
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
     cartopy               = ">=0.25.0,<0.26"
+    dask                  = ">=2025.10.0,<2026"
     duckdb                = ">=1.3.2,<2"
     duckdb-cli            = ">=1.3.2,<2"
     flox                  = ">=0.10.6,<0.11"
@@ -175,9 +191,13 @@
     geopandas             = ">=1.1.1,<2"
     icechunk              = ">=1.1.5,<2"
     libgdal-arrow-parquet = ">=3.10.3,<4"
+    morecantile           = ">=6.2.0,<7"
+    numcodecs             = ">=0.16.1,<0.17"
+    obstore               = ">=0.8.2,<0.9"
     odc-geo               = ">=0.5.0rc1,<0.6"
     opencv                = ">=4.12.0,<5"
     pint-xarray           = ">=0.6.0,<0.7"
+    pooch                 = ">=1.8.2,<2"
     pyarrow               = ">=21.0.0,<22"
     pydantic              = ">=2.11.9,<3"
     pydantic-extra-types  = ">=2.10.5,<3"
@@ -186,16 +206,17 @@
     python                = "3.13.*"
     rasterio              = ">=1.4.3,<2"
     rich                  = ">=14.1.0,<15"
+    rioxarray             = ">=0.19.0,<0.20"
     s3fs                  = ">=2025.9.0,<2026"
+    seaborn               = ">=0.13.2,<0.14"
     semver                = ">=3.0.4,<4"
+    syrupy                = ">=5.0.0,<6"
     tqdm                  = ">=4.67.1,<5"
     typer                 = ">=0.17.4,<0.18"
     universal-pathlib     = ">=0.2.6,<0.3"
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
-rioxarray = ">=0.19.0,<0.20"
-seaborn = ">=0.13.2,<0.14"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
@@ -203,4 +224,3 @@ seaborn = ">=0.13.2,<0.14"
     export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
     start-coiled-notebook        = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-huge = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.16xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
