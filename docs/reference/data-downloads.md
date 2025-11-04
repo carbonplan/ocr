@@ -1,6 +1,9 @@
 # Data Downloads
 
-OCR provides a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download. Each data download is made available under the license listed below. By downloading the data, you agree to adhere to the license terms.
+OCR provides a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download. 
+
+!!! warning "License Agreement"
+Each data download is made available under the license listed below. By downloading the data, you agree to adhere to the license terms.
 
 ## Download options
 
