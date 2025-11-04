@@ -50,6 +50,22 @@ class CoiledBatchManager(AbstractBatchManager):
     job_ids: list[str] = pydantic.Field(default_factory=list)
 
     def submit_job(self, command: str, name: str, kwargs: dict[str, typing.Any]) -> str:
+        """Submit a job to Coiled batch.
+
+        Parameters
+        ----------
+        command : str
+            The command to run.
+        name : str
+            The name of the job.
+        kwargs : dict
+            Additional keyword arguments to pass to `coiled.batch.run`.
+
+        Returns
+        -------
+        job_id : str
+            The ID of the submitted job.
+        """
         if self.debug:
             console.log(f'Submitting job: {name} with command: {command} and kwargs: {kwargs}')
         batch_result = coiled.batch.run(command=command, name=name, **kwargs)
@@ -67,7 +83,7 @@ class CoiledBatchManager(AbstractBatchManager):
 
         Returns
         -------
-        tuple[set[str], set[str]]
+        completed, failed : tuple[set[str], set[str]]
             A tuple of (completed_job_ids, failed_job_ids). If ``exit_on_failure`` is True
             and a failure is encountered the method will raise before returning.
         """
@@ -174,7 +190,22 @@ class LocalBatchManager(AbstractBatchManager):
             self._executor.shutdown(wait=False)
 
     def submit_job(self, command: str, name: str, kwargs: dict[str, typing.Any]) -> str:
-        """Submit a job to run locally."""
+        """Submit a job to run locally.
+
+        Parameters
+        ----------
+        command : str
+            The command to run.
+        name : str
+            The name of the job.
+        kwargs : dict
+            Additional keyword arguments to pass to subprocess.run.
+
+        Returns
+        -------
+        job_id : str
+            The ID of the submitted job.
+        """
         job_id = str(uuid.uuid4())
         if self.debug:
             console.log(f'Submitting local job: {name} (ID: {job_id}) with command: {command}')
@@ -231,7 +262,7 @@ class LocalBatchManager(AbstractBatchManager):
 
         Returns
         -------
-        tuple[set[str], set[str]]
+        completed, failed : tuple[set[str], set[str]]
             A tuple of (completed_job_ids, failed_job_ids). If ``exit_on_failure`` is True
             and a failure is encountered the method will raise before returning.
         """

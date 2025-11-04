@@ -215,8 +215,8 @@ class TestChunkingConfig:
         assert isinstance(region_ids, list)
         assert len(region_ids) > 0
         assert all(isinstance(rid, str) for rid in region_ids)
-        assert 'y1_x3' in region_ids
-        assert 'y2_x2' in region_ids
+        assert 'y1_x21' in region_ids
+        assert 'y2_x20' in region_ids
 
     def test_index_to_coords(self):
         """Test the index_to_coords method."""
@@ -478,29 +478,11 @@ class TestVectorConfig:
         test_file1.write_text('test data')
         test_file2.write_text('test data')
 
-        config.delete_region_gpqs()
+        config.wipe()
 
         # Files should be deleted
         assert not test_file1.exists()
         assert not test_file2.exists()
-
-    def test_delete_region_gpqs_invalid_prefix(self, temp_dir):
-        """Test delete_region_gpqs with invalid prefix - but since it adds /geoparquet-regions/, this won't raise."""
-        config = VectorConfig(storage_root=temp_dir, prefix='invalid-prefix')
-
-        # This actually works because the property adds '/geoparquet-regions/' to any non-None prefix
-        config.delete_region_gpqs()  # Should not raise
-
-    def test_delete_region_gpqs_none_prefix(self, temp_dir):
-        """Test delete_region_gpqs with None prefix - actually works because property returns string."""
-        config = VectorConfig(
-            storage_root=temp_dir, prefix='test-prefix', output_prefix='test-output'
-        )
-        config.prefix = None
-
-        # This doesn't raise because region_geoparquet_prefix returns "None/geoparquet-regions/"
-        # which still contains 'geoparquet-regions', so the check passes
-        config.delete_region_gpqs()  # Should not raise
 
     def test_pretty_paths_output_and_side_effects(self, temp_dir, capsys):
         """pretty_paths should print a readable table and create expected dirs."""
@@ -521,8 +503,6 @@ class TestVectorConfig:
         assert config.region_geoparquet_uri.is_dir()
         assert config.region_summary_stats_prefix.exists()
         assert config.region_summary_stats_prefix.is_dir()
-        # pmtiles and geoparquet parents should exist
-        assert config.building_geoparquet_uri.parent.exists()
         assert config.buildings_pmtiles_uri.parent.exists()
 
 

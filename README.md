@@ -1,8 +1,8 @@
-# OCR - Open Climate Risk Platform
+# Open Climate Risk (OCR) Platform
 
-| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![E2E Tests][github-e2e-badge]][github-e2e-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
-| :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| **License** |                                                                                                                                [![License][license-badge]][repo-link]                                                                                                                                |
+| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
+| :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| **License** |                                                                                                       [![License][license-badge]][repo-link]                                                                                                       |
 
 A scalable pipeline for calculating climate risk assessments at building-level resolution across the continental United States. OCR processes wildfire and wind risk data through a distributed processing system that can run locally or on cloud infrastructure.
 
@@ -25,51 +25,6 @@ pixi install
 pixi shell
 ```
 
-### Basic Usage
-
-```bash
-# Process fire risk for a single region locally
-ocr run --region-id y10_x2 --platform local --risk-type fire
-
-# Process multiple regions on Coiled cloud infrastructure
-ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled
-
-# Process and write regional geospatial files
-ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --write-region-files
-
-# Process all available regions
-ocr run --all-region-ids --platform coiled
-```
-
-## Architecture
-
-The OCR pipeline consists of four main stages:
-
-1. **Region Processing** - Calculate risk metrics for individual geographic regions
-2. **Data Aggregation** - Combine regional geoparquet files into consolidated datasets
-3. **Statistical Summaries** - Generate county and tract-level risk statistics (optional)
-4. **Tile Generation** - Create PMTiles for web visualization
-
-### Data Flow
-
-```mermaid
-flowchart LR
-    A[Raw Climate Data] --> B[Region Processing]
-    B --> C[Data Aggregation]
-    C --> D[PMTiles]
-    C --> E[Regional Stats]
-    E --> D
-```
-
-## Command Reference
-
-### Main Commands
-
-- `ocr run` - Full pipeline orchestration
-- `ocr process-region` - Process a single region
-- `ocr aggregate` - Combine regional data
-- `ocr create-pmtiles` - Generate visualization tiles
-
 ## Development
 
 ### Running Tests
@@ -80,6 +35,9 @@ pixi run tests
 
 # Run specific test file
 pixi run pytest tests/test_datasets.py
+
+# Run integration tests
+pixi run tests-integration
 ```
 
 ### Code Quality
@@ -99,7 +57,7 @@ The project uses dotenv-style env files. Example files in the repo include [`ocr
 Important environment variables:
 
 - `OCR_STORAGE_ROOT`: S3 path or local path where output is written (e.g. `s3://your-bucket/`).
-- `OCR_ENVIRONMENT`: name of the environment (e.g. `qa`, `staging`, `prod`).
+- `OCR_ENVIRONMENT`: name of the environment (e.g. `qa`, `staging`, `production`).
 - `OCR_DEBUG`: set to `1` to enable more verbose logging for local troubleshooting.
 
 Start a dev shell with the project environment (we use `pixi`):
@@ -109,44 +67,9 @@ pixi shell
 ```
 
 ```bash
-# 1. Test single region processing
-ocr process-region y10_x2 --risk-type fire --env-file .env
-
-# 2. Run minimal pipeline locally
+Run minimal pipeline locally
 ocr run --region-id y10_x2 --platform local --env-file .env
-
-# 3. Generate tiles from existing data
-ocr create-pmtiles --env-file .env
 ```
-
-## Deployment
-
-### GitHub Actions
-
-The repository includes automated workflows for:
-
-- **CI/CD** - Run tests and quality checks on every PR
-- **Deployment** - Process regions via manual workflow dispatch
-- **Integration Tests** - End-to-end pipeline validation
-
-### Manual Deployment
-
-```bash
-# Production deployment
-ocr run
-  --all-region-ids
-  --platform local
-  --env-file production.env
-```
-
-## Data Products
-
-OCR generates several data products:
-
-- **Regional Geoparquet** - Building-level risk scores by region
-- **Consolidated Dataset** - Combined data across all regions
-- **Regional Statistics** - County and tract-level aggregations
-- **PMTiles** - Vector tiles for web visualization
 
 ## Contributing
 
@@ -159,7 +82,7 @@ We welcome contributions! Please see our [contributing guide](./contributing.md)
 
 ## Support
 
-- **Documentation** - [Full documentation](https://carbonplan-ocr.readthedocs.io) (coming soon)
+- **Documentation** - [Full documentation](https://carbonplan-ocr.readthedocs.io)
 - **Issues** - Report bugs or request features via [GitHub Issues](https://github.com/carbonplan/ocr/issues)
 - **Discussions** - Join the conversation in [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
 
@@ -171,8 +94,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [github-ci-link]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml
 [github-deploy-badge]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml/badge.svg
 [github-deploy-link]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml
-[github-e2e-badge]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml/badge.svg
-[github-e2e-link]: https://github.com/carbonplan/ocr/actions/workflows/integration-tests.yaml
 [codecov-badge]: https://img.shields.io/codecov/c/github/carbonplan/ocr.svg?logo=codecov
 [codecov-link]: https://codecov.io/gh/carbonplan/ocr
 [license-badge]: https://img.shields.io/github/license/carbonplan/ocr

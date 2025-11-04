@@ -4,6 +4,7 @@ import pytest
 import xarray as xr
 
 from ocr import conus404
+from ocr.utils import geo_sel
 
 # ------------------ Helpers ------------------ #
 
@@ -126,7 +127,7 @@ def _make_geo_dataset():
 def test_geo_sel_point():
     ds = _make_geo_dataset()
     # Choose point near first grid cell
-    out = conus404.geo_sel(ds, lon=-119.2, lat=35.2, method='nearest')
+    out = geo_sel(ds, lon=-119.2, lat=35.2, method='nearest')
     assert 'dummy' in out
     assert out.dims.get('x') is None and out.dims.get('y') is None  # reduced to scalars
     assert out.attrs['requested_lon'] == -119.2
@@ -136,17 +137,17 @@ def test_geo_sel_point():
 def test_geo_sel_bbox():
     ds = _make_geo_dataset()
     # Bbox that spans entire domain
-    out = conus404.geo_sel(ds, bbox=(-121.0, 34.5, -118.5, 36.5))
+    out = geo_sel(ds, bbox=(-121.0, 34.5, -118.5, 36.5))
     assert out.dims['x'] == 2 and out.dims['y'] == 2
 
 
 def test_geo_sel_invalid_conflict():
     ds = _make_geo_dataset()
     with pytest.raises(ValueError, match='Provide either bbox OR point'):
-        conus404.geo_sel(ds, lon=-119, lat=35, bbox=(-121, 34, -118, 36))
+        geo_sel(ds, lon=-119, lat=35, bbox=(-121, 34, -118, 36))
 
 
 def test_geo_sel_invalid_missing():
     ds = _make_geo_dataset()
     with pytest.raises(ValueError, match='You must supply'):
-        conus404.geo_sel(ds)
+        geo_sel(ds)

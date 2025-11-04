@@ -4,95 +4,193 @@ repo_name: carbonplan/ocr
 repo_url: https://github.com/carbonplan/ocr
 site_description: CarbonPlan's Open Climate Risk platform
 site_author: CarbonPlan
-# site_url: TODO
+site_url: https://carbonplan.github.io/ocr/
 docs_dir: docs
 
+extra:
+    analytics:
+        provider: plausible
+        domain: ocr.docs.carbonplan.org #TODO: change this when we have a domain
+        enabled: false # uncomment to disable analytics in dev builds
+        feedback:
+            title: Was this page helpful?
+            ratings:
+                - icon: material/emoticon-happy-outline
+                  name: This page was helpful
+                  data: good
+                  note: Thanks for your feedback!
+
+                - icon: material/emoticon-sad-outline
+                  name: This page could be improved
+                  data: bad
+                  note: Thanks for your feedback!
+    social:
+        - icon: "fontawesome/brands/github"
+          link: "https://github.com/carbonplan"
+        - icon: "fontawesome/brands/bluesky"
+          link: "https://bsky.app/profile/carbonplan.org"
+        - icon: "fontawesome/brands/linkedin"
+          link: "https://www.linkedin.com/company/carbonplan"
+    version:
+        provider: mike
+
+extra_javascript:
+    - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+    - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 nav:
-  - Home: index.md
-  - Getting Started:
-      - How-to: how-to/installation.md
-  - Tutorials:
-      - Data Pipeline: tutorials/data-pipeline.md
-  - Reference:
-      - API: reference/api.md
-      - Project Structure: reference/project-structure.md
-      - Deployment: reference/deployment.md
-  - Explanations:
-      - Input Datasets: explanations/input-datasets.md
-      - Fire Risk: explanations/fire-risk.md
+    - Home: index.md
+    - How-to Guides:
+          - User Guides:
+                - Getting Started: how-to/getting-started.md
+                - Working with Data: how-to/work-with-data.ipynb
+          - Developer Guides:
+                - Installation: how-to/installation.md
+                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
+                - Release Procedure: how-to/release-procedure.md
+                - Snapshot Testing: how-to/snapshot-testing.md
+
+    - Methods:
+          - Fire Risk:
+                - Overview: methods/fire-risk/overview.md
+                - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
+                - Implementation: methods/fire-risk/implementation.ipynb
+                - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
+                - Caveats & Limitations: methods/fire-risk/limitations.md
+                - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+
+    - Tutorials:
+          - Data Pipeline: tutorials/data-pipeline.md
+          - Calculate Wind-Adjusted Fire Risk: tutorials/calculate-wind-adjusted-fire-risk-for-a-region.ipynb
+
+    - Reference:
+          - API: reference/api.md
+          - Project Structure: reference/project-structure.md
+          - Deployment: reference/deployment.md
+          - Data Schema: reference/data-schema.md
+          - Data Downloads: reference/data-downloads.md
 
 theme:
-  language: en
-  name: material
-  logo: assets/monogram-dark-cropped.png
-  palette:
-    # Palette toggle for light mode
-    - media: "(prefers-color-scheme: light)"
-      primary: default-dark
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
+    language: en
+    name: material
+    logo: assets/monogram-dark-cropped.png
+    palette:
+        # Palette toggle for light mode
+        - media: "(prefers-color-scheme: light)"
+          primary: default-dark
+          toggle:
+              icon: material/brightness-7
+              name: Switch to dark mode
 
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: default-dark
-      toggle:
-        icon: material/brightness-4
-        name: Switch to system preference
+        - media: "(prefers-color-scheme: dark)"
+          scheme: slate
+          primary: default-dark
+          toggle:
+              icon: material/brightness-4
+              name: Switch to system preference
 
-  font:
-    text: Roboto
-    code: Roboto Mono
+    font:
+        text: Roboto
+        code: Roboto Mono
 
-  features:
-    - content.code.annotate
-    - content.code.copy
-    - navigation.indexes
-    - navigation.instant
-    - navigation.tracking
-    - search.suggest
-    - search.share
+    features:
+        - content.code.annotate
+        - content.code.copy
+        - navigation.indexes
+        - navigation.instant
+        - navigation.tracking
+        - search.suggest
+        - search.share
 
 plugins:
-  - search
-  - markdown-exec
-  - mkdocstrings:
-      enable_inventory: true
-      handlers:
-        python:
-          paths: [ocr]
-          options:
-            show_if_no_docstring: false
+    - search
+    - markdown-exec
+    - social
+    - material-plausible
+    - panzoom:
+          always_show_hint: true
+          full_screen: True
+    - mike:
+          alias_type: "copy"
+          canonical_version: "latest"
+    - mkdocs-jupyter:
+          include_source: true
+          ignore: ["*.py", "**/.ipynb_checkpoints/*.ipynb"]
+          enabled: true
+          execute: false
+    - mkdocstrings:
+          enable_inventory: true
+          handlers:
+              python:
+                  paths: [ocr]
+                  options:
+                      show_if_no_docstring: false
+                      show_root_members_full_path: false
+                      merge_init_into_class: true
+                      show_labels: true
+                      allow_inspection: false
+                      docstring_style: numpy
+                      docstring_section_style: list
+                      line_length: 80
+                      separate_signature: true
+                      show_root_heading: true
+                      show_signature_annotations: true
+                      show_source: false
+                      show_symbol_type_toc: true
+                      signature_crossrefs: true
+                      group_by_category: true
+                      show_category_heading: true
+                      heading_level: 2
+                      extensions:
+                          - griffe_inherited_docstrings
 
-            show_root_members_full_path: false
-            merge_init_into_class: true
-            show_labels: true
-            allow_inspection: false
-            docstring_style: numpy
-            docstring_section_style: list
-            line_length: 80
-            separate_signature: true
-            show_root_heading: true
-            show_signature_annotations: true
-            show_source: false
-            show_symbol_type_toc: true
-            signature_crossrefs: true
-            group_by_category: true
-            show_category_heading: true
-            heading_level: 2
-
-          inventories:
-            - https://docs.python.org/3/objects.inv
+                  inventories:
+                      - https://docs.python.org/3/objects.inv
+                      - https://geopandas.org/en/stable/objects.inv
+                      - https://numpy.org/doc/stable/objects.inv
+                      - https://pandas.pydata.org/pandas-docs/stable/objects.inv
+                      - https://docs.xarray.dev/en/stable/objects.inv
+                      - https://icechunk.io/en/stable/objects.inv
 
 markdown_extensions:
-  - mkdocs-click
-  - pymdownx.highlight:
-      anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+    - admonition
+    - attr_list
+    - mkdocs-click
+    - codehilite:
+          guess_lang: false
+    - def_list
+    - footnotes
+    - md_in_html
+    - pymdownx.arithmatex:
+          generic: true
+    - pymdownx.betterem
+    - pymdownx.caret:
+          insert: false
+    - pymdownx.details
+    - pymdownx.emoji:
+          emoji_index: !!python/name:material.extensions.emoji.twemoji
+          emoji_generator: !!python/name:material.extensions.emoji.to_svg
+    - pymdownx.highlight:
+          anchor_linenums: true
+          line_spans: __span
+          pygments_lang_class: true
+    - pymdownx.escapeall:
+          hardbreak: true
+          nbsp: true
+    - pymdownx.magiclink:
+          hide_protocol: true
+          repo_url_shortener: true
+    - pymdownx.smartsymbols
+    - pymdownx.superfences:
+          custom_fences:
+              - name: mermaid
+                class: mermaid
+                format: !!python/name:pymdownx.superfences.fence_code_format
+    - pymdownx.tabbed:
+          alternate_style: true
+    - pymdownx.tasklist:
+          custom_checkbox: true
+    - pymdownx.tilde
 
-  - toc:
-      permalink: true
+    - toc:
+          permalink: true

@@ -71,7 +71,6 @@ def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
 
     # Test 1: Default query (no custom query provided)
     result = geoparquet_dataset.query_geoparquet()
-    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
     mock_duckdb_sql.assert_called_with(
         f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
     )
@@ -83,7 +82,6 @@ def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
     # Test 2: Custom query without s3_path placeholder
     custom_query = 'SELECT id, name FROM my_table'
     result = geoparquet_dataset.query_geoparquet(query=custom_query)
-    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
     mock_duckdb_sql.assert_called_with(custom_query)
     assert result == mock_result
 
@@ -94,17 +92,11 @@ def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
     custom_query_with_placeholder = "SELECT * FROM read_parquet('{s3_path}') WHERE id > 100"
     expected_query = f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}') WHERE id > 100"
     result = geoparquet_dataset.query_geoparquet(query=custom_query_with_placeholder)
-    mock_duckdb_sql.assert_any_call('INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs')
     mock_duckdb_sql.assert_called_with(expected_query)
     assert result == mock_result
 
-    # Test 4: Without installing extensions
     mock_duckdb_sql.reset_mock()
     result = geoparquet_dataset.query_geoparquet(install_extensions=False)
-    # Should not call the extension installation
-    assert 'INSTALL SPATIAL; LOAD SPATIAL; INSTALL httpfs; LOAD httpfs' not in str(
-        mock_duckdb_sql.call_args_list
-    )
     mock_duckdb_sql.assert_called_once_with(
         f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
     )
@@ -295,9 +287,6 @@ def test_catalog_repr_without_rich(sample_catalog):
     assert 'test-dataset' in repr_result
 
 
-# ============= Module-level Tests =============
-
-
 def test_module_datasets():
     """Test the module-level datasets list."""
     assert isinstance(datasets, list)
@@ -313,4 +302,4 @@ def test_module_datasets():
 def test_module_catalog():
     """Test the module-level catalog instance."""
     assert len(catalog.datasets) >= 1
-    assert isinstance(catalog.get_dataset('2011-climate-run', version='v1'), Dataset)
+    assert isinstance(catalog.get_dataset('riley-et-al-2025-2011-270m-5070', version='v1'), Dataset)

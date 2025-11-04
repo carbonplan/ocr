@@ -14,6 +14,14 @@ from ocr.types import Platform, RiskType
 
 app = typer.Typer(help='Run OCR deployment pipeline on Coiled')
 
+# Import and mount the input dataset CLI as a subcommand
+try:
+    from ocr.input_datasets.cli import app as ingest_app
+
+    app.add_typer(ingest_app, name='ingest-data', help='Ingest and process input datasets')
+except ImportError:
+    pass  # Gracefully handle if input_datasets module is not available
+
 
 def _resolve_env_vars(env_file: Path | None) -> dict[str, str]:
     if env_file is None:
@@ -65,11 +73,16 @@ def run(
     risk_type: RiskType = typer.Option(
         RiskType.FIRE, '-t', '--risk-type', help='Type of risk to calculate', show_default=True
     ),
-    write_region_files: bool = typer.Option(
+    write_regional_stats: bool = typer.Option(
         False,
-        '-w',
-        '--write-region-files',
-        help='Writes region aggregated geospatial analysis files (geoparquet, geojson, csv etc.)',
+        '--write-regional-stats',
+        help='Write aggregated statistical summaries for each region (one file per region type with stats like averages, medians, percentiles, and histograms)',
+        show_default=True,
+    ),
+    pyramid: bool = typer.Option(
+        False,
+        '--create-pyramid',
+        help='Create ndpyramid / multiscale zarr for web-visualization',
         show_default=True,
     ),
     platform: Platform = typer.Option(
@@ -117,8 +130,10 @@ def run(
             parts += ['--all-region-ids']
         parts += ['--risk-type', risk_type.value]
         parts += ['--platform', platform.value]
-        if write_region_files:
-            parts += ['--write-region-files']
+        if write_regional_stats:
+            parts += ['--write-regional-stats']
+        if pyramid:
+            parts += ['--create-pyramid']
         if wipe:
             parts += ['--wipe']
 
@@ -157,6 +172,7 @@ def run(
     if wipe:
         config.icechunk.wipe()
         config.vector.wipe()
+        # config.pyramid.wipe()
 
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
@@ -176,12 +192,12 @@ def run(
             region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
             remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-            batch_manager_01 = _get_manager(Platform.COILED, config.debug)
+            manager = _get_manager(Platform.COILED, config.debug)
 
             kwargs = _coiled_kwargs(config, env_file)
             # remove ntasks so we use map semantics
             kwargs.pop('ntasks', None)
-            batch_manager_01.submit_job(
+            manager.submit_job(
                 command=(
                     f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
                 ),
@@ -192,7 +208,7 @@ def run(
                     'software': COILED_SOFTWARE,
                 },
             )
-            completed, failed = batch_manager_01.wait_for_completion(exit_on_failure=False)
+            completed, failed = manager.wait_for_completion(exit_on_failure=False)
 
             if not failed:
                 break
@@ -210,11 +226,25 @@ def run(
             # small backoff
             time.sleep(5 * attempt)
 
+        # ----------- Pyramid   -------------
+        if pyramid:
+            manager = _get_manager(Platform.COILED, config.debug)
+            manager.submit_job(
+                command='ocr create-pyramid',
+                name=f'create-pyramid-{config.environment.value}',
+                kwargs={
+                    **_coiled_kwargs(config, env_file),
+                    'vm_type': 'm8g.16xlarge',
+                    'scheduler_vm_type': 'm8g.16xlarge',
+                    'software': COILED_SOFTWARE,
+                },
+            )
+
         # ----------- 02 Aggregate -------------
-        batch_manager_aggregate_02 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_aggregate_02.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
@@ -222,25 +252,24 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        batch_manager_aggregate_02.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
-        if write_region_files:
-            batch_manager_write_aggregated_region_analysis_files_01 = _get_manager(
-                Platform.COILED, config.debug
-            )
+        if write_regional_stats:
+            manager = _get_manager(Platform.COILED, config.debug)
 
-            batch_manager_write_aggregated_region_analysis_files_01.submit_job(
+            manager.submit_job(
                 command='ocr write-aggregated-region-analysis-files',
                 name=f'write-aggregated-region-analysis-files-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.2xlarge',
+                    'scheduler_vm_type': 'r8g.4xlarge',
+                    'vm_type': 'r8g.4xlarge',
                     'software': COILED_SOFTWARE,
                 },
             )
 
-        batch_manager_county_aggregation_01 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_county_aggregation_01.submit_job(
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr aggregate-region-risk-summary-stats',
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
@@ -250,11 +279,11 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        batch_manager_county_aggregation_01.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
         # create summary stats PMTiles layer
-        batch_manager_county_tiles_02 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_county_tiles_02.submit_job(
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr create-regional-pmtiles',
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
@@ -268,10 +297,10 @@ def run(
 
         # ------------- 03  Tiles ---------------
 
-        batch_manager_03 = _get_manager(Platform.COILED, config.debug)
-        batch_manager_03.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
                 'vm_type': 'c8g.8xlarge',
@@ -281,7 +310,7 @@ def run(
             },  # PMTiles creation needs more disk space
         )
 
-        batch_manager_03.wait_for_completion(exit_on_failure=True)
+        manager.wait_for_completion(exit_on_failure=True)
 
     elif platform == Platform.LOCAL:
         manager = _get_manager(Platform.LOCAL, config.debug)
@@ -300,18 +329,18 @@ def run(
             )
         manager.wait_for_completion(exit_on_failure=True)
 
-        # Aggregate geoparquet regions
+        # Partition buildings by geography
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr aggregate',
-            name=f'aggregate-geoparquet-{config.environment.value}',
+            command='ocr partition-buildings',
+            name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if write_region_files:
+        if write_regional_stats:
             manager = _get_manager(Platform.LOCAL, config.debug)
 
             manager.submit_job(
@@ -347,13 +376,25 @@ def run(
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
-            command='ocr create-pmtiles',
-            name=f'create-pmtiles-{config.environment.value}',
+            command='ocr create-building-pmtiles',
+            name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
+
+        # TODO: Should we run this locally? It will most likely break due to lack of resources
+        # # Create pyramid
+        # manager = _get_manager(Platform.LOCAL, config.debug)
+        # manager.submit_job(
+        #     command='ocr create-pyramid',
+        #     name=f'create-pyramid-{config.environment.value}',
+        #     kwargs={
+        #         **_local_kwargs(),
+        #     },
+        # )
+        # manager.wait_for_completion(exit_on_failure=True)
 
     if config.debug:
         # Print out the pretty paths
@@ -429,7 +470,7 @@ def process_region(
 
 
 @app.command()
-def aggregate(
+def partition_buildings(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -452,15 +493,15 @@ def aggregate(
     ),
 ):
     """
-    Aggregate geoparquet regions, reproject and write.
+    Partition buildings geoparquet by state and county FIPS codes.
     """
 
     # Schedule if requested and not already inside a batch task
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr aggregate'
-        name = f'aggregate-geoparquet-{config.environment.value}'
+        command = 'ocr partition-buildings'
+        name = f'partition-buildings-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -473,10 +514,10 @@ def aggregate(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.aggregate import aggregated_gpq
+    from ocr.pipeline.partition import partition_buildings_by_geography
 
     config = load_config(env_file)
-    aggregated_gpq(config=config)
+    partition_buildings_by_geography(config=config)
 
 
 @app.command()
@@ -609,7 +650,11 @@ def write_aggregated_region_analysis_files(
     ),
 ):
     """
-    Generate statistical summaries at county and tract levels and write to multiple geospatial file formats (geoparquet, geojson, csv).
+    Write aggregated statistical summaries for each region (county and tract).
+
+    Creates one file per region type containing aggregated statistics for ALL regions,
+    including building counts, average/median risk values, percentiles (p90, p95, p99),
+    and histograms. Outputs in geoparquet, geojson, and csv formats.
     """
 
     # Schedule if requested and not already inside a batch task
@@ -640,7 +685,7 @@ def write_aggregated_region_analysis_files(
 
 
 @app.command()
-def create_pmtiles(
+def create_building_pmtiles(
     env_file: Path | None = typer.Option(
         None,
         '-e',
@@ -670,8 +715,8 @@ def create_pmtiles(
     if platform is not None and not _in_batch():
         config = load_config(env_file)
         manager = _get_manager(platform, config.debug)
-        command = 'ocr create-pmtiles'
-        name = f'create-pmtiles-{config.environment.value}'
+        command = 'ocr create-building-pmtiles'
+        name = f'create-building-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
             kwargs = {**_coiled_kwargs(config, env_file)}
@@ -684,11 +729,64 @@ def create_pmtiles(
         manager.wait_for_completion(exit_on_failure=True)
         return
 
-    from ocr.pipeline.create_pmtiles import create_pmtiles
+    from ocr.pipeline.create_building_pmtiles import create_building_pmtiles
 
     config = load_config(env_file)
 
-    create_pmtiles(config=config)
+    create_building_pmtiles(config=config)
+
+
+@app.command()
+def create_pyramid(
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
+        show_default=True,
+        exists=True,
+        file_okay=True,
+        resolve_path=True,
+    ),
+    platform: Platform | None = typer.Option(
+        None,
+        '-p',
+        '--platform',
+        help='If set, schedule this command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+    ),
+):
+    """
+    Create Pyramid
+    """
+
+    # Schedule if requested and not already inside a batch task
+    if platform is not None and not _in_batch():
+        config = load_config(env_file)
+        manager = _get_manager(platform, config.debug)
+        command = 'ocr create-pyramid'
+        name = f'create-pyramid-{config.environment.value}'
+
+        if platform == Platform.COILED:
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            if vm_type:
+                kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = 'm8g.16xlarge'
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        manager.wait_for_completion(exit_on_failure=True)
+        return
+
+    from ocr.pipeline.create_pyramid import create_pyramid
+
+    config = load_config(env_file)
+
+    create_pyramid(config=config)
 
 
 ocr = typer.main.get_command(

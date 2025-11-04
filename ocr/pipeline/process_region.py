@@ -2,41 +2,48 @@ import geopandas as gpd
 import xarray as xr
 from upath import UPath
 
+from ocr.config import OCRConfig
 from ocr.console import console
 from ocr.datasets import catalog
 from ocr.risks.fire import calculate_wind_adjusted_risk
 from ocr.types import RiskType
 from ocr.utils import bbox_tuple_from_xarray_extent, extract_points
 
-from ..config import OCRConfig
-
 
 def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     # Create bounding box from region
     bbox = bbox_tuple_from_xarray_extent(ds, x_name='longitude', y_name='latitude')
     # Query buildings within the region
-    building_parquet = catalog.get_dataset('conus-overture-buildings')
+    building_parquet = catalog.get_dataset('conus-overture-region-id-tagged-buildings')
     buildings_table = building_parquet.query_geoparquet(
-        """SELECT bbox, ST_AsText(geometry) as geometry
+        """
+        SELECT
+            block_geoid as GEOID,
+            state_abbrev as state,
+            county_name as county,
+            bbox,
+            ST_AsText(geometry) as geometry
         FROM read_parquet('{s3_path}')"""
         + f"""
         WHERE
-        bbox.xmin BETWEEN {bbox[0]} AND {bbox[2]} AND
-        bbox.ymin BETWEEN {bbox[1]} AND {bbox[3]}"""
+            bbox.xmin BETWEEN {bbox[0]} AND {bbox[2]} AND
+            bbox.ymin BETWEEN {bbox[1]} AND {bbox[3]}"""
     ).df()
 
     # Convert to GeoDataFrame
     buildings_table['geometry'] = gpd.GeoSeries.from_wkt(buildings_table['geometry'])
     buildings_gdf = gpd.GeoDataFrame(buildings_table, geometry='geometry', crs='EPSG:4326')
 
+    # trim values less then 0.01 to 0 to match binning used in the frontend inputs
+    ds = ds.where(ds >= 0.01, 0)
     # Sample risk values at building locations
     data_var_list = list(ds.data_vars)
     for var in data_var_list:
         buildings_gdf[var] = extract_points(buildings_gdf, ds[var])
 
     # Remove any buildings with NaN values (outside CONUS)
-    geom_cols = ['geometry']
-    buildings_gdf = buildings_gdf[data_var_list + geom_cols].dropna(subset=data_var_list)
+    keep_cols = ['GEOID', 'state', 'county', 'geometry']
+    buildings_gdf = buildings_gdf[data_var_list + keep_cols].dropna(subset=data_var_list)
 
     return buildings_gdf
 
@@ -55,7 +62,9 @@ def calculate_risk(
             console.log(
                 f'Calculating wind risk for region with x_slice: {x_slice} and y_slice: {y_slice}'
             )
-        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice)
+        ds = calculate_wind_adjusted_risk(y_slice=y_slice, x_slice=x_slice).chunk(
+            config.chunking.chunks
+        )
     else:
         raise ValueError(f'Unsupported risk type: {risk_type}')
 
@@ -65,6 +74,10 @@ def calculate_risk(
     )
 
     dset = ds.sel(latitude=y_slice, longitude=x_slice)
+    if config.debug:
+        console.log(
+            f'Selected data for region {region_id} with x_slice: {x_slice} and y_slice: {y_slice}. Sampling buildings...'
+        )
 
     buildings_gdf = sample_risk_to_buildings(ds=dset)
 

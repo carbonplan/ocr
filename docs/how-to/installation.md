@@ -1,64 +1,59 @@
-# Installation
+# Install OCR for Development
 
-This guide shows two quick ways to install OCR for development and for a simple pip-based install.
+This guide shows how to set up OCR for local development using pixi.
 
 ## Prerequisites
 
-- Python 3.12+ installed
-- Git
-- Optional: `pixi` for reproducible developer environments (recommended)
+-   Python 3.12+
+-   Git
 
-## Option A — Recommended (pixi)
+## Steps
 
-1. Install pixi (see [pixi](https://pixi.sh)):
+### 1. Install pixi
 
 ```bash
 # macOS / Linux
 curl -sSf https://sh.pixi.sh | sh
 ```
 
-1. From the repo root, install dependencies and start a dev shell:
+For other platforms, see [pixi.sh](https://pixi.sh).
+
+### 2. Clone and install dependencies
 
 ```bash
+git clone https://github.com/carbonplan/ocr.git
+cd ocr
 pixi install
-pixi shell
 ```
 
-1. Inside the pixi shell, run tests or development commands:
-
-```bash
-pixi run pytest
-pixi run format
-```
-
-## Option B — pip (quick install)
-
-```bash
-pip install git+https://github.com/carbonplan/ocr
-```
-
-Note: pip install is useful for quickly installing the package, but the pixi workflow is recommended for development because it creates a reproducible environment and includes development-only dependencies.
-
-## Environment configuration
-
-Copy an example env file and edit values:
+### 3. Configure environment
 
 ```bash
 cp ocr-local.env .env
-# edit .env to set OCR_STORAGE_ROOT, OCR_ENVIRONMENT, OCR_DEBUG, and any credentials
 ```
 
-Key variables to set in `.env`:
+Edit `.env` and set required variables:
 
-- `OCR_STORAGE_ROOT` — S3 path or local path where outputs are written (e.g. `s3://your-bucket/`).
-- `OCR_ENVIRONMENT` — name of the environment (e.g. `QA`, `STAGING`, `PROD`).
-- `OCR_DEBUG` — `1` to enable verbose logging.
+-   `OCR_STORAGE_ROOT` — where outputs are written (e.g., `s3://your-bucket/` or local path)
+-   `OCR_ENVIRONMENT` — environment name (`QA`, `STAGING`, or `PROD`)
+-   `OCR_DEBUG` — set to `1` for verbose logging
 
-## Verification
-
-Run a quick smoke test to ensure the package imports and CLI are available:
+### 4. Verify installation
 
 ```bash
-python -c "import ocr; print('ocr', ocr.__version__)"
-ocr --help
+pixi run python -c "import ocr; print('ocr', ocr.__version__)"
+pixi run ocr --help
 ```
+
+### 5. Run tests
+
+```bash
+pixi run tests
+```
+
+## Next steps
+
+-   Run [pre-commit checks](../reference/project-structure.md#pre-commit): `pre-commit run --all-files`
+-   Run [integration tests with snapshots](snapshot-testing.md): `pixi run tests -m integration`
+-   See [Data Pipeline Tutorial](../tutorials/data-pipeline.md) to run the processing pipeline
+-   Read [Project Structure](../reference/project-structure.md) to understand the codebase

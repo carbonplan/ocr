@@ -12,52 +12,45 @@ def create_summary_stat_tmp_tables(
     con: duckdb.DuckDBPyConnection,
     counties_path: UPath,
     tracts_path: UPath,
-    consolidated_buildings_path: UPath,
+    block_path: UPath,
+    buildings_path_glob: str,
 ):
     # Assume extensions & creds handled by caller.
     # tmp table for buildings
     con.execute(f"""
         CREATE TEMP TABLE buildings AS
         SELECT geometry,
-
-
-    -- Single-year risks are stored as percentages (0-100)
-    round(USFS_RPS, 2) as USFS_RPS_horizon_1,
-    -- Convert percentage to probability (divide by 100) for multi-year aggregation, then back to percentage (multiply by 100)
-    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 15)) * 100 , 2) as USFS_RPS_horizon_15,
-    round((1.0 - POWER((1 - (USFS_RPS / 100.0)), 30)) * 100 , 2) as USFS_RPS_horizon_30,
-
-
-    round(wind_risk_2011, 2) as wind_risk_2011_horizon_1,
-    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 15)) * 100 , 2) as wind_risk_2011_horizon_15,
-    round((1.0 - POWER((1 - (wind_risk_2011 / 100.0)), 30)) * 100 , 2) as wind_risk_2011_horizon_30,
-
-    round(wind_risk_2047, 2) as wind_risk_2047_horizon_1,
-    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 15)) * 100 , 2) as wind_risk_2047_horizon_15,
-    round((1.0 - POWER((1 - (wind_risk_2047 / 100.0)), 30)) * 100 , 2) as wind_risk_2047_horizon_30,
-
-
-        FROM read_parquet('{consolidated_buildings_path}')
+        wind_risk_2011 as wind_risk_2011,
+        wind_risk_2047 as wind_risk_2047
+        FROM read_parquet('{buildings_path_glob}')
         """)
 
     # tmp table for geoms
     con.execute(f"""
         CREATE TEMP TABLE county AS
-        SELECT NAME, geometry
+        SELECT NAME, GEOID, geometry
         FROM read_parquet('{counties_path}')
         """)
 
     # tmp table for tracts
     con.execute(f"""
         CREATE TEMP TABLE tract AS
-        SELECT GEOID as NAME, geometry
+        SELECT GEOID, geometry
         FROM read_parquet('{tracts_path}')
+        """)
+
+    # tmp table for block
+    con.execute(f"""
+        CREATE TEMP TABLE block AS
+        SELECT GEOID, geometry
+        FROM read_parquet('{block_path}')
         """)
 
     # create spatial index on geom cols
     con.execute('CREATE INDEX buildings_spatial_idx ON buildings USING RTREE (geometry)')
     con.execute('CREATE INDEX counties_spatial_idx ON county USING RTREE (geometry)')
     con.execute('CREATE INDEX tracts_spatial_idx ON tract USING RTREE (geometry)')
+    con.execute('CREATE INDEX block_spatial_idx ON block USING RTREE (geometry)')
 
 
 def custom_histogram_query(
@@ -65,121 +58,46 @@ def custom_histogram_query(
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
     summary_stats_path: UPath,
-    hist_bins: list[int] | None = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    hist_bins: list[int] | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
 ):
-    """The default duckdb histogram is left-open and right-closed, so to get counts of zero we need two create a counts of values that are exactly zero per county,
-    then add them on to a histogram that excludes values of 0.
-    """
-    # Connection, extensions, and credentials are managed by caller.
+    # optional add if geo_table_name is county, we add a county Name to select.
+    name_column = 'b.NAME as NAME,' if geo_table_name == 'county' else ''
+    name_group_by = ', NAME' if geo_table_name == 'county' else ''
 
-    # First temp table: zero counts by county.
     hist_bin_padding = len(hist_bins)
-    zero_counts_query = f"""
-    CREATE TEMP TABLE temp_zero_counts_{geo_table_name} AS
-    SELECT
-        b.NAME as NAME,
-        count(CASE WHEN a.USFS_RPS_horizon_1 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_1,
-        count(CASE WHEN a.USFS_RPS_horizon_15 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_15,
-        count(CASE WHEN a.USFS_RPS_horizon_30 = 0 THEN 1 END) as zero_count_USFS_RPS_horizon_30,
-        count(CASE WHEN a.wind_risk_2011_horizon_1 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_1,
-        count(CASE WHEN a.wind_risk_2011_horizon_15 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_15,
-        count(CASE WHEN a.wind_risk_2011_horizon_30 = 0 THEN 1 END) as zero_count_wind_risk_2011_horizon_30,
-        count(CASE WHEN a.wind_risk_2047_horizon_1 = 0 THEN 1 END) as zero_count_wind_risk_2047_horizon_1,
-        count(CASE WHEN a.wind_risk_2047_horizon_15 = 0 THEN 1 END) as zero_count_wind_risk_2047_horizon_15,
-        count(CASE WHEN a.wind_risk_2047_horizon_30 = 0 THEN 1 END) as zero_count_wind_risk_2047_horizon_30
-    FROM buildings a
-    JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
-    GROUP BY NAME
-    """
-    con.execute(zero_counts_query)
-
-    # temp table #2 that excludes any 0 values and creates histograms.
-    # filter out exact 0's and values greater then 100 (This shouldn't exist!)
-    nonzero_hist_query = f"""
-    CREATE TEMP TABLE temp_nonzero_histograms_{geo_table_name} AS
-    SELECT
-        b.NAME as NAME,
-        count(a.USFS_RPS_horizon_1) as building_count,
-        round(avg(a.USFS_RPS_horizon_1), 2) as avg_USFS_RPS_horizon_1,
-        round(avg(a.USFS_RPS_horizon_15), 2) as avg_USFS_RPS_horizon_15,
-        round(avg(a.USFS_RPS_horizon_30), 2) as avg_USFS_RPS_horizon_30,
-
-        round(avg(a.wind_risk_2011_horizon_1), 2) as avg_wind_risk_2011_horizon_1,
-        round(avg(a.wind_risk_2011_horizon_15), 2) as avg_wind_risk_2011_horizon_15,
-        round(avg(a.wind_risk_2011_horizon_30), 2) as avg_wind_risk_2011_horizon_30,
-        round(avg(a.wind_risk_2047_horizon_1), 2) as avg_wind_risk_2047_horizon_1,
-        round(avg(a.wind_risk_2047_horizon_15), 2) as avg_wind_risk_2047_horizon_15,
-        round(avg(a.wind_risk_2047_horizon_30), 2) as avg_wind_risk_2047_horizon_30,
-
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_1 <> 0 THEN a.USFS_RPS_horizon_1 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_USFS_RPS_horizon_1,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_15 <> 0 THEN a.USFS_RPS_horizon_15 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_USFS_RPS_horizon_15,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.USFS_RPS_horizon_30 <> 0 THEN a.USFS_RPS_horizon_30 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_USFS_RPS_horizon_30,
-
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_1 <> 0 THEN a.wind_risk_2011_horizon_1 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2011_horizon_1,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_15 <> 0 THEN a.wind_risk_2011_horizon_15 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2011_horizon_15,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2011_horizon_30 <> 0 THEN a.wind_risk_2011_horizon_30 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2011_horizon_30,
-
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_1 <> 0 THEN a.wind_risk_2047_horizon_1 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2047_horizon_1,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_15 <> 0 THEN a.wind_risk_2047_horizon_15 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2047_horizon_15,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2047_horizon_30 <> 0 THEN a.wind_risk_2047_horizon_30 END, {hist_bins})),[]), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2047_horizon_30,
-
-        b.geometry as geometry
-    FROM buildings a
-    JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
-    GROUP BY NAME, b.geometry
-
-    """
-
-    con.execute(nonzero_hist_query)
 
     output_path = summary_stats_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Now we merge the two temp tables together, the 0 counts table and the histograms that exclude 0.
-    # duckdb has a func called `list_concat` for this.
-    # We then write the result to parquet.
-    merge_and_write = f""" COPY (
+    histogram_table = f""" COPY (
     SELECT
-        h.NAME,
-        h.building_count,
-        h.avg_USFS_RPS_horizon_1,
-        h.avg_USFS_RPS_horizon_15,
-        h.avg_USFS_RPS_horizon_30,
-
-        h.avg_wind_risk_2011_horizon_1,
-        h.avg_wind_risk_2011_horizon_15,
-        h.avg_wind_risk_2011_horizon_30,
-
-        h.avg_wind_risk_2047_horizon_1,
-        h.avg_wind_risk_2047_horizon_15,
-        h.avg_wind_risk_2047_horizon_30,
-
-        list_concat([z.zero_count_USFS_RPS_horizon_1], h.nonzero_hist_USFS_RPS_horizon_1) as USFS_RPS_horizon_1,
-        list_concat([z.zero_count_USFS_RPS_horizon_15], h.nonzero_hist_USFS_RPS_horizon_15) as USFS_RPS_horizon_15,
-        list_concat([z.zero_count_USFS_RPS_horizon_30], h.nonzero_hist_USFS_RPS_horizon_30) as USFS_RPS_horizon_30,
-
-        list_concat([z.zero_count_wind_risk_2011_horizon_1], h.nonzero_hist_wind_risk_2011_horizon_1) as wind_risk_2011_horizon_1,
-        list_concat([z.zero_count_wind_risk_2011_horizon_15], h.nonzero_hist_wind_risk_2011_horizon_15) as wind_risk_2011_horizon_15,
-        list_concat([z.zero_count_wind_risk_2011_horizon_30], h.nonzero_hist_wind_risk_2011_horizon_30) as wind_risk_2011_horizon_30,
-        list_concat([z.zero_count_wind_risk_2047_horizon_1], h.nonzero_hist_wind_risk_2047_horizon_1) as wind_risk_2047_horizon_1,
-        list_concat([z.zero_count_wind_risk_2047_horizon_15], h.nonzero_hist_wind_risk_2047_horizon_15) as wind_risk_2047_horizon_15,
-        list_concat([z.zero_count_wind_risk_2047_horizon_30], h.nonzero_hist_wind_risk_2047_horizon_30) as wind_risk_2047_horizon_30,
-        h.geometry
-    FROM temp_nonzero_histograms_{geo_table_name} h
-    JOIN temp_zero_counts_{geo_table_name} z ON h.NAME = z.NAME)
+        b.GEOID as GEOID,
+        {name_column}
+        count(b.GEOID) as building_count,
+        avg(a.wind_risk_2011) as mean_wind_risk_2011,
+        avg(a.wind_risk_2047) as mean_wind_risk_2047,
+        median(a.wind_risk_2011) as median_wind_risk_2011,
+        median(a.wind_risk_2047) as median_wind_risk_2047,
+        list_resize(map_values(histogram(a.wind_risk_2011, {hist_bins})), {hist_bin_padding}, 0) as wind_risk_2011,
+        list_resize(map_values(histogram(a.wind_risk_2047, {hist_bins})), {hist_bin_padding}, 0) as wind_risk_2047,
+        b.geometry as geometry
+    FROM buildings a
+    JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
+    GROUP BY GEOID, b.geometry{name_group_by})
         TO '{output_path}'
         (
                 FORMAT 'parquet',
                 COMPRESSION 'zstd',
                 OVERWRITE_OR_IGNORE true);
     """
-    con.execute(merge_and_write)
+    con.execute(histogram_table)
 
 
 def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
+    block_summary_stats_path = config.vector.block_summary_stats_uri
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
-    consolidated_buildings_path = config.vector.building_geoparquet_uri
+    buildings_path_glob = f'{config.vector.region_geoparquet_uri}/*.parquet'
 
     dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
@@ -187,11 +105,14 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     dataset = catalog.get_dataset('us-census-tracts')
     tracts_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
 
-    # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 10 (excluding zero from our earlier temp table filter).
-    hist_bins = [5, 10, 15, 20, 25, 100]
+    dataset = catalog.get_dataset('us-census-blocks')
+    block_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+
+    # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 0.01.
+    hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
 
     if config.debug:
-        console.log(f'Using consolidated buildings path: {consolidated_buildings_path}')
+        console.log(f'Using buildings path: {buildings_path_glob}')
 
     connection = duckdb.connect(database=':memory:')
 
@@ -203,7 +124,8 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         con=connection,
         counties_path=counties_path,
         tracts_path=tracts_path,
-        consolidated_buildings_path=consolidated_buildings_path,
+        block_path=block_path,
+        buildings_path_glob=buildings_path_glob,
     )
 
     if config.debug:
@@ -216,6 +138,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     )
     if config.debug:
         console.log(f'Wrote summary statistics for county to {counties_summary_stats_path}')
+
     if config.debug:
         console.log('Computing tract summary statistics')
     custom_histogram_query(
@@ -226,6 +149,17 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     )
     if config.debug:
         console.log(f'Wrote summary statistics for tract to {tracts_summary_stats_path}')
+
+    if config.debug:
+        console.log('Computing block summary statistics')
+    custom_histogram_query(
+        con=connection,
+        geo_table_name='block',
+        summary_stats_path=block_summary_stats_path,
+        hist_bins=hist_bins,
+    )
+    if config.debug:
+        console.log(f'Wrote summary statistics for block to {block_summary_stats_path}')
 
     try:
         connection.close()
