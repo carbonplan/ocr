@@ -108,7 +108,7 @@
 [tool.pixi.workspace]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+    platforms = ["linux-64", "linux-aarch64", "osx-arm64"]
 
 # Only keep local package as an editable PyPI dep (and rare stragglers).
 [tool.pixi.pypi-dependencies]
@@ -182,6 +182,7 @@
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
     cartopy               = ">=0.25.0,<0.26"
+    dask                  = ">=2025.10.0,<2026"
     duckdb                = ">=1.3.2,<2"
     duckdb-cli            = ">=1.3.2,<2"
     flox                  = ">=0.10.6,<0.11"
@@ -190,6 +191,9 @@
     geopandas             = ">=1.1.1,<2"
     icechunk              = ">=1.1.5,<2"
     libgdal-arrow-parquet = ">=3.10.3,<4"
+    morecantile           = ">=6.2.0,<7"
+    numcodecs             = ">=0.16.1,<0.17"
+    obstore               = ">=0.8.2,<0.9"
     odc-geo               = ">=0.5.0rc1,<0.6"
     opencv                = ">=4.12.0,<5"
     pint-xarray           = ">=0.6.0,<0.7"
@@ -212,10 +216,6 @@
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
     zarr                  = ">=3.1.2,<4"
-    morecantile = ">=6.2.0,<7"
-    obstore = ">=0.8.2,<0.9"
-    numcodecs = ">=0.16.1,<0.17"
-    dask = ">=2025.10.0,<2026"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
