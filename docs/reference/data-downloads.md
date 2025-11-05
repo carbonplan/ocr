@@ -2,14 +2,20 @@
 
 OCR provides a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
+<!-- prettier-ignore-start -->
+!!! warning "License Agreement"
+    Each data download is made available under the license listed below. By downloading the data, you agree to adhere to the license terms.
+
+<!-- prettier-ignore-end -->
+
 ## Download options
 
-| Option                            | Description                                                                         | Formats               | Access               |
-| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------- | -------------------- |
-| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based) | S3                   |
-| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet            | S3                   |
-| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON          | S3                   |
-| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage       | Web tool (see below) |
+| Option                            | Description                                                                         | Formats               | Access               | License                                                   |
+| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------- | -------------------- | --------------------------------------------------------- |
+| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based) | S3                   | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet            | S3                   | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
+| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON          | S3                   | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
+| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage       | Web tool (see below) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
 
 ## Full dataset downloads
 
@@ -17,10 +23,8 @@ OCR provides a few different ways to access the data, in addition to exploration
 
 | Option                   | Path                                                                                         | Notes                                                                        |
 | ------------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Raster (tensor) data** | `s3://carbonplan-ocr/output/fire-risk/tensor/production/v0.8.0/ocr.icechunk/`                | See [guide for working with Icehunk data](../how-to/work-with-data.ipynb)    |
-| **Vector (point) data**  | `s3://carbonplan-ocr/output/fire-risk/vector/production/v0.8.0/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](../how-to/work-with-data.ipynb) |
-
-TODO: update/finalize version pointers
+| **Raster (tensor) data** | `s3://carbonplan-ocr/output/fire-risk/tensor/production/v0.9.0/ocr.icechunk/`                | See [guide for working with Icehunk data](../how-to/work-with-data.ipynb)    |
+| **Vector (point) data**  | `s3://carbonplan-ocr/output/fire-risk/vector/production/v0.9.0/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](../how-to/work-with-data.ipynb) |
 
 ### Schema
 
@@ -30,13 +34,11 @@ The schemas for each of the full datasets are described on the [data schema](./d
 
 ### Links
 
-|                                     | CSV                                                                                                                                           | GeoJSON                                                                                                                                        |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Statistics across **counties**      | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.8.0/region-analysis/counties/stats.csv) | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/counties/stats.geojson) |
-| Statistics across **census tracts** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.csv)          | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/tracts/stats.geojson)   |
-| Statistics across **census blocks** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/block/stats.csv)           | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/production/v0.8.0/region-analysis/block/stats.geojson)    |
-
-TODO: update/finalize version pointers
+|                                     | CSV                                                                                                                                           | GeoJSON                                                                                                                                               |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Statistics across **counties**      | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/counties/stats.csv) | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/counties/stats.geojson) |
+| Statistics across **census tracts** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/tracts/stats.csv)   | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/tracts/stats.geojson)   |
+| Statistics across **census blocks** | [`stats.csv`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/block/stats.csv)    | [`stats.geojson`](https://carbonplan-ocr.s3.us-west-2.amazonaws.com/output/fire-risk/vector/production/v0.9.0/region-analysis/block/stats.geojson)    |
 
 ### Schema
 
@@ -83,8 +85,6 @@ The [web tool](https://ocr.carbonplan.org/) can be used to access region-specifi
 4. Click `CSV ↓` or `GeoPackage ↓` to download building-level data for the selected region.
 
 ![](../assets/web-data-downloads.png)
-
-TODO: update/finalize screenshot
 
 ### Schema
 

@@ -15,7 +15,7 @@ def write_stats_table(
     config: OCRConfig,
     region_path: UPath,
     stats_table_name: str,
-    hist_bins: list | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
+    hist_bins: list | None = [0.003, 0.015, 0.02, 0.03, 0.04, 0.06, 0.1, 0.15, 0.3, 0.6, 100],
 ):
     region_analysis_path = config.vector.aggregated_region_analysis_uri
     buildings_path = f'{config.vector.region_geoparquet_uri}/*.parquet'
@@ -76,7 +76,7 @@ def write_stats_table(
 
 
 def write_aggregated_region_analysis_files(config: OCRConfig):
-    hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
+    hist_bins = [0.003, 0.015, 0.02, 0.03, 0.04, 0.06, 0.1, 0.15, 0.3, 0.6, 100]
 
     counties_dataset = catalog.get_dataset('us-census-counties')
     counties_path = UPath(f's3://{counties_dataset.bucket}/{counties_dataset.prefix}')

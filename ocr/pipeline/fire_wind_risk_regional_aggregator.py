@@ -58,7 +58,7 @@ def custom_histogram_query(
     con: duckdb.DuckDBPyConnection,
     geo_table_name: str,
     summary_stats_path: UPath,
-    hist_bins: list[int] | None = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100],
+    hist_bins: list[int] | None = [0.003, 0.015, 0.02, 0.03, 0.04, 0.06, 0.1, 0.15, 0.3, 0.6, 100],
 ):
     # optional add if geo_table_name is county, we add a county Name to select.
     name_column = 'b.NAME as NAME,' if geo_table_name == 'county' else ''
@@ -109,8 +109,7 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     block_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
 
     # The histogram syntax is kind of strange in duckdb, but since it's left-open, the first bin is values up to 0.01.
-    hist_bins = [0.01, 0.1, 1, 2, 3, 5, 7, 10, 15, 20, 100]
-
+    hist_bins = [0.003, 0.015, 0.02, 0.03, 0.04, 0.06, 0.1, 0.15, 0.3, 0.6, 100]
     if config.debug:
         console.log(f'Using buildings path: {buildings_path_glob}')
 
