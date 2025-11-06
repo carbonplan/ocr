@@ -108,7 +108,7 @@
 [tool.pixi.workspace]
     channels  = ["conda-forge"]
     name      = "ocr"
-    platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+    platforms = ["linux-64", "linux-aarch64", "osx-arm64"]
 
 # Only keep local package as an editable PyPI dep (and rare stragglers).
 [tool.pixi.pypi-dependencies]
