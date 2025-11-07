@@ -72,8 +72,8 @@ def create_regional_pmtiles(
                         '2', mean_wind_risk_2047,
                         '3', median_wind_risk_2011,
                         '4', median_wind_risk_2047,
-                        '5', wind_risk_2011,
-                        '6', wind_risk_2047,
+                        '5', wind_risk_2011_hist,
+                        '6', wind_risk_2047_hist,
                         '7', GEOID,
                         '8', [
                                 ST_XMin(geometry),
@@ -103,8 +103,8 @@ def create_regional_pmtiles(
                         '2', mean_wind_risk_2047,
                         '3', median_wind_risk_2011,
                         '4', median_wind_risk_2047,
-                        '5', wind_risk_2011,
-                        '6', wind_risk_2047,
+                        '5', wind_risk_2011_hist,
+                        '6', wind_risk_2047_hist,
                         '7', GEOID,
                         '8', [
                                 ST_XMin(geometry),
@@ -131,8 +131,8 @@ def create_regional_pmtiles(
                         '2', mean_wind_risk_2047,
                         '3', median_wind_risk_2011,
                         '4', median_wind_risk_2047,
-                        '5', wind_risk_2011,
-                        '6', wind_risk_2047,
+                        '5', wind_risk_2011_hist,
+                        '6', wind_risk_2047_hist,
                         '7', GEOID,
                         '8', [
                                 ST_XMin(geometry),

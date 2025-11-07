@@ -34,8 +34,6 @@ def sample_risk_to_buildings(*, ds: xr.Dataset) -> gpd.GeoDataFrame:
     buildings_table['geometry'] = gpd.GeoSeries.from_wkt(buildings_table['geometry'])
     buildings_gdf = gpd.GeoDataFrame(buildings_table, geometry='geometry', crs='EPSG:4326')
 
-    # trim values less then 0.01 to 0 to match binning used in the frontend inputs
-    ds = ds.where(ds >= 0.01, 0)
     # Sample risk values at building locations
     data_var_list = list(ds.data_vars)
     for var in data_var_list:
