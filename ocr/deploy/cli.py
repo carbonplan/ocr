@@ -254,20 +254,6 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if write_regional_stats:
-            manager = _get_manager(Platform.COILED, config.debug)
-
-            manager.submit_job(
-                command='ocr write-aggregated-region-analysis-files',
-                name=f'write-aggregated-region-analysis-files-{config.environment.value}',
-                kwargs={
-                    **_coiled_kwargs(config, env_file),
-                    'scheduler_vm_type': 'r8g.4xlarge',
-                    'vm_type': 'r8g.4xlarge',
-                    'software': COILED_SOFTWARE,
-                },
-            )
-
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
             command='ocr aggregate-region-risk-summary-stats',
@@ -281,6 +267,19 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        if write_regional_stats:
+            manager = _get_manager(Platform.COILED, config.debug)
+
+            manager.submit_job(
+                command='ocr write-aggregated-region-analysis-files',
+                name=f'write-aggregated-region-analysis-files-{config.environment.value}',
+                kwargs={
+                    **_coiled_kwargs(config, env_file),
+                    'scheduler_vm_type': 'r8g.4xlarge',
+                    'vm_type': 'r8g.4xlarge',
+                    'software': COILED_SOFTWARE,
+                },
+            )
         # create summary stats PMTiles layer
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
@@ -340,17 +339,6 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
-        if write_regional_stats:
-            manager = _get_manager(Platform.LOCAL, config.debug)
-
-            manager.submit_job(
-                command='ocr write-aggregated-region-analysis-files',
-                name=f'write-aggregated-region-analysis-files-{config.environment.value}',
-                kwargs={
-                    **_local_kwargs(),
-                },
-            )
-
         manager = _get_manager(Platform.LOCAL, config.debug)
         # Aggregate regional fire and wind risk statistics
         manager.submit_job(
@@ -362,6 +350,16 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        if write_regional_stats:
+            manager = _get_manager(Platform.LOCAL, config.debug)
+
+            manager.submit_job(
+                command='ocr write-aggregated-region-analysis-files',
+                name=f'write-aggregated-region-analysis-files-{config.environment.value}',
+                kwargs={
+                    **_local_kwargs(),
+                },
+            )
         # Create summary stats PMTiles layer
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
