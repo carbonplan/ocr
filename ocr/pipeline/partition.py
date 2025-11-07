@@ -53,11 +53,14 @@ def partition_buildings_by_geography(config: OCRConfig):
     connection.execute(f"""
         SET preserve_insertion_order=false;
         COPY (
-        SELECT *
-        FROM '{path}')
-        TO  '{consolidate_buildings_parquet}' (
-        FORMAT 'parquet',
-        COMPRESSION 'zstd',
-        OVERWRITE_OR_IGNORE true);""")
+            SELECT *
+            FROM '{path}'
+        )
+        TO '{consolidate_buildings_parquet}'
+        (
+            FORMAT 'parquet',
+            COMPRESSION 'zstd',
+            OVERWRITE_OR_IGNORE true
+        );""")
     if config.debug:
         console.log(f'Consolidated buildings written to: {consolidate_buildings_parquet}')
