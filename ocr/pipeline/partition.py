@@ -48,7 +48,7 @@ def partition_buildings_by_geography(config: OCRConfig):
     )
 
     if config.debug:
-        console.log(f'Creating a consolidated parquet file at: {consolidate_buildings_parquet}')
+        console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
 
     connection.execute(f"""
         SET preserve_insertion_order=false;
@@ -56,11 +56,12 @@ def partition_buildings_by_geography(config: OCRConfig):
             SELECT *
             FROM '{path}'
         )
-        TO '{consolidate_buildings_parquet}'
+        TO '{consolidated_buildings_parquet}'
         (
             FORMAT 'parquet',
             COMPRESSION 'zstd',
-            OVERWRITE_OR_IGNORE true
+            OVERWRITE_OR_IGNORE true,
+            ROW_GROUP_SIZE 10000000
         );""")
     if config.debug:
-        console.log(f'Consolidated buildings written to: {consolidate_buildings_parquet}')
+        console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
