@@ -43,7 +43,7 @@ def partition_buildings_by_geography(config: OCRConfig):
     if config.debug:
         console.log(f'Partitioned buildings written to: {output_path}')
 
-    consolidate_buildings_parquet = (
+    consolidated_buildings_parquet = (
         f'{config.vector.building_geoparquet_uri.parent / "consolidated-buildings.parquet"}'
     )
 
