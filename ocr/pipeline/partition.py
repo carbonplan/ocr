@@ -18,6 +18,38 @@ def partition_buildings_by_geography(config: OCRConfig):
     install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
     apply_s3_creds(region='us-west-2', con=connection)
 
+    consolidated_buildings_parquet = (
+        f'{config.vector.building_geoparquet_uri.parent / "consolidated-buildings.parquet"}'
+    )
+
+    if config.debug:
+        console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
+
+    connection.execute(f"""
+        SET preserve_insertion_order=false;
+        COPY (
+            SELECT *
+            FROM '{path}'
+        )
+        TO '{consolidated_buildings_parquet}'
+        (
+            FORMAT 'parquet',
+            COMPRESSION 'zstd',
+            OVERWRITE_OR_IGNORE true
+        );""")
+
+    if config.debug:
+        console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
+
+    connection.close()
+
+    if config.debug:
+        console.log('Reconnecting to database for partitioned parquet creation')
+
+    connection = duckdb.connect(database=':memory:')
+    install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
+    apply_s3_creds(region='us-west-2', con=connection)
+
     if config.debug:
         console.log(f'Partitioning geoparquet regions from: {path}')
 
@@ -42,35 +74,3 @@ def partition_buildings_by_geography(config: OCRConfig):
 
     if config.debug:
         console.log(f'Partitioned buildings written to: {output_path}')
-
-    connection.close()
-
-    if config.debug:
-        console.log('Reconnecting to database for consolidated parquet creation')
-
-    connection = duckdb.connect(database=':memory:')
-    install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
-    apply_s3_creds(region='us-west-2', con=connection)
-
-    consolidated_buildings_parquet = (
-        f'{config.vector.building_geoparquet_uri.parent / "consolidated-buildings.parquet"}'
-    )
-
-    if config.debug:
-        console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
-
-    connection.execute(f"""
-        SET preserve_insertion_order=false;
-        COPY (
-            SELECT *
-            FROM '{path}'
-        )
-        TO '{consolidated_buildings_parquet}'
-        (
-            FORMAT 'parquet',
-            COMPRESSION 'zstd',
-            OVERWRITE_OR_IGNORE true
-        );""")
-
-    if config.debug:
-        console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
