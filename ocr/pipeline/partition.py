@@ -19,20 +19,23 @@ def partition_buildings_by_geography(config: OCRConfig):
     apply_s3_creds(region='us-west-2', con=connection)
 
     if config.debug:
-        console.log(f'Partitioning geoparquet regions from: {path}')
+        console.log(f'Loading buildings data from: {path}')
 
     connection.execute(f"""
         SET preserve_insertion_order=false;
-        COPY (
-        SELECT *
-        FROM (
-            SELECT
-                *,
-                SUBSTRING(GEOID, 1, 2) AS state_fips,
-                SUBSTRING(GEOID, 3, 3) AS county_fips
-            FROM '{path}'
-        )
-        )
+        CREATE TEMP TABLE buildings_temp AS
+        SELECT
+            *,
+            SUBSTRING(GEOID, 1, 2) AS state_fips,
+            SUBSTRING(GEOID, 3, 3) AS county_fips
+        FROM '{path}';
+    """)
+
+    if config.debug:
+        console.log(f'Partitioning geoparquet regions to: {output_path}')
+
+    connection.execute(f"""
+        COPY buildings_temp
         TO '{output_path}' (
             FORMAT 'parquet',
             PARTITION_BY (state_fips, county_fips),
@@ -51,10 +54,9 @@ def partition_buildings_by_geography(config: OCRConfig):
         console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
 
     connection.execute(f"""
-        SET preserve_insertion_order=false;
         COPY (
-            SELECT *
-            FROM '{path}'
+            SELECT * EXCLUDE (state_fips, county_fips)
+            FROM buildings_temp
         )
         TO '{consolidated_buildings_parquet}'
         (
@@ -63,5 +65,8 @@ def partition_buildings_by_geography(config: OCRConfig):
             OVERWRITE_OR_IGNORE true,
             ROW_GROUP_SIZE 10000000
         );""")
+
     if config.debug:
         console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
+
+    connection.execute('DROP TABLE buildings_temp')
