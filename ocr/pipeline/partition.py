@@ -18,24 +18,53 @@ def partition_buildings_by_geography(config: OCRConfig):
     install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
     apply_s3_creds(region='us-west-2', con=connection)
 
+    consolidated_buildings_parquet = (
+        f'{config.vector.building_geoparquet_uri.parent / "consolidated-buildings.parquet"}'
+    )
+
     if config.debug:
-        console.log(f'Loading buildings data from: {path}')
+        console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
 
     connection.execute(f"""
         SET preserve_insertion_order=false;
-        CREATE TEMP TABLE buildings_temp AS
-        SELECT
-            *,
-            SUBSTRING(GEOID, 1, 2) AS state_fips,
-            SUBSTRING(GEOID, 3, 3) AS county_fips
-        FROM '{path}';
-    """)
+        COPY (
+            SELECT *
+            FROM '{path}'
+        )
+        TO '{consolidated_buildings_parquet}'
+        (
+            FORMAT 'parquet',
+            COMPRESSION 'zstd',
+            OVERWRITE_OR_IGNORE true
+        );""")
 
     if config.debug:
-        console.log(f'Partitioning geoparquet regions to: {output_path}')
+        console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
+
+    connection.close()
+
+    if config.debug:
+        console.log('Reconnecting to database for partitioned parquet creation')
+
+    connection = duckdb.connect(database=':memory:')
+    install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
+    apply_s3_creds(region='us-west-2', con=connection)
+
+    if config.debug:
+        console.log(f'Partitioning geoparquet regions from: {path}')
 
     connection.execute(f"""
-        COPY buildings_temp
+        SET preserve_insertion_order=false;
+        COPY (
+        SELECT *
+        FROM (
+            SELECT
+                *,
+                SUBSTRING(GEOID, 1, 2) AS state_fips,
+                SUBSTRING(GEOID, 3, 3) AS county_fips
+            FROM '{path}'
+        )
+        )
         TO '{output_path}' (
             FORMAT 'parquet',
             PARTITION_BY (state_fips, county_fips),
@@ -45,28 +74,3 @@ def partition_buildings_by_geography(config: OCRConfig):
 
     if config.debug:
         console.log(f'Partitioned buildings written to: {output_path}')
-
-    consolidated_buildings_parquet = (
-        f'{config.vector.building_geoparquet_uri.parent / "consolidated-buildings.parquet"}'
-    )
-
-    if config.debug:
-        console.log(f'Creating a consolidated parquet file at: {consolidated_buildings_parquet}')
-
-    connection.execute(f"""
-        COPY (
-            SELECT * EXCLUDE (state_fips, county_fips)
-            FROM buildings_temp
-        )
-        TO '{consolidated_buildings_parquet}'
-        (
-            FORMAT 'parquet',
-            COMPRESSION 'zstd',
-            OVERWRITE_OR_IGNORE true,
-            ROW_GROUP_SIZE 10000000
-        );""")
-
-    if config.debug:
-        console.log(f'Consolidated buildings written to: {consolidated_buildings_parquet}')
-
-    connection.execute('DROP TABLE buildings_temp')
