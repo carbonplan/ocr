@@ -1376,10 +1376,29 @@ class OCRConfig(pydantic_settings.BaseSettings):
         error_message += "\nPlease provide valid region IDs that haven't been processed yet."
         return error_message
 
-    def resolve_region_ids(self, provided_region_ids: set[str]) -> 'RegionIDStatus':
+    def resolve_region_ids(
+        self, provided_region_ids: set[str], *, allow_all_processed: bool = False
+    ) -> 'RegionIDStatus':
         """Validate provided region IDs against valid + processed sets.
 
-        Returns a RegionIDStatus object or raises ValueError if none are processable.
+        Parameters
+        ----------
+        provided_region_ids : set[str]
+            The set of region IDs to validate.
+        allow_all_processed : bool, optional
+            If True, don't raise an error when all regions are already processed.
+            This is useful for production reruns where you want to regenerate
+            vector outputs even if icechunk regions are complete. Default is False.
+
+        Returns
+        -------
+        RegionIDStatus
+            Status object with validation results.
+
+        Raises
+        ------
+        ValueError
+            If no valid unprocessed region IDs remain and allow_all_processed is False.
         """
         assert self.chunking is not None, 'Chunking configuration not initialized'
         assert self.icechunk is not None, 'Icechunk configuration not initialized'
@@ -1397,19 +1416,38 @@ class OCRConfig(pydantic_settings.BaseSettings):
             previously_processed_ids=previously_processed_ids,
             unprocessed_valid_region_ids=unprocessed_valid_region_ids,
         )
-        if len(unprocessed_valid_region_ids) == 0:
+        if len(unprocessed_valid_region_ids) == 0 and not allow_all_processed:
             raise ValueError(self._compose_region_id_error(status))
         return status
 
     def select_region_ids(
-        self, region_ids: list[str] | None, *, all_region_ids: bool = False
+        self,
+        region_ids: list[str] | None,
+        *,
+        all_region_ids: bool = False,
+        allow_all_processed: bool = False,
     ) -> 'RegionIDStatus':
         """Helper to pick the effective set of region IDs (all or user-provided) and
         return the validated status object.
+
+        Parameters
+        ----------
+        region_ids : list[str] | None
+            User-provided region IDs to process.
+        all_region_ids : bool, optional
+            If True, use all valid region IDs instead of user-provided ones. Default is False.
+        allow_all_processed : bool, optional
+            If True, don't raise an error when all regions are already processed.
+            Passed through to resolve_region_ids. Default is False.
+
+        Returns
+        -------
+        RegionIDStatus
+            Status object with validation results.
         """
         assert self.chunking is not None, 'Chunking configuration not initialized'
         provided = set(self.chunking.valid_region_ids) if all_region_ids else set(region_ids or [])
-        return self.resolve_region_ids(provided)
+        return self.resolve_region_ids(provided, allow_all_processed=allow_all_processed)
 
 
 def load_config(file_path: Path | None) -> OCRConfig:
