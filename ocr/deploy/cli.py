@@ -487,7 +487,7 @@ def partition_buildings(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -502,9 +502,16 @@ def partition_buildings(
         name = f'partition-buildings-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -538,7 +545,7 @@ def aggregate_region_risk_summary_stats(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -553,9 +560,16 @@ def aggregate_region_risk_summary_stats(
         name = f'create-aggregated-region-summary-stats-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -592,8 +606,9 @@ def create_regional_pmtiles(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
 ):
     """
     Create PMTiles for regional risk statistics (counties and tracts).
@@ -607,9 +622,17 @@ def create_regional_pmtiles(
         name = f'create-aggregated-region-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -644,7 +667,7 @@ def write_aggregated_region_analysis_files(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'r8g.4xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -663,9 +686,16 @@ def write_aggregated_region_analysis_files(
         name = f'write-aggregated-region-analysis-files-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -702,8 +732,9 @@ def create_building_pmtiles(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
 ):
     """
     Create PMTiles from the consolidated geoparquet file.
@@ -717,9 +748,17 @@ def create_building_pmtiles(
         name = f'create-building-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -754,7 +793,7 @@ def create_pyramid(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'm8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -769,10 +808,16 @@ def create_pyramid(
         name = f'create-pyramid-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
-            kwargs['scheduler_vm_type'] = 'm8g.16xlarge'
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
