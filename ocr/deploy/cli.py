@@ -247,8 +247,8 @@ def run(
             name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'software': COILED_SOFTWARE,
             },
         )
@@ -260,8 +260,8 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.16xlarge',
+                'scheduler_vm_type': 'c8g.16xlarge',
                 'software': COILED_SOFTWARE,
             },
         )
@@ -287,8 +287,8 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'disk_size': 250,
                 'software': COILED_SOFTWARE,
             },
@@ -302,8 +302,8 @@ def run(
             name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'disk_size': 250,
                 'software': COILED_SOFTWARE,
             },  # PMTiles creation needs more disk space
@@ -487,7 +487,7 @@ def partition_buildings(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.12xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -545,7 +545,7 @@ def aggregate_region_risk_summary_stats(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
