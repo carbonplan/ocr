@@ -414,6 +414,7 @@ jobs:
               env:
                   DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
                   OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+                  OCR_ALLOW_ALL_PROCESSED: "true"
               run: |
                   cat ocr-coiled-s3-production.env
                   echo "Running production deployment for tag: $OCR_VERSION (environment=$OCR_ENVIRONMENT)"
@@ -517,6 +518,7 @@ jobs:
               env:
                   DASK_COILED__TOKEN: ${{ secrets.DASK_COILED__TOKEN }}
                   OCR_ENVIRONMENT: ${{ env.OCR_ENVIRONMENT }}
+                  OCR_ALLOW_ALL_PROCESSED: "true"
               run: |
                   cat ocr-coiled-s3-production.env
                   REGION_ARGS="--all-region-ids"
