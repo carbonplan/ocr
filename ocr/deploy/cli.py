@@ -203,6 +203,24 @@ def run(
             attempt = 0
             while True:
                 attempt += 1
+
+                # Recompute remaining regions on each attempt (after first attempt)
+                if attempt > 1:
+                    region_status = config.select_region_ids(
+                        region_id,
+                        all_region_ids=all_region_ids,
+                        allow_all_processed=allow_all_processed,
+                    )
+                    remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
+
+                    if not remaining_to_process:
+                        console.log('[green]All regions processed successfully on retry.[/green]')
+                        break
+
+                    console.log(
+                        f'[yellow]Retry attempt {attempt}: {len(remaining_to_process)} regions remaining to process.[/yellow]'
+                    )
+
                 manager = _get_manager(Platform.COILED, config.debug)
 
                 kwargs = _coiled_kwargs(config, env_file)
