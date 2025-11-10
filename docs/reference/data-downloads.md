@@ -10,12 +10,12 @@ OCR provides a few different ways to access the data, in addition to exploration
 
 ## Download options
 
-| Option                            | Description                                                                         | Formats               | Access               | License                                                   |
-| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------- | -------------------- | --------------------------------------------------------- |
-| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based) | S3                   | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
-| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet            | S3                   | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
-| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON          | S3                   | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
-| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage       | Web tool (see below) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
+| Option                            | Description                                                                         | Formats               | Access                                                       | License                                                   |
+| --------------------------------- | ----------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                 | Icechunk (Zarr-based) | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| **Vector (point) data**           | Full buildings dataset spanning CONUS                                               | GeoParquet            | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
+| **Regional statistics**           | Summary statistics for regions (county, census tract, census block) within CONUS    | CSV, GeoJSON          | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
+| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block) | CSV, GeoPackage       | Web tool (see below)                                         | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    |
 
 ## Full dataset downloads
 
