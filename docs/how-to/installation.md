@@ -53,7 +53,7 @@ pixi run tests
 
 ## Next steps
 
-- Run [pre-commit checks](../reference/project-structure.md#pre-commit): `pre-commit run --all-files`
-- Run [integration tests with snapshots](snapshot-testing.md): `pixi run tests -m integration`
-- See [Data Pipeline Tutorial](../tutorials/data-pipeline.md) to run the processing pipeline
-- Read [Project Structure](../reference/project-structure.md) to understand the codebase
+- Run [pre-commit checks][code-quality]: `pre-commit run --all-files`
+- Run [integration tests with snapshots][snapshot-testing-with-xarrayzarr]: `pixi run tests -m integration`
+- See [Data Pipeline Tutorial][ocr-data-pipeline] to run the processing pipeline
+- Read [Project Structure][project-structure] to understand the codebase

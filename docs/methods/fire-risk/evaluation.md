@@ -13,7 +13,7 @@ Our evaluation approach includes multiple independent analyses to validate the q
 
 ## Evaluation Notebooks
 
-### [Benchmarking](../benchmarking)
+### [Benchmarking][basic-burn-probability-benchmarking]
 
 Comprehensive comparison of our burn probability estimates against historical U.S. fire perimeter data. This analysis adapts methods from [Moran et al. 2025](https://www.nature.com/articles/s41598-025-07968-6) to benchmark our model-derived burn probabilities, examining both all pixels and specifically "non-burnable" areas where we extended estimates beyond the original Riley et al. (2025) coverage.
 
@@ -23,7 +23,7 @@ Comprehensive comparison of our burn probability estimates against historical U.
 - Performance assessment in areas we designated as burnable
 - Statistical comparison with 70+ year fire history
 
-### [California Comparison](../california-comparison)
+### [California Comparison][comparing-datasets-over-california]
 
 Detailed comparison of our risk estimates with two authoritative California datasets: the Wildfire Risk to Communities (WRC) project and [California Fire Hazard Severity Zones](https://osfm.fire.ca.gov/what-we-do/community-wildfire-preparedness-and-mitigation/fire-hazard-severity-zones) from CAL FIRE.
 
@@ -35,6 +35,8 @@ Detailed comparison of our risk estimates with two authoritative California data
 
 ### [Score Bins](../score-bins)
 
+# FIXME: notebook missing?
+
 Exploration and justification of our approach to translating continuous risk values into an 11-step categorical scoring system. This notebook details how we designed bins that allow users to resolve fine-scale differences at both low and high risk levels.
 
 **Key features:**
@@ -43,7 +45,7 @@ Exploration and justification of our approach to translating continuous risk val
 - Distribution-based bin design using building-level data
 - Comparison with other scoring approaches
 
-### [Comparing Risk Rasters](../compare-risk-rasters)
+### [Comparing Risk Rasters][comparing-raster-data-for-regions-of-interest]
 
 Visual comparison of our 30m resolution risk rasters with those from the Wildfire Risk to Communities project. This notebook showcases regions where the datasets differ and explains the underlying causes, including effects of wind modeling and development patterns.
 
@@ -54,7 +56,7 @@ Visual comparison of our 30m resolution risk rasters with those from the Wildfir
 - Historical fire locations (Eaton Fire, Marshall Fire, Camp Fire)
 - "Wind effect" vs. "development effect" attribution
 
-### [Comparing Risk at Buildings](../compare-risk-buildings)
+### [Comparing Risk at Buildings][comparing-address-level-risk-estimates-for-conus]
 
 Building-level comparison of risk estimates, examining how our approach differs from other datasets when evaluated at the scale of individual structures.
 

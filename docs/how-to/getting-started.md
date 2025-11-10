@@ -33,7 +33,7 @@ If you want to analyze OCR data programmatically, you can access our production 
 
 ## Accessing Production Data
 
-OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with xarray and other Python geospatial tools.
+OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
 
 ### Prerequisites
 
@@ -54,8 +54,8 @@ import xarray as xr
 # Connect to OCR's production Icechunk repository
 version = 'v0.12.0'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
-    bucket='carbonplan-ocr',
-    prefix=f'output/fire-risk/tensor/production/{version}/ocr.icechunk',
+    bucket='us-west-2.opendata.source.coop',
+    prefix=f'carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/{version}/ocr.icechunk',
     anonymous=True,
 )
 
