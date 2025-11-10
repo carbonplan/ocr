@@ -17,7 +17,7 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 The fastest way to explore OCR data is through our interactive web map:
 
-**🌐 [ocr.carbonplan.org](https://ocr.carbonplan.org)**
+**[ocr.carbonplan.org](https://ocr.carbonplan.org)**
 
 The web tool allows you to:
 
