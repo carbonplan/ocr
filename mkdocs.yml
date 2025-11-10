@@ -61,6 +61,8 @@ nav:
                 - Evaluation:
                       - Overview: methods/fire-risk/evaluation.md
                       - Benchmarking: methods/fire-risk/benchmarking.ipynb
+                      - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
+                      - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
                       - California Comparison: methods/fire-risk/california-comparison.ipynb
                       - Score Bins: methods/fire-risk/score-bins.ipynb
                       - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
@@ -111,6 +113,7 @@ theme:
 
 plugins:
     - search
+    - autorefs
     - markdown-exec
     - social
     - material-plausible

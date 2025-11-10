@@ -6,10 +6,10 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 **Open Climate Risk (OCR)** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. OCR provides:
 
--   **Building-level fire risk scores** for ~180 million structures
--   **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
--   **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
--   **Present and future scenarios**: Current conditions (circa 2023) and future projections (circa 2047)
+- **Building-level fire risk scores** for ~160 million structures
+- **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
+- **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
+- **Present and future scenarios**: Current conditions (circa 2023) and future projections (circa 2047)
 
 ## Quick Access Options
 
@@ -17,15 +17,15 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 The fastest way to explore OCR data is through our interactive web map:
 
-**🌐 [ocr.carbonplan.org](https://ocr.carbonplan.org)**
+**[ocr.carbonplan.org](https://ocr.carbonplan.org)**
 
 The web tool allows you to:
 
--   Search for specific addresses or locations
--   View building-level risk scores on a 1-10 scale
--   Explore county and census tract aggregations
--   Compare baseline vs. wind-adjusted risk
--   Examine different time horizons (1, 15, and 30-year)
+- Search for specific addresses or locations
+- View building-level risk scores on a 1-10 scale
+- Explore county and census tract aggregations
+- Compare baseline vs. wind-adjusted risk
+- Examine different time horizons (1, 15, and 30-year)
 
 ### Option 2: Access Production Data
 
@@ -33,7 +33,7 @@ If you want to analyze OCR data programmatically, you can access our production 
 
 ## Accessing Production Data
 
-OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with xarray and other Python geospatial tools.
+OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
 
 ### Prerequisites
 
@@ -52,10 +52,10 @@ import icechunk
 import xarray as xr
 
 # Connect to OCR's production Icechunk repository
-version = 'v0.5.0'  # Check GitHub releases for latest version
+version = 'v0.12.0'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
-    bucket='carbonplan-ocr',
-    prefix=f'output/fire-risk/tensor/production/{version}/ocr.icechunk',
+    bucket='us-west-2.opendata.source.coop',
+    prefix=f'carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/{version}/ocr.icechunk',
     anonymous=True,
 )
 
@@ -69,19 +69,19 @@ ds
 
 This gives you access to:
 
--   **Raster datasets**: 30m resolution risk surfaces
--   **Risk scores (RPS)**: Risk to Potential Structures values
--   **Spatial coverage**: Full CONUS extent
--   **Multiple variables**: Burn probability, conditional risk, wind-adjusted metrics
+- **Raster datasets**: 30m resolution risk surfaces
+- **Risk scores (RPS)**: Risk to Potential Structures values
+- **Spatial coverage**: Full CONUS extent
+- **Multiple variables**: Burn probability, conditional risk, wind-adjusted metrics
 
 ### Understanding the Data
 
 The dataset contains several key variables:
 
--   **`rps`**: Risk to Potential Structures (expected net value change per year)
--   **`bp`**: Burn Probability (annual likelihood of burning)
--   **`crps`**: Conditional Risk to Potential Structures (damage if fire occurs)
--   Risk scores are for a "generic" or "potential" structure at each location
+- **`rps`**: Risk to Potential Structures (expected net value change per year)
+- **`bp`**: Burn Probability (annual likelihood of burning)
+- **`crps`**: Conditional Risk to Potential Structures (damage if fire occurs)
+- Risk scores are for a "generic" or "potential" structure at each location
 
 !!! note "Important Limitation"
 Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management. See [Caveats & Limitations](../methods/fire-risk/limitations.md) for details.
@@ -90,36 +90,36 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 
 ### For Data Users
 
--   **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing OCR datasets
--   **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
--   **[Data Downloads](../reference/data-downloads.md)**: Direct download links and bulk access options
+- **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing OCR datasets
+- **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
+- **[Data Downloads](../reference/data-downloads.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 
--   **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
--   **[Data Sources and Provenance](../methods/fire-risk/data-sources-and-provenance.md)**: Learn about input datasets
--   **[Validation and Uncertainty](../methods/fire-risk/validation-and-uncertainty.ipynb)**: Model evaluation and limitations
+- **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
+- **[Data Sources and Provenance](../methods/fire-risk/data-sources-and-provenance.md)**: Learn about input datasets
+- **[Validation and Uncertainty](../methods/fire-risk/validation-and-uncertainty.ipynb)**: Model evaluation and limitations
 
 ### For Developers
 
--   **[Installation](installation.md)**: Set up OCR for local development
--   **[Project Structure](../reference/project-structure.md)**: Understand the codebase
--   **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
+- **[Installation](installation.md)**: Set up OCR for local development
+- **[Project Structure](../reference/project-structure.md)**: Understand the codebase
+- **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
 
 ## Support
 
--   **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
--   **Questions & Discussions**: [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
--   **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+- **Questions & Discussions**: [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
+- **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
 ## Available Data Versions
 
 Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for:
 
--   Latest data version numbers
--   Release notes and changelogs
--   Known issues and fixes
--   Data format changes
+- Latest data version numbers
+- Release notes and changelogs
+- Known issues and fixes
+- Data format changes
 
 ---
 

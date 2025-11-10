@@ -64,8 +64,8 @@ conus_buildings = catalog.get_dataset('conus-overture-buildings')
 Ingestion notes
 
 - All ingestion scripts live in `input-data/`. When adding a new dataset:
-  1. Add a script under `input-data/` that downloads, preprocesses, and writes data to an Icechunk store or geoparquet.
-  2. Add a registration entry in the `ocr` catalog so `catalog.get_dataset(name)` returns a usable object.
-  3. Add a short How-to in `docs/how-to/` describing provenance and any license constraints, and an explanatory note in `docs/explanations/` if needed.
+    1. Add a script under `input-data/` that downloads, preprocesses, and writes data to an Icechunk store or geoparquet.
+    2. Add a registration entry in the `ocr` catalog so `catalog.get_dataset(name)` returns a usable object.
+    3. Add a short How-to in `docs/how-to/` describing provenance and any license constraints, and an explanatory note in `docs/explanations/` if needed.
 
 Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.

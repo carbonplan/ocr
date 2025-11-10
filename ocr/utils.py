@@ -259,26 +259,26 @@ def geo_sel(
     Parameters
     ----------
     ds : xr.Dataset
-      Input dataset with x, y coordinates and a valid 'crs' variable with WKT
+        Input dataset with x, y coordinates and a valid 'crs' variable with WKT
     lon : float, optional
-      Longitude of point to select, by default None
+        Longitude of point to select, by default None
     lat : float, optional
-      Latitude of point to select, by default None
+        Latitude of point to select, by default None
     bbox : tuple, optional
-      Bounding box to select (west, south, east, north), by default None
+        Bounding box to select (west, south, east, north), by default None
     method : str, optional
-      Method to use for point selection, by default 'nearest'
+        Method to use for point selection, by default 'nearest'
     tolerance : float, optional
-      Tolerance (in units of the dataset's CRS) for point selection, by default None
+        Tolerance (in units of the dataset's CRS) for point selection, by default None
     crs_wkt : str, optional
-      WKT string for the dataset's CRS. If None, attempts to read from ds.crs.attrs['crs_wkt'].
+        WKT string for the dataset's CRS. If None, attempts to read from ds.crs.attrs['crs_wkt'].
 
     Returns
     -------
     xarray.Dataset
-      Single point: time dimension only
-      Multiple points: adds 'point' dimension
-      BBox: retains y, x subset
+        Single point: time dimension only
+        Multiple points: adds 'point' dimension
+        BBox: retains y, x subset
     """
     if crs_wkt is None:
         try:

@@ -167,6 +167,7 @@
     mkdocstrings-python         = ">=1.18.2,<2"
     pillow                      = ">=11.3.0,<12"
     ruff                        = ">=0.12.12,<0.14"
+    mkdocs-autorefs             = ">=1.4.3,<2"
 
 [tool.pixi.feature.docs.pypi-dependencies]
     markdown-exec             = ">=1.11.0, <2"
