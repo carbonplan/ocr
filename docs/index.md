@@ -8,11 +8,11 @@ TODO: Add description of OCR here. [TK]
 
 ## Quick Links
 
--   **🌐 Live Web Tool**: [ocr.carbonplan.org](https://ocr.carbonplan.org)
--   **📰 Explainer Article**: [Explainer Article](TK)
--   **💻 GitHub Repository**: [carbonplan/ocr](https://github.com/carbonplan/ocr)
--   **📊 Data Access**: [S3 Bucket](./how-to/work-with-data.ipynb)
--   **📄 Changelog**: [Changelog](https://github.com/carbonplan/ocr/releases)
+- **🌐 Live Web Tool**: [ocr.carbonplan.org](https://ocr.carbonplan.org)
+- **📰 Explainer Article**: [Explainer Article](TK)
+- **💻 GitHub Repository**: [carbonplan/ocr](https://github.com/carbonplan/ocr)
+- **📊 Data Access**: [S3 Bucket](./how-to/work-with-data.ipynb)
+- **📄 Changelog**: [Changelog](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
@@ -46,7 +46,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 <div class="grid cards" markdown>
 
--   :material-school:{ .lg .middle } **Tutorials**
+- :material-school:{ .lg .middle } **Tutorials**
 
     ***
 
@@ -54,7 +54,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
     [:octicons-arrow-right-24: Browse tutorials](tutorials/data-pipeline.md)
 
--   :material-hammer-wrench:{ .lg .middle } **How-to Guides**
+- :material-hammer-wrench:{ .lg .middle } **How-to Guides**
 
     ***
 
@@ -63,7 +63,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
     [:octicons-arrow-right-24: User guides](how-to/work-with-data.ipynb)
     [:octicons-arrow-right-24: Developer guides](how-to/installation.md)
 
--   :material-book-open-variant:{ .lg .middle } **Methods**
+- :material-book-open-variant:{ .lg .middle } **Methods**
 
     ***
 
@@ -71,7 +71,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
     [:octicons-arrow-right-24: Fire risk methods](methods/fire-risk/overview.md)
 
--   :material-file-document:{ .lg .middle } **Reference**
+- :material-file-document:{ .lg .middle } **Reference**
 
     ***
 
@@ -84,9 +84,9 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 ## Support
 
--   **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
--   **Discussions**: [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
--   **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
+- **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
 ## Citation (TK)
 

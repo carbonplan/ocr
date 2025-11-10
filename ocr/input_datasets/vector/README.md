@@ -14,9 +14,9 @@ Overture Maps building and address data for CONUS.
 
 **Features**:
 
--   Buildings data with bbox and geometry
--   Addresses data with full attribute set
--   CONUS-bounded subset from global dataset
+- Buildings data with bbox and geometry
+- Addresses data with full attribute set
+- CONUS-bounded subset from global dataset
 
 **Usage**:
 
@@ -36,13 +36,13 @@ ocr ingest-data run-all overture-maps --dry-run
 
 **Output**:
 
--   Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS-overture-buildings-2025-09-24.0.parquet`
--   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS-overture-addresses-2025-09-24.0.parquet`
+- Buildings: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/CONUS-overture-buildings-2025-09-24.0.parquet`
+- Addresses: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/CONUS-overture-addresses-2025-09-24.0.parquet`
 
 **Processing time**:
 
--   Buildings: ~14 minutes on c8g.2xlarge
--   Addresses: ~4 minutes on c8g.xlarge
+- Buildings: ~14 minutes on c8g.2xlarge
+- Addresses: ~4 minutes on c8g.xlarge
 
 ### census-tiger
 
@@ -54,10 +54,10 @@ US Census TIGER/Line geographic boundaries for CONUS + DC.
 
 **Features**:
 
--   Census blocks (GEOID + geometry)
--   Census tracts (TRACTCE, GEOID, NAME + geometry) - per-state and aggregated
--   Counties (NAME + geometry)
--   Excludes Alaska and Hawaii (CONUS + DC only)
+- Census blocks (GEOID + geometry)
+- Census tracts (TRACTCE, GEOID, NAME + geometry) - per-state and aggregated
+- Counties (NAME + geometry)
+- Excludes Alaska and Hawaii (CONUS + DC only)
 
 **Usage**:
 
@@ -78,16 +78,16 @@ ocr ingest-data run-all census-tiger --dry-run
 
 **Output**:
 
--   Blocks: `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet`
--   Tracts (per-state): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/FIPS/FIPS_*.parquet`
--   Tracts (aggregated): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
--   Counties: `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
+- Blocks: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet`
+- Tracts (per-state): `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/FIPS/FIPS_*.parquet`
+- Tracts (aggregated): `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
+- Counties: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
 
 **Processing time**:
 
--   Blocks: ~20-30 minutes for all 49 states
--   Tracts: ~15-20 minutes for all 49 states (including aggregation)
--   Counties: ~2 minutes
+- Blocks: ~20-30 minutes for all 49 states
+- Tracts: ~15-20 minutes for all 49 states (including aggregation)
+- Counties: ~2 minutes
 
 Overture Maps building and address data for CONUS.
 
@@ -97,9 +97,9 @@ Overture Maps building and address data for CONUS.
 
 **Features**:
 
--   Buildings data with bbox and geometry
--   Addresses data with full attribute set
--   CONUS-bounded subset from global dataset
+- Buildings data with bbox and geometry
+- Addresses data with full attribute set
+- CONUS-bounded subset from global dataset
 
 **Usage**:
 
@@ -119,13 +119,13 @@ ocr ingest-data run-all overture-maps --dry-run
 
 **Output**:
 
--   Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS_overture_buildings_2025-09-24.0.parquet`
--   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/CONUS_overture_addresses_2025-09-24.0.parquet`
+- Buildings: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/CONUS_overture_buildings_2025-09-24.0.parquet`
+- Addresses: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/CONUS_overture_addresses_2025-09-24.0.parquet`
 
 **Processing time**:
 
--   Buildings: ~14 minutes on c8g.2xlarge
--   Addresses: ~4 minutes on c8g.xlarge
+- Buildings: ~14 minutes on c8g.2xlarge
+- Addresses: ~4 minutes on c8g.xlarge
 
 ## Implementation Notes
 

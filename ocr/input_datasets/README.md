@@ -25,49 +25,47 @@ ocr ingest-data run-all <dataset>            # Execute
 
 ## Architecture Overview
 
--   **Base Classes**: `BaseDatasetProcessor`, `InputDatasetConfig`
--   **Storage Utilities**: `IcechunkWriter`, `S3Uploader`
--   **Tensor Datasets**: USFS fire risk data (scott-et-al-2024, riley-et-al-2025, dillon-et-al-2023)
--   **Vector Datasets**: Overture Maps, Census TIGER/Line
+- **Base Classes**: `BaseDatasetProcessor`, `InputDatasetConfig`
+- **Storage Utilities**: `IcechunkWriter`, `S3Uploader`
+- **Tensor Datasets**: USFS fire risk data (scott-et-al-2024, riley-et-al-2025, dillon-et-al-2023)
+- **Vector Datasets**: Overture Maps, Census TIGER/Line
 
 ## Developer Guide
 
 See the [full documentation](../../docs/how-to/input-dataset-ingestion.md) for:
 
--   Adding new datasets
--   Using static methods for distributed processing
--   Registering datasets in CLI
--   Configuration options
--   Troubleshooting
+- Adding new datasets
+- Using static methods for distributed processing
+- Registering datasets in CLI
+- Configuration options
+- Troubleshooting
 
 ## Architecture
 
 ### Base Classes
 
--   **`BaseDatasetProcessor`**: Abstract base class for all dataset processors
+- **`BaseDatasetProcessor`**: Abstract base class for all dataset processors
+    - `download()`: Download raw source data
+    - `process()`: Process and upload to S3/Icechunk
+    - `run_all()`: Complete pipeline with cleanup
 
-    -   `download()`: Download raw source data
-    -   `process()`: Process and upload to S3/Icechunk
-    -   `run_all()`: Complete pipeline with cleanup
-
--   **`InputDatasetConfig`**: Pydantic configuration with environment variable support
-    -   `OCR_INPUT_DATASET_S3_BUCKET`: S3 bucket (default: `carbonplan-ocr`)
-    -   `OCR_INPUT_DATASET_S3_REGION`: AWS region (default: `us-west-2`)
-    -   `OCR_INPUT_DATASET_BASE_PREFIX`: S3 prefix (default: `input/fire-risk`)
-    -   `OCR_INPUT_DATASET_DEBUG`: Enable debug logging
+- **`InputDatasetConfig`**: Pydantic configuration with environment variable support
+    - `OCR_INPUT_DATASET_S3_BUCKET`: S3 bucket (default: `carbonplan-ocr`)
+    - `OCR_INPUT_DATASET_S3_REGION`: AWS region (default: `us-west-2`)
+    - `OCR_INPUT_DATASET_BASE_PREFIX`: S3 prefix (default: `input/fire-risk`)
+    - `OCR_INPUT_DATASET_DEBUG`: Enable debug logging
 
 ### Storage Utilities
 
--   **`IcechunkWriter`**: Manages Icechunk repository creation and writing
+- **`IcechunkWriter`**: Manages Icechunk repository creation and writing
+    - Automatic conflict resolution with retries
+    - Supports both S3 and local storage
+    - Dry-run mode for testing
 
-    -   Automatic conflict resolution with retries
-    -   Supports both S3 and local storage
-    -   Dry-run mode for testing
-
--   **`S3Uploader`**: Handles S3 file uploads with progress tracking
-    -   Single file and directory uploads
-    -   Pattern-based file filtering
-    -   Dry-run mode
+- **`S3Uploader`**: Handles S3 file uploads with progress tracking
+    - Single file and directory uploads
+    - Pattern-based file filtering
+    - Dry-run mode
 
 ## Developer Guide
 
