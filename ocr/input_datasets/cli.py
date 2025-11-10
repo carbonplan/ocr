@@ -6,6 +6,7 @@ from rich.table import Table
 
 from ocr.console import console
 from ocr.input_datasets.base import InputDatasetConfig
+from ocr.input_datasets.tensor.calfire_fhsz import CalfireFHSZProcessor
 from ocr.input_datasets.tensor.usfs_dillon_2023 import Dillon2023Processor
 from ocr.input_datasets.tensor.usfs_riley_2025 import RileyEtAl2025Processor
 from ocr.input_datasets.tensor.usfs_scott_2024 import ScottEtAl2024Processor
@@ -41,6 +42,11 @@ DATASET_REGISTRY = {
         'processor_class': CensusTigerProcessor,
         'type': 'vector',
         'description': 'US Census TIGER/Line geographic boundaries (blocks, tracts, counties)',
+    },
+    'calfire-fhsz': {
+        'processor_class': CalfireFHSZProcessor,
+        'type': 'tensor',
+        'description': 'California Fire Hazard Severity Zones (FHSZ)',
     },
 }
 
