@@ -47,18 +47,20 @@ pixi run ocr ingest-data process census-tiger \
 
 ## Available Datasets
 
+Our processed input dataset have been transfered to a public AWS bucket in `us-west-2` hosted by the [Source Cooperative](https://radiant.earth/blog/2023/10/what-is-source-cooperative/) project.
+
 ### Tensor Datasets (Raster/Icechunk)
 
 #### scott-et-al-2024
 
 **USFS Wildfire Risk to Communities (2nd Edition)**
 
--   **RDS ID**: RDS-2020-0016-02
--   **Version**: 2024-V2
--   **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2020-0016-2)
--   **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
--   **Coverage**: CONUS
--   **Variables**: BP (Burn Probability), CRPS (Conditional Risk to Potential Structures), CFL (Conditional Flame Length), Exposure, FLEP4, FLEP8, RPS (Relative Proportion Spread), WHP (Wildfire Hazard Potential)
+- **RDS ID**: RDS-2020-0016-02
+- **Version**: 2024-V2
+- **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2020-0016-2)
+- **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
+- **Coverage**: CONUS
+- **Variables**: BP (Burn Probability), CRPS (Conditional Risk to Potential Structures), CFL (Conditional Flame Length), Exposure, FLEP4, FLEP8, RPS (Relative Proportion Spread), WHP (Wildfire Hazard Potential)
 
 **Pipeline**:
 
@@ -80,9 +82,9 @@ pixi run ocr ingest-data process scott-et-al-2024 --use-coiled
 
 **Outputs**:
 
--   Raw TIFFs: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/`
--   Native Icechunk: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02_all_vars_merge_icechunk/`
--   Reprojected: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/scott-et-al-2024-30m-4326.icechunk/`
+- Raw TIFFs: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02/input_tif/`
+- Native Icechunk: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/RDS-2020-0016-02_all_vars_merge_icechunk/`
+- Reprojected: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/scott-et-al-2024-30m-4326.icechunk/`
 
 ---
 
@@ -90,12 +92,12 @@ pixi run ocr ingest-data process scott-et-al-2024 --use-coiled
 
 **USFS Probabilistic Wildfire Risk - 2011 & 2047 Climate Runs**
 
--   **RDS ID**: RDS-2025-0006
--   **Version**: 2025
--   **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2025-0006)
--   **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
--   **Coverage**: CONUS
--   **Variables**: Multiple climate scenarios (2011 baseline, 2047 projections)
+- **RDS ID**: RDS-2025-0006
+- **Version**: 2025
+- **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2025-0006)
+- **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
+- **Coverage**: CONUS
+- **Variables**: Multiple climate scenarios (2011 baseline, 2047 projections)
 
 **Pipeline**:
 
@@ -111,7 +113,7 @@ pixi run ocr ingest-data run-all riley-et-al-2025 --use-coiled
 
 **Outputs**:
 
--   Reprojected: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/riley-et-al-2025-30m-4326.icechunk/`
+- Reprojected: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/riley-et-al-2025-30m-4326.icechunk/`
 
 ---
 
@@ -119,12 +121,12 @@ pixi run ocr ingest-data run-all riley-et-al-2025 --use-coiled
 
 **USFS Spatial Datasets of Probabilistic Wildfire Risk Components (270m, 3rd Edition)**
 
--   **RDS ID**: RDS-2016-0034-3
--   **Version**: 2023
--   **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2016-0034-3)
--   **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
--   **Coverage**: CONUS
--   **Variables**: BP, FLP1-6 (Flame Length Probability levels)
+- **RDS ID**: RDS-2016-0034-3
+- **Version**: 2023
+- **Source**: [USFS Research Data Archive](https://www.fs.usda.gov/rds/archive/catalog/RDS-2016-0034-3)
+- **Resolution**: 30m (EPSG:4326), native 270m (EPSG:5070)
+- **Coverage**: CONUS
+- **Variables**: BP, FLP1-6 (Flame Length Probability levels)
 
 **Pipeline**:
 
@@ -140,9 +142,9 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 
 **Outputs**:
 
--   Raw TIFFs: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/raw-input-tiffs/`
--   Native Icechunk: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-270m-5070.icechunk/`
--   Reprojected: `s3://carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk/`
+- Raw TIFFs: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/raw-input-tiffs/`
+- Native Icechunk: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-270m-5070.icechunk/`
+- Reprojected: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk/`
 
 ---
 
@@ -152,11 +154,11 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 
 **Overture Maps Building and Address Data for CONUS**
 
--   **Release**: 2025-09-24.0
--   **Source**: [Overture Maps Foundation](https://overturemaps.org)
--   **Format**: GeoParquet (WKB geometry, zstd compression)
--   **Coverage**: CONUS (spatially filtered from global dataset)
--   **Data Types**: Buildings (bbox + geometry), Addresses (full attributes), Region-Tagged Buildings (buildings + census identifiers)
+- **Release**: 2025-09-24.0
+- **Source**: [Overture Maps Foundation](https://overturemaps.org)
+- **Format**: GeoParquet (WKB geometry, zstd compression)
+- **Coverage**: CONUS (spatially filtered from global dataset)
+- **Data Types**: Buildings (bbox + geometry), Addresses (full attributes), Region-Tagged Buildings (buildings + census identifiers)
 
 **Pipeline**:
 
@@ -169,10 +171,10 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 
 When buildings are processed, an additional dataset is automatically created that tags each building with census geographic identifiers:
 
--   Loads census FIPS lookup table for state/county names
--   Creates spatial indexes on buildings and census blocks
--   Performs bbox-filtered spatial join using `ST_Intersects`
--   Adds identifiers at multiple administrative levels: state, county, tract, block group, and block
+- Loads census FIPS lookup table for state/county names
+- Creates spatial indexes on buildings and census blocks
+- Performs bbox-filtered spatial join using `ST_Intersects`
+- Adds identifiers at multiple administrative levels: state, county, tract, block group, and block
 
 **Usage**:
 
@@ -196,9 +198,9 @@ pixi run ocr ingest-data run-all overture-maps --use-coiled
 
 **Outputs**:
 
--   Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-buildings-2025-09-24.0.parquet`
--   Addresses: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet`
--   Region-Tagged Buildings: `s3://carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet`
+- Buildings: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-buildings-2025-09-24.0.parquet`
+- Addresses: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet`
+- Region-Tagged Buildings: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet`
 
 ---
 
@@ -206,11 +208,11 @@ pixi run ocr ingest-data run-all overture-maps --use-coiled
 
 **US Census TIGER/Line Geographic Boundaries**
 
--   **Vintage**: 2024 (tracts/counties), 2025 (blocks)
--   **Source**: [US Census Bureau TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)
--   **Format**: GeoParquet (WKB geometry, zstd compression, schema v1.1.0)
--   **Coverage**: CONUS + DC (49 states/territories, excludes Alaska & Hawaii)
--   **Geography Types**: Blocks, Tracts, Counties
+- **Vintage**: 2024 (tracts/counties), 2025 (blocks)
+- **Source**: [US Census Bureau TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)
+- **Format**: GeoParquet (WKB geometry, zstd compression, schema v1.1.0)
+- **Coverage**: CONUS + DC (49 states/territories, excludes Alaska & Hawaii)
+- **Geography Types**: Blocks, Tracts, Counties
 
 **Pipeline**:
 
@@ -237,48 +239,48 @@ pixi run ocr ingest-data run-all census-tiger --dry-run
 
 **Outputs**:
 
--   Blocks: `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet`
--   Tracts (per-state): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/FIPS/FIPS_*.parquet`
--   Tracts (aggregated): `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
--   Counties: `s3://carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
+- Blocks: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/blocks/blocks.parquet`
+- Tracts (per-state): `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/FIPS/FIPS_*.parquet`
+- Tracts (aggregated): `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
+- Counties: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
 
 ## CLI Reference
 
 ### Commands
 
--   **`list-datasets`**: Show all available datasets
--   **`download <dataset>`**: Download raw source data (tensor datasets only)
--   **`process <dataset>`**: Process and upload to S3/Icechunk
--   **`run-all <dataset>`**: Complete pipeline (download + process + cleanup)
+- **`list-datasets`**: Show all available datasets
+- **`download <dataset>`**: Download raw source data (tensor datasets only)
+- **`process <dataset>`**: Process and upload to S3/Icechunk
+- **`run-all <dataset>`**: Complete pipeline (download + process + cleanup)
 
 ### Global Options
 
--   **`--dry-run`**: Preview operations without executing (recommended before any real run)
--   **`--debug`**: Enable debug logging for troubleshooting
+- **`--dry-run`**: Preview operations without executing (recommended before any real run)
+- **`--debug`**: Enable debug logging for troubleshooting
 
 ### Tensor Dataset Options
 
--   **`--use-coiled`**: Use Coiled for distributed processing (USFS datasets)
+- **`--use-coiled`**: Use Coiled for distributed processing (USFS datasets)
 
 ### Vector Dataset Options
 
 #### Overture Maps
 
--   **`--overture-data-type <type>`**: Which data to process
-    -   `buildings`: Only building geometries
-    -   `addresses`: Only address points
-    -   `both`: Both datasets (default)
+- **`--overture-data-type <type>`**: Which data to process
+    - `buildings`: Only building geometries
+    - `addresses`: Only address points
+    - `both`: Both datasets (default)
 
 #### Census TIGER
 
--   **`--census-geography-type <type>`**: Which geography to process
-    -   `blocks`: Census blocks
-    -   `tracts`: Census tracts (per-state + aggregated)
-    -   `counties`: County boundaries
-    -   `all`: All three types (default)
--   **`--census-subset-states <state> [<state> ...]`**: Process only specific states
-    -   Repeat option for each state: `--census-subset-states California --census-subset-states Oregon`
-    -   Use full state names (case-sensitive): `California`, `Oregon`, `Washington`, etc.
+- **`--census-geography-type <type>`**: Which geography to process
+    - `blocks`: Census blocks
+    - `tracts`: Census tracts (per-state + aggregated)
+    - `counties`: County boundaries
+    - `all`: All three types (default)
+- **`--census-subset-states <state> [<state> ...]`**: Process only specific states
+    - Repeat option for each state: `--census-subset-states California --census-subset-states Oregon`
+    - Use full state names (case-sensitive): `California`, `Oregon`, `Washington`, etc.
 
 ## Configuration
 
@@ -304,10 +306,10 @@ export OCR_INPUT_DATASET_TEMP_DIR=/path/to/temp
 
 The `InputDatasetConfig` class (Pydantic model) provides:
 
--   Type validation for all settings
--   Automatic environment variable loading (prefix: `OCR_INPUT_DATASET_`)
--   Default values for all options
--   Case-insensitive environment variable names
+- Type validation for all settings
+- Automatic environment variable loading (prefix: `OCR_INPUT_DATASET_`)
+- Default values for all options
+- Case-insensitive environment variable names
 
 ## Troubleshooting
 
