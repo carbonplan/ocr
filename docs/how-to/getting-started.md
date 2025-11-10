@@ -6,7 +6,7 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 **Open Climate Risk (OCR)** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. OCR provides:
 
-- **Building-level fire risk scores** for ~180 million structures
+- **Building-level fire risk scores** for ~160 million structures
 - **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
 - **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
 - **Present and future scenarios**: Current conditions (circa 2023) and future projections (circa 2047)
