@@ -191,6 +191,7 @@
     geopandas             = ">=1.1.1,<2"
     icechunk              = ">=1.1.5,<2"
     libgdal-arrow-parquet = ">=3.10.3,<4"
+    lonboard              = ">=0.11.1,<0.14"
     morecantile           = ">=6.2.0,<7"
     numcodecs             = ">=0.16.1,<0.17"
     obstore               = ">=0.8.2,<0.9"
@@ -208,6 +209,7 @@
     rich                  = ">=14.1.0,<15"
     rioxarray             = ">=0.19.0,<0.20"
     s3fs                  = ">=2025.9.0,<2026"
+    seaborn               = ">=0.13.2,<0.14"
     semver                = ">=3.0.4,<4"
     syrupy                = ">=5.0.0,<6"
     tqdm                  = ">=4.67.1,<5"
@@ -223,3 +225,4 @@
     export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
     start-coiled-notebook        = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    start-coiled-notebook-extra  = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.16xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }

@@ -626,6 +626,20 @@ datasets = [
         prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk',
         data_format='zarr',
     ),
+    Dataset(
+        name='calfire-fhsz-3310',
+        description='California Fire Hazard Severity Zones (FHSZ) in EPSG 3310',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/calfire-fhsz/calfire-risk-raster-3310.icechunk',
+        data_format='zarr',
+    ),
+    Dataset(
+        name='calfire-fhsz-4326',
+        description='California Fire Hazard Severity Zones (FHSZ) in EPSG 4326',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/tensor/calfire-fhsz/calfire-risk-raster-4326.icechunk',
+        data_format='zarr',
+    ),
 ]
 
 
