@@ -8,11 +8,11 @@ TODO: Add description of OCR here. [TK]
 
 ## Quick Links
 
-- **🌐 Live Web Tool**: [ocr.carbonplan.org](https://ocr.carbonplan.org)
-- **📰 Explainer Article**: [Explainer Article](TK)
-- **💻 GitHub Repository**: [carbonplan/ocr](https://github.com/carbonplan/ocr)
-- **📊 Data Access**: [S3 Bucket](./how-to/work-with-data.ipynb)
-- **📄 Changelog**: [Changelog](https://github.com/carbonplan/ocr/releases)
+- ** Live Web Tool**: [ocr.carbonplan.org](https://ocr.carbonplan.org)
+- ** Explainer Article**: [Explainer Article](TK)
+- ** GitHub Repository**: [carbonplan/ocr](https://github.com/carbonplan/ocr)
+- ** Data Access**: [S3 Bucket](./how-to/work-with-data.ipynb)
+- ** Changelog**: [Changelog](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
