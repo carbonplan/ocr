@@ -79,7 +79,7 @@ The dataset contains several key variables:
 
 !!! note "Important Limitation"
 
-    Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management. See [Caveats & Limitations](../methods/fire-risk/limitations.md) for details.
+    Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management.
 
 ## Next Steps
 
@@ -93,7 +93,6 @@ The dataset contains several key variables:
 
 - **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
 - **[Data Sources and Provenance](../methods/fire-risk/data-sources-and-provenance.md)**: Learn about input datasets
-- **[Validation and Uncertainty](../methods/fire-risk/validation-and-uncertainty.ipynb)**: Model evaluation and limitations
 
 ### For Developers
 

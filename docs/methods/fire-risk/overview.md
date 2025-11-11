@@ -111,7 +111,6 @@ For each 30m pixel:
 - Convert continuous RPS values to categorical risk scores (1-10 scale)
 - Scores based on percentile bins of RPS across full CONUS domain
 
-For detailed implementation steps, see the [Implementation](./implementation.ipynb) page.
 
 ## Spatial Processing Architecture
 
@@ -154,9 +153,7 @@ See [Horizontal Scaling via Spatial Chunking](./horizontal-scaling-via-spatial-c
 - **No explicit fire suppression**: Model does not account for firefighting efforts
 - **Wildfire focus only**: Does not include structure-to-structure fire spread in WUI
 - **99th percentile FFWI**: Fire weather threshold may not perfectly capture conditions during largest fires
-- **Point-specific wind data**: Wind directions at pixel B determine spreading, regardless of wind at upwind pixel A (see limitations discussion)
-
-For a detailed discussion of caveats, see [Caveats & Limitations](./limitations.md).
+- **Point-specific wind data**: Wind directions at pixel B determine spreading, regardless of wind at upwind pixel A
 
 ## Factors Not Included
 
@@ -173,8 +170,6 @@ The risk scores described above represent risk to a **"potential" or "generic" s
 
 **Interpretation guidance**: The risk score at a given address should be understood as risk to a generic building at that location, leaving it to users to assess how their actual building compares to that generic baseline.
 
-For validation approaches and uncertainty quantification, see [Validation and Uncertainty](./validation-and-uncertainty.ipynb).
-
 ## References and Further Reading
 
 ### Primary Data Sources
@@ -190,11 +185,3 @@ For validation approaches and uncertainty quantification, see [Validation and Un
 - Richards (1990): Elliptical fire spread wavelets
 - Finney (2005): "The challenge of quantitative risk analysis for wildland fire"
 - Scott and Thompson (2015): Expected net value change / RPS definition
-
-### Related Documentation
-
-- [Data Sources and Provenance](./data-sources-and-provenance.md): Detailed data access and preprocessing
-- [Implementation](./implementation.ipynb): Step-by-step calculation details
-- [Validation and Uncertainty](./validation-and-uncertainty.ipynb): Model evaluation and uncertainty analysis
-- [Horizontal Scaling via Spatial Chunking](./horizontal-scaling-via-spatial-chunking.ipynb): Parallel processing architecture
-- [Data Pipeline Tutorial](../../tutorials/data-pipeline.md): Runnable tutorial for reproducing calculations

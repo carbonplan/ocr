@@ -33,7 +33,6 @@
 
     1. Read the [Fire Risk Overview][fire-risk-methods-overview] for conceptual background
     2. Explore [Data Sources and Provenance][input-datasets-technical-reference-how-to]
-    3. Review [Implementation][implementation] for technical details
 
 ## Documentation Structure
 
