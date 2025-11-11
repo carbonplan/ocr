@@ -111,7 +111,6 @@ For each 30m pixel:
 - Convert continuous RPS values to categorical risk scores (1-10 scale)
 - Scores based on percentile bins of RPS across full CONUS domain
 
-
 ## Spatial Processing Architecture
 
 The model uses a spatial chunking system for efficient parallel processing:

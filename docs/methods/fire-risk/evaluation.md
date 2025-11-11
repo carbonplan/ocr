@@ -33,12 +33,6 @@ Detailed comparison of our risk estimates with two authoritative California data
 - Spatial patterns of agreement and disagreement
 - Regional variation in performance metrics
 
-### [Score Bins](../score-bins)
-
-# FIXME: notebook missing?
-
-Exploration and justification of our approach to translating continuous risk values into an 11-step categorical scoring system. This notebook details how we designed bins that allow users to resolve fine-scale differences at both low and high risk levels.
-
 **Key features:**
 
 - Monotonically descending bin prevalence with increasing risk scores
