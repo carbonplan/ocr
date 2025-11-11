@@ -54,9 +54,6 @@ nav:
           - Fire Risk:
                 - Overview: methods/fire-risk/overview.md
                 - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
-                - Implementation: methods/fire-risk/implementation.ipynb
-                - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
-                - Caveats & Limitations: methods/fire-risk/limitations.md
                 - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
                 - Evaluation:
                       - Overview: methods/fire-risk/evaluation.md

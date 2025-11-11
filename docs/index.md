@@ -5,10 +5,9 @@
 ## Quick Links
 
 - [**Web Tool**](https://ocr.carbonplan.org)
-- [**Explainer Article**](TK)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr)
-- [**Data Access**](./how-to/work-with-data.ipynb)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
+- [**Explainer Article**](https://ocr.carbonplan.org/research/climate-risk-explainer)
+- [**GitHub Repository**](https://github.com/carbonplan/ocr) (currently private)
+- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases) (currently private)
 
 ## Getting Started
 
@@ -18,7 +17,7 @@
 
     1. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
     2. Explore the [Data Schema][data-schema] to understand available variables
-    3. Check [Data Downloads][data-downloads] for direct S3 access
+    3. Check [Data Downloads][data-downloads] for an overview of all available formats
 
 === "Contributing to OCR"
 
@@ -34,7 +33,6 @@
 
     1. Read the [Fire Risk Overview][fire-risk-methods-overview] for conceptual background
     2. Explore [Data Sources and Provenance][input-datasets-technical-reference-how-to]
-    3. Review [Implementation][implementation] for technical details
 
 ## Documentation Structure
 
@@ -85,6 +83,4 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 ## License
 
-OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details.
-
-## See [data downloads][data-downloads] for information about data licensing.
+OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](reference/data-downloads.md) for information about data licensing.

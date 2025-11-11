@@ -1,8 +1,6 @@
 # OCR Data Pipeline
 
-![](../assets/ocr_data_flow.png)
-
-The OCR (Optimal Climate Risk) data pipeline processes climate risk data through a series of coordinated stages, from individual region processing to final tile generation for visualization.
+The OCR (Open Climate Risk) data pipeline processes climate risk data through a series of coordinated stages, from individual region processing to final tile generation for visualization.
 
 ## Overview
 
