@@ -6,26 +6,20 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 **Open Climate Risk (OCR)** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. OCR provides:
 
-- **Building-level fire risk scores** for ~160 million structures
+- **Building-level fire risk** for ~160 million structures
 - **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
 - **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
-- **Present and future scenarios**: Current conditions (circa 2023) and future projections (circa 2047)
+- **Present and future scenarios**: Current conditions (circa 2011) and future projections (circa 2047)
 
 ## Quick Access Options
 
 ### Option 1: Explore the Web Tool
 
-The fastest way to explore OCR data is through our interactive web map:
-
-**[ocr.carbonplan.org](https://ocr.carbonplan.org)**
-
-The web tool allows you to:
+The fastest way to explore OCR data is through our [interactive web map](https://ocr.carbonplan.org). The web tool allows you to:
 
 - Search for specific addresses or locations
 - View building-level risk scores on a 1-10 scale
-- Explore county and census tract aggregations
-- Compare baseline vs. wind-adjusted risk
-- Examine different time horizons (1, 15, and 30-year)
+- Explore county, census tract, and census block aggregations
 
 ### Option 2: Access Production Data
 
@@ -84,7 +78,8 @@ The dataset contains several key variables:
 - Risk scores are for a "generic" or "potential" structure at each location
 
 !!! note "Important Limitation"
-Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management. See [Caveats & Limitations](../methods/fire-risk/limitations.md) for details.
+
+    Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management. See [Caveats & Limitations](../methods/fire-risk/limitations.md) for details.
 
 ## Next Steps
 
