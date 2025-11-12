@@ -1,6 +1,6 @@
-# Welcome to OCR Documentation
+# Open Climate Risk (Beta)
 
-**Open Climate Risk (OCR)**is CarbonPlan's platform for analyzing and visualizing climate-related risks at a building-level resolution across the Continental United States (CONUS).
+**Open Climate Risk (OCR)** is CarbonPlan's platform, currently in beta, for analyzing and visualizing climate-related risks at a building-level resolution across the Continental United States (CONUS). While in beta, you may notice broken links to code references (GitHub project is currently private).
 
 ## Quick Links
 
