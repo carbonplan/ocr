@@ -8,6 +8,13 @@ While OCR is in beta, there a few different ways to access the data, in addition
 
 <!-- prettier-ignore-end -->
 
+<!-- prettier-ignore-start -->
+!!! warning "Terms of Data Use"
+    By viewing Open Climate Risk data, you agree to CarbonPlan’s [Terms of Use](https://carbonplan.org/terms) and [Privacy Policy](https://carbonplan.org/privacy), and that the data is in a beta state and may not be used for decision-making purposes, cited, or otherwise shared.
+
+
+<!-- prettier-ignore-end -->
+
 ## Download options
 
 | Option                            | Description                                                                         | Formats               | Access                                                       | License                                                   |
