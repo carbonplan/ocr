@@ -1,6 +1,6 @@
-# Data Downloads
+# Data Downloads (Beta)
 
-OCR provides a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
+While OCR is in beta, there a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
