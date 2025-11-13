@@ -457,7 +457,7 @@ def create_wind_informed_burn_probability(
             riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
         )
 
-    # smooth using a 21x21 Gaussian filter
+    # smooth using a 25x25 Gaussian filter
     smoothed_bp = xr.apply_ufunc(
         cv.GaussianBlur,
         wind_informed_bp_combined.chunk(latitude=-1, longitude=-1),
@@ -466,7 +466,7 @@ def create_wind_informed_burn_probability(
         vectorize=True,
         dask='parallelized',
         output_dtypes=[np.float32],
-        kwargs={'ksize': (21, 21), 'sigmaX': 0},
+        kwargs={'ksize': (25, 25), 'sigmaX': 0},
     )
     smoothed_bp.name = 'BP'
 
