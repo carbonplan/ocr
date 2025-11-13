@@ -73,7 +73,7 @@ def generate_weights(
 def generate_wind_directional_kernels(
     kernel_size: float = 81.0, circle_diameter: float = 35.0
 ) -> dict[str, np.ndarray]:
-    """Generate a dictionary of 2D arrays of weights for ellptical kernels oriented in different directions.
+    """Generate a dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
 
     Parameters
     ----------
