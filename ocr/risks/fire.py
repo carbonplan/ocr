@@ -87,7 +87,7 @@ def generate_wind_directional_kernels(
     """
     weights_dict = {}
     rotating_angles = np.arange(0, 360, 45)
-    wind_direction_labels = ['W', 'SW', 'S', 'SE', 'E', 'NE', 'N', 'NW']
+    wind_direction_labels = ['W', 'NW', 'N', 'NE', 'E', 'SE', 'S', 'SW']
     for angle, direction in zip(rotating_angles, wind_direction_labels):
         base = generate_weights(
             method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
@@ -100,10 +100,6 @@ def generate_wind_directional_kernels(
             mode='nearest',
             prefilter=False,
         )
-
-        if angle in [45, 135, 225, 315]:
-            # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
-            rotated = rotated[17:98, 17:98]
 
         # Remove tiny negative interpolation artifacts, renormalize
         rotated = np.clip(rotated, 0.0, None)
@@ -470,7 +466,7 @@ def create_wind_informed_burn_probability(
         vectorize=True,
         dask='parallelized',
         output_dtypes=[np.float32],
-        kwargs={'ksize': (21, 21), 'sigmaX': 0},
+        kwargs={'ksize': (25, 25), 'sigmaX': 0},
     )
     smoothed_bp.name = 'BP'
 
