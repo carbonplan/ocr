@@ -17,7 +17,7 @@ def generate_weights(
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
 ) -> np.ndarray:
-    """Generate a 2D array of weights for a circular kernel.
+    """Generate a 2D array of weights for a kernel.
 
     Parameters
     ----------
@@ -45,7 +45,9 @@ def generate_weights(
         weights = inside / inside.sum()
 
     elif method == 'skewed':
-        # elliptical kernel
+        # elliptical kernel oriented with the major axis horizontal and shifted
+        # to the left. this captures pixels to the left, which, in our approach
+        # corresponds to a wind from the west
         a = 4  # semi-major axis
         b = 2  # semi-minor axis
         x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
@@ -71,7 +73,7 @@ def generate_weights(
 def generate_wind_directional_kernels(
     kernel_size: float = 81.0, circle_diameter: float = 35.0
 ) -> dict[str, np.ndarray]:
-    """Generate a dictionary of 2D arrays of weights for circular kernels oriented in different directions.
+    """Generate a dictionary of 2D arrays of weights for ellptical kernels oriented in different directions.
 
     Parameters
     ----------
@@ -83,15 +85,23 @@ def generate_wind_directional_kernels(
     Returns
     -------
     kernels : dict[str, np.ndarray]
-        A dictionary of 2D arrays of weights for circular kernels oriented in different directions.
+        A dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
     """
     weights_dict = {}
     rotating_angles = np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'SW', 'S', 'SE', 'E', 'NE', 'N', 'NW']
     for angle, direction in zip(rotating_angles, wind_direction_labels):
+        # our base kernel is oriented to the west
         base = generate_weights(
             method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
         ).astype(np.float32)
+        # rotating we rotate the kernel and pair it with each direction
+        # when you plot these kernels with imshow (aka with y coordinates inverted),
+        # north is at the bottom and south is at the top. thus, we want the elliptical
+        # kernel to be toward the bottom of a figure when you plot the
+        # weights in imshow.
+        # Note: rotate will introduce some non 0/1 values for the ellipses in the ordinal directions
+        # but they are normalized so the total weight is consistent.
         rotated = rotate(
             base,
             angle=angle,
@@ -100,23 +110,9 @@ def generate_wind_directional_kernels(
             mode='nearest',
             prefilter=False,
         )
-
-        if angle in [45, 135, 225, 315]:
-            # TODO, @orianac, i presume this cropping only applies to kernel_size=81.0, circle_diameter=35.0. If so, what should the cropping be for other kernel sizes and circle diameters?
-            rotated = rotated[17:98, 17:98]
-
         # Remove tiny negative interpolation artifacts, renormalize
         rotated = np.clip(rotated, 0.0, None)
         weights_dict[direction] = rotated
-
-    circ = generate_weights(
-        method='circular_focal_mean',
-        kernel_size=kernel_size,
-        circle_diameter=circle_diameter,
-    ).astype(np.float32)
-    circ = np.clip(circ, 0, None)
-
-    weights_dict['circular'] = circ
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
