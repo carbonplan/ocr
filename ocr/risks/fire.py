@@ -89,7 +89,7 @@ def generate_wind_directional_kernels(
     """
     weights_dict = {}
     rotating_angles = np.arange(0, 360, 45)
-    wind_direction_labels = ['W', 'SW', 'S', 'SE', 'E', 'NE', 'N', 'NW']
+    wind_direction_labels = ['W', 'NW', 'N', 'NE', 'E', 'SE', 'S', 'SW']
     for angle, direction in zip(rotating_angles, wind_direction_labels):
         # our base kernel is oriented to the west
         base = generate_weights(
