@@ -170,6 +170,8 @@ def apply_wind_directional_convolution(
 
     for direction, weights in weights_dict.items():
         arr = spread_results[direction].values
+        # replace NaNs with 0 in the array before convolution
+        arr = np.nan_to_num(arr, nan=0.0)
         for _ in range(iterations):
             valid_mask = (arr > 0).astype(np.float32)
             convolved_mask = cv.filter2D(valid_mask, ddepth=-1, kernel=weights)
