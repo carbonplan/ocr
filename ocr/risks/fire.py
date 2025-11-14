@@ -170,20 +170,72 @@ def apply_wind_directional_convolution(
 
     for direction, weights in weights_dict.items():
         arr = spread_results[direction].values
+        # nan_mask will keep track of where the nans were to begin with. we'll use it at
+        # the very end of the processing
+        nan_mask = np.isnan(arr)
+        # the cv.filter2D routine doesn't have an option to ignore nans, so it will propagate them.
+        # due to reprojections within this processing we are almost guaranteed to have nans in the corners of regions,
+        # and those can get propagated very far amidst multiple iterations of convolutions!
+        # so, we will cast them to zeros for this step.
+        # two notes:
+        # 1) this will NOT influence our results, which only accounts for positive values,
+        # because any NaNs will be cast into zeros, and so will just be kept track of in the
+        # convolved_mask object explained below.
+        # 2) we will retain the nans and add them back in using `nan_mask` defined above. this step is inspired by the need
+        # to accomodate nans introduced around the corners of each region we are working in as a result of
+        # reprojection/cropping issues. we have steps in the `calculated_wind_adjusted_risk` function
+        # which crop out the expected bad data
+        # (e.g. `riley_2011_30m_4326_subset = riley_2011_30m_4326_subset.sel(latitude=y_slice, longitude=x_slice)`
+        # however, in case there are nans introduced for some other reason we want to make sure we don't
+        # mistakenly hide those. so, we'll add them back in after all iterations of the convolution are done
         # replace NaNs with 0 in the array before convolution
         arr = np.nan_to_num(arr, nan=0.0)
         for _ in range(iterations):
+            # valid_mask is wherever we have positive numbers. we only want to spread numbers informed by non-zero numbers - we are
+            # performing an additive method here by spreading burn probability. so, we keep track of which pixels are positive, or valid
+            # for spreading. valid_mask will get progressively bigger throughout the runs because 0 values will disappear.
+            # we initialize valid_mask fresh each iteration.
             valid_mask = (arr > 0).astype(np.float32)
+            # convolved_mask is the fraction the contributing area for each pixel which is from non-zero values (if the values is 1 it is entirely
+            # valid values and doesn't need to be adjusted, if the value is 0 it is entirely zero values and there are no valid values in the mask
+            # if there were only one valid pixel contributing to the kernel it would make a very tiny positive number
+            # dividing by the convolved_mask value will essentially extract out the zeros which have been averaged into the
+            # convolved_arr.
             convolved_mask = cv.filter2D(valid_mask, ddepth=-1, kernel=weights)
-            # why does `filter2D` produce tiny negatives and tiny positives? we shouldn't have to deal with this
-            # if we do clip we should ensure we're only clipping VERY small numbers (e.g. e-12)
-            convolved_mask = np.where(convolved_mask < 10e-10, 0.0, convolved_mask)
+            # because things can get unstable at very small numbers, we remove the tiny values and cast them to zero.
+            # this introduces an assumption that we are not spreading isolated pixels with very low values, which is conservative -
+            # this is a slight rounding-down of risk spreading, but the impact is negligible given the low threshold
+            # we use for clipping (10e-12).
+            # we use a threshold of 10e-12 here. with testing it showed isolated differences (e.g. a handful of spots of a few hundred pixels across
+            # a processing region; of maximum magnitude ~-7e-5 in BP) between 10e-12 and 10e-10, so we opt for the lower
+            # threshold to clip as little as possible.
+            # further, due to numerical precision issues, the method does introduce
+            # small negative values which we want to clip, particularly since when we divide by the mask a few lines below,
+            # those _tiny_ negative/positive values could propagate
 
+            convolved_mask = np.where(convolved_mask < 10e-12, 0.0, convolved_mask)
+            # convolved_arr is the array after having the filter applied to it. any zeros within the filter have been pulled into the averaging.
             convolved_arr = cv.filter2D(arr, ddepth=-1, kernel=weights)
-            convolved_arr = np.where(convolved_arr < 10e-10, 0.0, convolved_arr)
+            convolved_arr = np.where(convolved_arr < 10e-12, 0.0, convolved_arr)
+            # output_arr is the final result. wherever the convolved_mask is 0 there was no contribution of valid pixels
+            # to the convolution, so it should just be zero. wherever convolved_mask is greater than 0 that means there
+            # was at least one valid pixel in the filter contributing so it should get a non-zero number! however, we want
+            # to extract out all of the zeros that might have supressed that number. we do that by renormalizing by the
+            # value of the convolved_mask. for example, if the convolved_mask value for a pixel is 1, it means that all
+            # the pixels in that area were non-zero and so the value doesn't need to be adjusted. if the value is 0.5,
+            # that means that half of the pixels in that kernel were zeros, so the final convolved pixel value was
+            # diluted in half by zeros. to compensate we divide the `convolved_arr` value by the `convolved_mask` value,
+            # in this example, dividing by 0.5 and thus dubling the `convoled_arr` value. this is an around-the-way
+            # approach to essentially treat those zeros as nans and applying a `ignore_nans` flag!
+            # NOTE: we renormalize by the convolved_mask every iteration because we want to make this correction every time
+            # as opposed to going back after the fact.
             arr = np.where(convolved_mask > 0, convolved_arr / convolved_mask, 0.0)
-        # clip residual tiny negatives
-        arr = np.where(arr < 0, 0.0, arr)
+        # confirm array is entirely positive. this should be handled by the above clipping but we just want to make sure!
+        np.testing.assert_equal((arr < 0).sum(), 0)
+        # add back in nans at the very end after iterations done. use the `nan_mask` to do this. this will
+        # make sure that any nans are retained, whether they're ones we expect or ones we didn't! and so
+        # we'll make sure they can trigger tests later on in the processing steps
+        arr = np.where(nan_mask, np.nan, arr)
         spread_results[direction] = (da.dims, arr.astype(np.float32))
     return spread_results
 
