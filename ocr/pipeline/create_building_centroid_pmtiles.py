@@ -42,12 +42,7 @@ def create_building_centroid_pmtiles(
                     'Feature' AS type,
                     json_object(
                         '0', wind_risk_2011,
-                        '1', wind_risk_2047,
-                        '2', burn_probability_2011,
-                        '3', burn_probability_2047,
-                        '4', conditional_risk_usfs,
-                        '5', burn_probability_usfs_2011,
-                        '6', burn_probability_usfs_2047
+                        '1', wind_risk_2047
                     ) AS properties,
                     json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
