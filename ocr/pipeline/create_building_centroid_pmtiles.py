@@ -46,7 +46,10 @@ def create_building_centroid_pmtiles(
                     ) AS properties,
                     json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
-                WHERE wind_risk_2011 > 0  AND wind_risk_2047 > 0
+                WHERE
+                    wind_risk_2011 > 0
+                    AND
+                    wind_risk_2047 > 0
             ) TO '{ndjson_path.as_posix()}' (FORMAT json);
             """
             connection.execute(copy_sql)
@@ -65,7 +68,7 @@ def create_building_centroid_pmtiles(
                 'centroid',
                 '-f',
                 '-P',  # Parallel processing
-                '--drop-densest-as-needed',
+                '--drop-fraction-as-needed',
                 '--maximum-tile-features',
                 '400000',  # 2x tile features
                 '--maximum-tile-bytes',
