@@ -778,12 +778,14 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 f'Wiping vector data storage at these locations:\n'
                 f'- {self.building_geoparquet_uri.parent}\n'
                 f'- {self.buildings_pmtiles_uri.parent}\n'
+                f'- {self.building_centroids_pmtiles_uri.parent}\n'
                 f'- {self.region_geoparquet_uri}\n'
                 f'- {self.aggregated_region_analysis_uri}\n'
                 f'- {self.tracts_summary_stats_uri.parent}\n'
             )
         self.upath_delete(self.building_geoparquet_uri.parent)
         self.upath_delete(self.buildings_pmtiles_uri.parent)
+        self.upath_delete(self.building_centroids_pmtiles_uri.parent)
         self.upath_delete(self.region_geoparquet_uri)
         self.upath_delete(self.aggregated_region_analysis_uri)
         self.upath_delete(self.tracts_summary_stats_uri.parent)
@@ -799,6 +801,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def buildings_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/buildings.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def building_centroids_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/building_centroids.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -929,6 +937,7 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
+                nv('Buildings PMTiles', str(self.building_centroids_pmtiles_uri)),
                 nv('Region PMTiles', str(self.region_pmtiles_uri)),
             ]
         )

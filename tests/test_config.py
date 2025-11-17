@@ -438,6 +438,11 @@ class TestVectorConfig:
             str(config.buildings_pmtiles_uri)
             == f'{temp_dir}/output/fire-risk/vector/qa/pmtiles/buildings.pmtiles'
         )
+        # Test building centroid pmtiles uri
+        assert (
+            str(config.building_centroids_pmtiles_uri)
+            == f'{temp_dir}/output/fire-risk/vector/qa/pmtiles/building_centroids.pmtiles'
+        )
 
     def test_summary_stats_uris(self, temp_dir):
         """Test summary statistics URI properties."""

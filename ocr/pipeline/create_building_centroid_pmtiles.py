@@ -13,17 +13,11 @@ from ocr.utils import apply_s3_creds, copy_or_upload, get_temp_dir, install_load
 def create_building_pmtiles(
     config: OCRConfig,
 ):
-    """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
-
-    Steps:
-      1. (Optionally) create or reuse a DuckDB connection and load extensions.
-      2. Export feature rows as NDJSON GeoJSON features via COPY ... TO.
-      3. Invoke tippecanoe on the NDJSON to produce a PMTiles archive.
-      4. Upload resulting PMTiles to the configured destination.
-    """
+    """Nearly identical to create_building_pmtiles.py, but creates centroid only layer for higher zoom levels."""
 
     input_path = f'{config.vector.region_geoparquet_uri}/*.parquet'  # type: ignore[attr-defined]
-    output_path = config.vector.buildings_pmtiles_uri  # type: ignore[attr-defined]
+
+    output_path = config.vector.building_centroids_pmtiles_uri  # type: ignore[attr-defined]
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
 
@@ -55,7 +49,7 @@ def create_building_pmtiles(
                         '5', burn_probability_usfs_2011,
                         '6', burn_probability_usfs_2047
                     ) AS properties,
-                    json(ST_AsGeoJson(geometry)) AS geometry
+                    json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
             ) TO '{ndjson_path.as_posix()}' (FORMAT json);
             """
@@ -72,14 +66,14 @@ def create_building_pmtiles(
                 '-l',
                 'risk',
                 '-n',
-                'building',
+                'centroid',
                 '-f',
                 '-P',  # Parallel processing
-                '--drop-smallest-as-needed',
+                '--drop-densest-as-needed',
+                '--maximum-tile-features 400000',  # 2x tile features
+                '--maximum-tile-bytes=1000000',  # 2x tile size
+                '-z13',
                 '-q',
-                '--extend-zooms-if-still-dropping',
-                '-zg',
-                '-Z 6',
                 '--generate-ids',
                 str(ndjson_path),
             ]
