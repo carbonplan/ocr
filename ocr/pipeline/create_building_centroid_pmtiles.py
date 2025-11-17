@@ -10,7 +10,7 @@ from ocr.console import console
 from ocr.utils import apply_s3_creds, copy_or_upload, get_temp_dir, install_load_extensions
 
 
-def create_building_pmtiles(
+def create_building_centroid_pmtiles(
     config: OCRConfig,
 ):
     """Nearly identical to create_building_pmtiles.py, but creates centroid only layer for higher zoom levels."""
@@ -58,7 +58,7 @@ def create_building_pmtiles(
             if config.debug:
                 console.log('NDJSON export complete')
                 console.log(f'Generating PMTiles at {local_pmtiles}')
-
+            # import ipdb; ipdb.set_trace()
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -70,9 +70,12 @@ def create_building_pmtiles(
                 '-f',
                 '-P',  # Parallel processing
                 '--drop-densest-as-needed',
-                '--maximum-tile-features 400000',  # 2x tile features
-                '--maximum-tile-bytes=1000000',  # 2x tile size
-                '-z13',
+                '--maximum-tile-features',
+                '400000',  # 2x tile features
+                '--maximum-tile-bytes',
+                '1000000',  # 2x tile size
+                '-z',
+                '13',
                 '-q',
                 '--generate-ids',
                 str(ndjson_path),
