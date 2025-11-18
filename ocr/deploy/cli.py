@@ -299,9 +299,10 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        manager.wait_for_completion(exit_on_failure=True)
 
         if write_regional_stats:
+            manager.wait_for_completion(exit_on_failure=True)
+
             manager = _get_manager(Platform.COILED, config.debug)
 
             manager.submit_job(
