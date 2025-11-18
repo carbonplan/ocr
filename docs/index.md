@@ -17,7 +17,7 @@
 
     1. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
     2. Explore the [Data Schema][data-schema] to understand available variables
-    3. Check [Data Downloads][data-downloads] for an overview of all available formats
+    3. Check [Data Downloads](reference/data-downloads.md) for an overview of all available formats
 
 === "Contributing to OCR"
 
