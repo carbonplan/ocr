@@ -67,12 +67,10 @@ def create_building_centroid_pmtiles(
                 '-n',
                 'centroid',
                 '-f',
-                '-P',  # Parallel processing
+                '-P',
                 '--drop-fraction-as-needed',
-                '--maximum-tile-features',
-                '400000',  # 2x tile features
-                '--maximum-tile-bytes',
-                '1000000',  # 2x tile size
+                '--maximum-tile-features=400000',
+                '--maximum-tile-bytes=1000000',
                 '-z',
                 '13',
                 '-q',
