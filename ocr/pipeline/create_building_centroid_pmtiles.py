@@ -41,8 +41,8 @@ def create_building_centroid_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                    '0', ROUND(CAST(wind_risk_2011 AS DOUBLE), 2),
-                    '1', ROUND(CAST(wind_risk_2047 AS DOUBLE), 2)
+                    '0', ROUND(CAST(wind_risk_2011 AS DOUBLE), 3),
+                    '1', ROUND(CAST(wind_risk_2047 AS DOUBLE), 3)
                     ) AS properties,
                     json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
@@ -76,7 +76,6 @@ def create_building_centroid_pmtiles(
                 '-z',
                 '13',
                 '-q',
-                '--generate-ids',
                 str(ndjson_path),
             ]
             subprocess.run(tippecanoe_cmd, check=True)
