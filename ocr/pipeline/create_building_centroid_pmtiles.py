@@ -71,8 +71,7 @@ def create_building_centroid_pmtiles(
                 '--drop-fraction-as-needed',
                 '--maximum-tile-features=400000',
                 '--maximum-tile-bytes=1000000',
-                '-z',
-                '13',
+                '-zg',
                 '-q',
                 str(ndjson_path),
             ]
