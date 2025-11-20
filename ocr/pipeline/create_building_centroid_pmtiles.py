@@ -10,20 +10,14 @@ from ocr.console import console
 from ocr.utils import apply_s3_creds, copy_or_upload, get_temp_dir, install_load_extensions
 
 
-def create_building_pmtiles(
+def create_building_centroid_pmtiles(
     config: OCRConfig,
 ):
-    """Convert consolidated geoparquet to PMTiles (using DuckDB Python API).
-
-    Steps:
-      1. (Optionally) create or reuse a DuckDB connection and load extensions.
-      2. Export feature rows as NDJSON GeoJSON features via COPY ... TO.
-      3. Invoke tippecanoe on the NDJSON to produce a PMTiles archive.
-      4. Upload resulting PMTiles to the configured destination.
-    """
+    """Nearly identical to create_building_pmtiles.py, but creates centroid only layer for higher zoom levels."""
 
     input_path = f'{config.vector.region_geoparquet_uri}/*.parquet'  # type: ignore[attr-defined]
-    output_path = config.vector.buildings_pmtiles_uri  # type: ignore[attr-defined]
+
+    output_path = config.vector.building_centroids_pmtiles_uri  # type: ignore[attr-defined]
 
     needs_s3 = any(str(p).startswith('s3://') for p in [input_path, output_path])
 
@@ -47,16 +41,15 @@ def create_building_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                        '0', wind_risk_2011,
-                        '1', wind_risk_2047,
-                        '2', burn_probability_2011,
-                        '3', burn_probability_2047,
-                        '4', conditional_risk_usfs,
-                        '5', burn_probability_usfs_2011,
-                        '6', burn_probability_usfs_2047
+                    '0', ROUND(CAST(wind_risk_2011 AS DOUBLE), 3),
+                    '1', ROUND(CAST(wind_risk_2047 AS DOUBLE), 3)
                     ) AS properties,
-                    json(ST_AsGeoJson(geometry)) AS geometry
+                    json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
+                WHERE
+                    wind_risk_2011 > 0
+                    AND
+                    wind_risk_2047 > 0
             ) TO '{ndjson_path.as_posix()}' (FORMAT json);
             """
             connection.execute(copy_sql)
@@ -64,7 +57,7 @@ def create_building_pmtiles(
             if config.debug:
                 console.log('NDJSON export complete')
                 console.log(f'Generating PMTiles at {local_pmtiles}')
-
+            # import ipdb; ipdb.set_trace()
             tippecanoe_cmd = [
                 'tippecanoe',
                 '-o',
@@ -72,15 +65,14 @@ def create_building_pmtiles(
                 '-l',
                 'risk',
                 '-n',
-                'building',
+                'centroid',
                 '-f',
-                '-P',  # Parallel processing
-                '--drop-smallest-as-needed',
-                '-q',
+                '-P',
+                '--drop-fraction-as-needed',
+                '--no-feature-limit',
                 '--extend-zooms-if-still-dropping',
                 '-zg',
-                '-Z 6',
-                '--generate-ids',
+                '-q',
                 str(ndjson_path),
             ]
             subprocess.run(tippecanoe_cmd, check=True)

@@ -299,9 +299,10 @@ def run(
                 'software': COILED_SOFTWARE,
             },
         )
-        manager.wait_for_completion(exit_on_failure=True)
 
         if write_regional_stats:
+            manager.wait_for_completion(exit_on_failure=True)
+
             manager = _get_manager(Platform.COILED, config.debug)
 
             manager.submit_job(
@@ -329,6 +330,19 @@ def run(
         )
 
         # ------------- 03  Tiles ---------------
+
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
+            command='ocr create-building-centroid-pmtiles',
+            name=f'create-building-centroid-pmtiles-{config.environment.value}',
+            kwargs={
+                **_coiled_kwargs(config, env_file),
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
+                'disk_size': 250,
+                'software': COILED_SOFTWARE,
+            },  # PMTiles creation needs more disk space
+        )
 
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
@@ -412,6 +426,15 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        # Create building centroid PMTiles from the consolidated geoparquet file
+        manager = _get_manager(Platform.LOCAL, config.debug)
+        manager.submit_job(
+            command='ocr create-building-centroid-pmtiles',
+            name=f'create-building-centroid-pmtiles-{config.environment.value}',
+            kwargs={
+                **_local_kwargs(),
+            },
+        )
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
@@ -422,18 +445,6 @@ def run(
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
-
-        # TODO: Should we run this locally? It will most likely break due to lack of resources
-        # # Create pyramid
-        # manager = _get_manager(Platform.LOCAL, config.debug)
-        # manager.submit_job(
-        #     command='ocr create-pyramid',
-        #     name=f'create-pyramid-{config.environment.value}',
-        #     kwargs={
-        #         **_local_kwargs(),
-        #     },
-        # )
-        # manager.wait_for_completion(exit_on_failure=True)
 
     if config.debug:
         # Print out the pretty paths
@@ -812,6 +823,67 @@ def create_building_pmtiles(
     config = load_config(env_file)
 
     create_building_pmtiles(config=config)
+
+
+@app.command()
+def create_building_centroid_pmtiles(
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
+        show_default=True,
+        exists=True,
+        file_okay=True,
+        resolve_path=True,
+    ),
+    platform: Platform | None = typer.Option(
+        None,
+        '-p',
+        '--platform',
+        help='If set, schedule this command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+    ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
+):
+    """
+    Create building centroid PMTiles from the consolidated geoparquet file.
+    """
+
+    # Schedule if requested and not already inside a batch task
+    if platform is not None and not _in_batch():
+        config = load_config(env_file)
+        manager = _get_manager(platform, config.debug)
+        command = 'ocr create-building-pmtiles'
+        name = f'create-building-pmtiles-{config.environment.value}'
+
+        if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        manager.wait_for_completion(exit_on_failure=True)
+        return
+
+    from ocr.pipeline.create_building_centroid_pmtiles import create_building_centroid_pmtiles
+
+    config = load_config(env_file)
+
+    create_building_centroid_pmtiles(config=config)
 
 
 @app.command()
