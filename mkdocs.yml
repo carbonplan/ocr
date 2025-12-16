@@ -56,19 +56,18 @@ nav:
                 - Snapshot Testing: how-to/snapshot-testing.md
 
     - Methods:
-          - Fire Risk:
-                - Overview: methods/fire-risk/overview.md
-                - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
-                - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
-                - Evaluation:
-                      - Overview: methods/fire-risk/evaluation.md
-                      - Benchmarking: methods/fire-risk/benchmarking.ipynb
-                      - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
-                      - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
-                      - California Comparison: methods/fire-risk/california-comparison.ipynb
-                      - Score Bins: methods/fire-risk/score-bins.ipynb
-                      - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
-                      - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
+          - Overview: methods/fire-risk/overview.md
+          - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
+          - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+          - Evaluation:
+                - Overview: methods/fire-risk/evaluation.md
+                - Benchmarking: methods/fire-risk/benchmarking.ipynb
+                - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
+                - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                - California Comparison: methods/fire-risk/california-comparison.ipynb
+                - Score Bins: methods/fire-risk/score-bins.ipynb
+                - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
+                - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
 
     - Tutorials:
           - Data Pipeline: tutorials/data-pipeline.md
