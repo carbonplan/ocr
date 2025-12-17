@@ -522,11 +522,14 @@ def create_wind_informed_burn_probability(
         output_dtypes=[np.float32],
         kwargs={'ksize': (25, 25), 'sigmaX': 0},
     )
+    # Convert from decimal to percentage (e.g., 0.004 -> 0.4%)
+    smoothed_bp = smoothed_bp * 100
     smoothed_bp.name = 'BP'
 
     smoothed_bp.attrs = {
         'long_name': 'Wind-informed Burn Probability',
         'description': 'Wind-informed Burn Probability created by applying directional convolution and weighted composite using wind direction distribution',
+        'units': 'percent',
     }
     return smoothed_bp
 
@@ -634,12 +637,14 @@ def calculate_wind_adjusted_risk(
 
     with xr.set_options(arithmetic_join='exact'):
         # wind_risk_2011 (our wind-informed RPS value)
-        fire_risk['wind_risk_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
+        # Divide BP by 100 to convert from percentage back to decimal for RPS calculation
+        fire_risk['wind_risk_2011'] = (wind_informed_bp_combined_2011 / 100) * rps_30_subset['CRPS']
         fire_risk['wind_risk_2011'].attrs['description'] = (
             'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
         )
         # wind_risk_2047 (our wind-informed RPS value)
-        fire_risk['wind_risk_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
+        # Divide BP by 100 to convert from percentage back to decimal for RPS calculation
+        fire_risk['wind_risk_2047'] = (wind_informed_bp_combined_2047 / 100) * rps_30_subset['CRPS']
         fire_risk['wind_risk_2047'].attrs['description'] = (
             'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
         )
@@ -649,12 +654,14 @@ def calculate_wind_adjusted_risk(
         fire_risk['burn_probability_2011'].attrs['description'] = (
             'Wind-informed burn probability for 2011 calculated as wind-informed BP'
         )
+        fire_risk['burn_probability_2011'].attrs['units'] = 'percent'
 
         # burn_probability_2047 (our wind-informed BP value)
         fire_risk['burn_probability_2047'] = wind_informed_bp_combined_2047
         fire_risk['burn_probability_2047'].attrs['description'] = (
             'Wind-informed burn probability for 2047 calculated as wind-informed BP'
         )
+        fire_risk['burn_probability_2047'].attrs['units'] = 'percent'
 
         # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
         fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
