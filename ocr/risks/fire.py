@@ -646,7 +646,7 @@ def calculate_wind_adjusted_risk(
         )
         fire_risk['wind_risk_2011'].attrs['units'] = 'percent'
         # wind_risk_2047 (our wind-informed RPS value)
-        # Divide BP by 100 to convert from percentage back to decimal for RPS calculation
+        # Divide by 100 to return RPS as a percentage
         fire_risk['wind_risk_2047'] = (wind_informed_bp_combined_2047 * rps_30_subset['CRPS']) / 100
         fire_risk['wind_risk_2047'].attrs['description'] = (
             'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
