@@ -156,7 +156,7 @@ This single-file format enables:
 
 | Variable          | Expected Range | Notes                                                |
 | ----------------- | -------------: | ---------------------------------------------------- |
-| Risk Scores (RPS) |         [0, ∞) | Product of BP and CRPS (values expressed in percent) |
+| Risk Scores (RPS) |         [0, 100] | Product of BP and CRPS (values expressed in percent) |
 | Wind Distribution |         [0, 1] | Sums to 1.0 per pixel (if fire-weather hours exist)  |
 
 ### Quality Checks
