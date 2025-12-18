@@ -47,7 +47,7 @@ The primary output dataset contains the following variables:
 
 | Variable                     |    Type |  Units  | Description                                                                                                  |
 | ---------------------------- | ------: | :-----: | ------------------------------------------------------------------------------------------------------------ |
-| `USFS_RPS`                   | float32 | percent | Original USFS Relative Risk Score from Scott (2024) baseline dataset (RDS-2020-0016-2).                      |
+| `USFS_RPS`                   | float32 | percent | Original USFS Relative Risk Score from Scott (2024) baseline dataset (RDS-2020-0016-2) (values in percent, 0–100).                      |
 | `conditional_risk_usfs`      | float32 | percent | USFS Conditional Risk to Potential Structures (CRPS) from Scott (2024) (values in percent, 0–100).           |
 | `burn_probability_usfs_2011` | float32 | percent | Original USFS burn probability for 2011 from Riley et al. (2025) (RDS-2025-0006) (values in percent, 0–100). |
 | `burn_probability_usfs_2047` | float32 | percent | Original USFS burn probability for 2047 from Riley et al. (2025) (RDS-2025-0006) (values in percent, 0–100). |
