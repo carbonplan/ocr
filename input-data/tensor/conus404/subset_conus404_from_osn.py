@@ -4,6 +4,26 @@
 # COILED --vm-type m5.2xlarge
 # COILED --tag Project=OCR
 
+# =============================================================================
+# DEPRECATION NOTICE
+# =============================================================================
+# This script has been migrated to the unified OCR input dataset CLI.
+# Please use the new command instead:
+#
+#   ocr ingest-data process conus404-subset --conus404-variable <VARIABLE> --use-coiled --software <SOFTWARE_ENV>
+#
+# Available variables: Q2, TD2, PSFC, T2, V10, U10
+#
+# Examples:
+#   # Process Q2 variable with dry-run
+#   ocr ingest-data process conus404-subset --conus404-variable Q2 --dry-run --use-coiled
+#
+#   # Process U10 variable with custom spatial tile size
+#   ocr ingest-data process conus404-subset --conus404-variable U10 --conus404-spatial-tile-size 10 --use-coiled
+#
+# This script is kept for backward compatibility but may be removed in a future release.
+# =============================================================================
+
 
 import time
 from enum import Enum

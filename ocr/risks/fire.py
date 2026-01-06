@@ -360,7 +360,8 @@ def create_weighted_composite_bp_map(
 
     bp_da = _bp_dataset_to_direction_da(bp)
 
-    # Prepare distribution: ensure a 'direction' coord with labels matching CARDINAL_8
+    # Prepare distribution: ensure a 'direction' coord with labels matching CARDINAL_AND_ORDINAL
+    # The distribution should now always have proper direction coordinates from compute_wind_direction_distribution
     if distribution_direction_dim != 'direction':
         wind_direction_distribution = wind_direction_distribution.rename(
             {distribution_direction_dim: 'direction'}
@@ -368,13 +369,16 @@ def create_weighted_composite_bp_map(
     if 'direction' not in wind_direction_distribution.dims:
         raise ValueError('Distribution must have a direction dimension after renaming.')
 
-    # Attach labels if they are not present (numeric 0..7 assumed in correct order)
-    if (
-        'direction' not in wind_direction_distribution.coords
-        or len(wind_direction_distribution['direction']) != 8
-    ):
-        wind_direction_distribution = wind_direction_distribution.assign_coords(
-            direction=CARDINAL_AND_ORDINAL
+    # Verify direction coordinates are present and match expected labels
+    if 'direction' not in wind_direction_distribution.coords:
+        raise ValueError(
+            'Distribution is missing direction coordinate labels. '
+            'Expected coordinates with labels: ' + str(CARDINAL_AND_ORDINAL)
+        )
+
+    if len(wind_direction_distribution['direction']) != 8:
+        raise ValueError(
+            f'Distribution must have exactly 8 direction values, got {len(wind_direction_distribution["direction"])}'
         )
 
     # Sanity checks
@@ -714,9 +718,12 @@ def direction_histogram(data_array: xr.DataArray) -> xr.DataArray:
         keep_attrs=False,
     )
     fraction = fraction.rename('wind_direction_histogram')
+    # Assign cardinal direction labels as coordinates
+    fraction = fraction.assign_coords(wind_direction=CARDINAL_AND_ORDINAL)
     fraction.attrs = {
         'long_name': 'Wind Direction Histogram',
         'units': 'probability',
+        'direction_labels': CARDINAL_AND_ORDINAL,
     }
     return fraction
 
@@ -811,6 +818,7 @@ def compute_wind_direction_distribution(
     wind_direction_hist.attrs['description'] = (
         'Fraction of hours in each of 8 cardinal and ordinal directions during hours meeting fire weather criteria'
     )
+    wind_direction_hist.attrs['direction_labels'] = CARDINAL_AND_ORDINAL
 
     hist_dim = 'wind_direction'
     chunk_dict = {dim: -1 for dim in wind_direction_hist.dims if dim != hist_dim}

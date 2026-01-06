@@ -1,38 +1,70 @@
-# A subset of the CONUS-404 dataset
+# CONUS404 Data Processing Pipeline
 
-The `subset_conus404_from_osn.py` Python module contains code used to subset and rechunk the [CONUS404](https://www.sciencebase.gov/catalog/item/6372cd09d34ed907bf6c6ab1) dataset. The subset is created from the original dataset available from the open storage network (OSN). The original dataset is chunked along the sptial and temporal dimensions. We transferred a subset of this dataset to our bucket and rechunked it to create a version that is more suitable for our analysis. This new version is chunked along the spatial dimensions only.
+This directory contains the end-to-end pipeline for processing [CONUS404](https://www.sciencebase.gov/catalog/item/6372cd09d34ed907bf6c6ab1) meteorological data for fire risk analysis. The pipeline consists of two main stages:
 
-## Usage
+1. **Variable Subsetting**: Download and rechunk individual meteorological variables from Open Storage Network (OSN)
+2. **FFWI Computation**: Calculate Fosberg Fire Weather Index with quantiles, wind direction distributions, and reprojection
 
-To see the available options, you can run the following command:
+> **Note**: The original scripts (`subset_conus404_from_osn.py` and `compute_fosberg_fire_weather_index.py`) have been migrated to the unified OCR input dataset CLI. See the deprecation notices in those files for migration information.
 
-```bash
-pixi run python input-data/tensor/conus404/subset_conus404_from_osn.py --help                                                                                                       ─╯
+## Quick Start
 
- Usage: subset_conus404_from_osn.py [OPTIONS] VARIABLE
-
- Main entry point for processing CONUS-404 dataset.
-
-
-╭─ Arguments ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *    variable      TEXT  variable to process from the dataset [default: None] [required]                                                                                              │
-╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ --worker-vm-type            TEXT     VM type for worker nodes in the Coiled cluster [default: r6a.8xlarge]                                                                            │
-│ --scheduler-vm-type         TEXT     VM type for the scheduler node in the Coiled cluster [default: c6a.large]                                                                        │
-│ --n-workers                 INTEGER  Number of worker nodes in the Coiled cluster [default: 15]                                                                                       │
-│ --spatial-tile-size         INTEGER  Size of spatial tiles for chunking [default: 10]                                                                                                 │
-│ --install-completion                 Install completion for the current shell.                                                                                                        │
-│ --show-completion                    Show completion for the current shell, to copy it or customize the installation.                                                                 │
-│ --help                               Show this message and exit.                                                                                                                      |
-╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-```
-
-You can run it on coiled with the following command to process a specific variable, for example `U10`:
+All processing is now done through the unified `ocr ingest-data` CLI:
 
 ```bash
-pixi run coiled batch run input-data/tensor/conus404/subset_conus404_from_osn.py U10
+# List all available datasets
+pixi run ocr ingest-data list-datasets
+
+# Get help for CONUS404 processing
+pixi run ocr ingest-data process conus404-subset --help
+pixi run ocr ingest-data process conus404-ffwi --help
 ```
+
+## Stage 1: Variable Subsetting
+
+### Overview
+
+Downloads individual CONUS404 meteorological variables from OSN and rechunks them from temporal+spatial chunks to spatial-only chunks for efficient spatial queries.
+
+**Available variables**: `Q2`, `TD2`, `PSFC`, `T2`, `V10`, `U10`
+
+### Commands
+
+```bash
+# Dry-run to preview operations
+pixi run ocr ingest-data process conus404-subset \
+  --conus404-variable Q2 \
+  --dry-run
+
+# Process a single variable (Q2)
+pixi run ocr ingest-data process conus404-subset \
+  --conus404-variable Q2 \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# Process with custom spatial tile size
+pixi run ocr ingest-data process conus404-subset \
+  --conus404-variable U10 \
+  --conus404-spatial-tile-size 10 \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# Process all variables (run this command 6 times, once per variable)
+for var in Q2 TD2 PSFC T2 V10 U10; do
+  pixi run ocr ingest-data process conus404-subset \
+    --conus404-variable $var \
+    --use-coiled \
+    --software <your-coiled-env>
+done
+```
+
+### Configuration
+
+-   **Workers**: 15 (configurable via class constant `COILED_WORKERS`)
+-   **Worker VM**: `r6a.8xlarge` (configurable via `COILED_WORKER_VM`)
+-   **Scheduler VM**: `c6a.large` (configurable via `COILED_SCHEDULER_VM`)
+-   **Spatial tile size**: 10 (adjustable via `--conus404-spatial-tile-size`)
+-   **Output**: `s3://carbonplan-ocr/input/conus404-hourly-icechunk/{variable}`
 
 ## Accessing the dataset
 
@@ -98,89 +130,249 @@ Attributes: (12/148)
 
 ```
 
-## Fosberg Fire Weather Index (FFWI)
+## Stage 2: Fosberg Fire Weather Index (FFWI)
 
-The script `compute_fosberg_fire_weather_index.py` computes the Fosberg Fire Weather Index from CONUS404 hourly data, writes the base FFWI field to an Icechunk repo, and postprocesses quantiles and prevailing wind direction during high-FFWI periods. A utility command reprojects the mode product to the geobox of a catalog dataset.
+### FFWI Overview
 
-### What it does (FFWI)
+Computes the Fosberg Fire Weather Index from CONUS404 hourly data with three processing steps:
 
-- Loads CONUS404 with spatial constants via `load_conus404(add_spatial_constants=True)`.
-- Computes relative humidity from specific humidity and temperature.
-- Rotates grid-relative winds to earth-relative components and derives wind speed and direction.
-- Computes FFWI using `fosberg_fire_weather_index(hurs, T2, sfcWind)` and writes to Icechunk.
-- Saves the derived surface wind fields used in the computation.
-- Postprocesses: time-quantiles of FFWI and wind-direction distribution/mode where FFWI exceeds those quantiles.
-- Reprojects the mode dataset to the `USFS-wildfire-risk-communities-4326` geobox.
+1. **compute**: Calculate base FFWI and winds from relative humidity, temperature, and wind speed
+2. **postprocess**: Compute quantiles (e.g., 99th percentile) and wind direction distributions over time
+3. **reproject**: Reproject wind direction distribution to EPSG:4326 geobox
 
-### Commands
+### FFWI Workflow Steps
 
-The module is a Typer app with three subcommands.
-
-1. Compute base FFWI and winds
+#### Step 1: Compute Base FFWI
 
 ```bash
-pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute --help
+# Dry-run to preview
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step compute \
+  --dry-run
+
+# Run with Coiled
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step compute \
+  --use-coiled \
+  --software <your-coiled-env>
 ```
 
-Key options:
+This step:
 
-- `--dry-run`: Use a tiny spatial slice and skip cluster startup.
-- `--overwrite`: Overwrite existing Icechunk data.
-- `--output-base`: Base path for outputs (S3 or local). Default: `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`.
-- `--min-workers`, `--max-workers`, `--worker-vm-types`: Coiled autoscaling and instance types.
+-   Loads CONUS404 variables with spatial constants
+-   Computes relative humidity from specific humidity and temperature
+-   Rotates grid-relative winds to earth coordinates
+-   Computes FFWI using `fosberg_fire_weather_index(hurs, T2, sfcWind)`
+-   Writes base FFWI and wind fields to Icechunk
 
-Example (Coiled):
+Output:
+
+-   `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index.icechunk`
+-   `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/winds.icechunk`
+
+#### Step 2: Postprocess Quantiles and Wind Direction Distribution
 
 ```bash
-pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py compute \
-  --min-workers 10 --max-workers 70 --worker-vm-types m8g.2xlarge
+# Compute 99th percentile (default)
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step postprocess \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# Compute multiple quantiles
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step postprocess \
+  --ffwi-quantiles 0.99 \
+  --ffwi-quantiles 0.95 \
+  --use-coiled \
+  --software <your-coiled-env>
 ```
 
-1. Postprocess quantiles and mode
+This step:
+
+-   Loads base FFWI from step 1 (validates prerequisite exists)
+-   Computes time quantiles for each spatial location
+-   Computes wind direction distribution during high-FFWI hours (hours where FFWI >= quantile threshold)
+-   Assigns cardinal direction labels (`N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW`) to wind direction dimension
+
+Output:
+
+-   `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99.icechunk`
+-   `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk`
+
+#### Step 3: Reproject Wind Direction Distribution
 
 ```bash
-pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess --help
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step reproject \
+  --use-coiled \
+  --software <your-coiled-env>
 ```
 
-Key options:
+This step:
 
-- `--quantiles`: List of quantiles to compute (default `[0.95, 0.99]`).
-- `--mode/--no-mode`: Compute prevailing wind direction for hours where FFWI exceeds the quantile.
-- Same cluster options as above.
+-   Loads wind direction distribution from step 2 (validates prerequisite exists)
+-   Reprojects to EPSG:4326 geobox matching Scott et al. 2024 dataset (30m resolution)
+-   Uses nearest neighbor resampling for categorical wind direction data
 
-Example:
+Output:
+
+-   `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk`
+
+### Run All Steps
 
 ```bash
-pixi run coiled batch run input-data/tensor/conus404/compute_fosberg_fire_weather_index.py postprocess \
-  --quantiles 0.95 0.99 --mode True
+# Run entire FFWI pipeline (compute → postprocess → reproject)
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step all \
+  --ffwi-quantiles 0.99 \
+  --use-coiled \
+  --software <your-coiled-env>
 ```
 
-1. Reproject FFWI mode
+### FFWI Configuration
 
-```bash
-pixi run python input-data/tensor/conus404/compute_fosberg_fire_weather_index.py reproject-mode --help
-```
+-   **Compute workers**: 10 (class constant `COILED_WORKERS_COMPUTE`)
+-   **Postprocess workers**: 10 (class constant `COILED_WORKERS_POSTPROCESS`)
+-   **Reproject workers**: 10 (class constant `COILED_WORKERS_REPROJECT`)
+-   **Worker VM**: `m8g.2xlarge`
+-   **Scheduler VM**: `m8g.large`
+-   **Default quantiles**: `[0.99]`
 
-Reprojects the mode dataset to the geobox for `USFS-wildfire-risk-communities-4326`.
+## Accessing Processed Data
 
-### Outputs (FFWI)
-
-Under the base `--output-base` (default `s3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi`):
-
-- `fosberg-fire-weather-index.icechunk` — Base FFWI over time (x, y, time).
-- `winds.icechunk` — Derived surface wind speed and direction fields.
-- `fosberg-fire-weather-index_p95.icechunk`, `fosberg-fire-weather-index_p99.icechunk` — Time-quantiles of FFWI (x, y).
-- `fosberg-fire-weather-index_p95_wind_direction_distribution.icechunk` — Per-direction histogram for hours exceeding the quantile.
-- `fosberg-fire-weather-index_p95_mode.icechunk` — Mode of wind direction during high-FFWI hours.
-- `fosberg-fire-weather-index_p99_mode_reprojected.icechunk` — Mode reprojected to target geobox (when using `reproject-mode`).
-
-### Reading results
+### Stage 1: Variable Subsets
 
 ```python
 import xarray as xr
+import icechunk
 
-base = 's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi'
-ffwi = xr.open_zarr(f'{base}/fosberg-fire-weather-index.icechunk', consolidated=False)
-q99  = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99.icechunk', consolidated=False)
-mode = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99_mode.icechunk', consolidated=False)
+# Access a single variable
+variable = 'Q2'
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix=f'input/conus404-hourly-icechunk/{variable}',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open(storage)
+session = repo.readonly_session('main')
+ds = xr.open_zarr(session.store, chunks={})
+
+# Access all variables at once
+variables = ['Q2', 'TD2', 'PSFC', 'T2', 'V10', 'U10']
+stores = []
+for var in variables:
+    storage = icechunk.s3_storage(
+        bucket='carbonplan-ocr',
+        prefix=f'input/conus404-hourly-icechunk/{var}',
+        region='us-west-2',
+    )
+    repo = icechunk.Repository.open(storage)
+    session = repo.readonly_session('main')
+    stores.append(session.store)
+
+ds = xr.open_mfdataset(stores, engine='zarr', consolidated=False, chunks={}, parallel=True)
+# Result: Dataset with dimensions (time: 376945, y: 1015, x: 1367)
 ```
+
+### Stage 2: FFWI Products
+
+```python
+import xarray as xr
+import icechunk
+
+base_prefix = 'input/fire-risk/tensor/conus404-ffwi'
+
+# Base FFWI (time series)
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix=f'{base_prefix}/fosberg-fire-weather-index.icechunk',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open(storage)
+session = repo.readonly_session('main')
+ffwi = xr.open_zarr(session.store)
+
+# 99th percentile quantile
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix=f'{base_prefix}/fosberg-fire-weather-index-p99.icechunk',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open(storage)
+session = repo.readonly_session('main')
+ffwi_p99 = xr.open_zarr(session.store)
+
+# Wind direction distribution (with cardinal labels)
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix=f'{base_prefix}/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open(storage)
+session = repo.readonly_session('main')
+wind_dist = xr.open_zarr(session.store)
+# wind_dist has wind_direction coordinate with labels: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
+# Reprojected wind direction distribution (EPSG:4326, 30m)
+storage = icechunk.s3_storage(
+    bucket='carbonplan-ocr',
+    prefix=f'{base_prefix}/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk',
+    region='us-west-2',
+)
+repo = icechunk.Repository.open(storage)
+session = repo.readonly_session('main')
+wind_dist_4326 = xr.open_zarr(session.store)
+```
+
+## Complete End-to-End Workflow
+
+```bash
+# 1. Process all 6 meteorological variables (can be parallelized)
+for var in Q2 TD2 PSFC T2 V10 U10; do
+  pixi run ocr ingest-data process conus404-subset \
+    --conus404-variable $var \
+    --use-coiled \
+    --software <your-coiled-env>
+done
+
+# 2. Compute FFWI (requires all variables from step 1)
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step compute \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# 3. Postprocess quantiles and wind direction distribution
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step postprocess \
+  --ffwi-quantiles 0.99 \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# 4. Reproject wind direction distribution to EPSG:4326
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step reproject \
+  --use-coiled \
+  --software <your-coiled-env>
+
+# Alternative: Run steps 2-4 together
+pixi run ocr ingest-data process conus404-ffwi \
+  --ffwi-processing-step all \
+  --ffwi-quantiles 0.99 \
+  --use-coiled \
+  --software <your-coiled-env>
+```
+
+## Implementation Details
+
+-   **Processor classes**: `Conus404SubsetProcessor` and `Conus404FFWIProcessor` in [ocr/input_datasets/tensor/conus404.py](../../../ocr/input_datasets/tensor/conus404.py)
+-   **CLI registration**: [ocr/input_datasets/cli.py](../../../ocr/input_datasets/cli.py)
+-   **Fire risk functions**: [ocr/risks/fire.py](../../../ocr/risks/fire.py)
+-   **Wind direction labels**: Cardinal and ordinal directions (`N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW`) are assigned at creation time
+
+## Legacy Scripts
+
+The original standalone scripts are deprecated but kept for reference:
+
+-   `subset_conus404_from_osn.py` - See deprecation notice for migration path
+-   `compute_fosberg_fire_weather_index.py` - See deprecation notice for migration path

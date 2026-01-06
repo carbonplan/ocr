@@ -157,6 +157,7 @@ class IcechunkWriter:
         commit_message: str,
         *,
         branch: str = 'main',
+        skip_housekeeping: bool = False,
     ) -> str:
         """Write a dataset to the Icechunk store with automatic conflict resolution.
 
@@ -168,6 +169,8 @@ class IcechunkWriter:
             Commit message for the snapshot.
         branch : str, default 'main'
             Branch to write to.
+        skip_housekeeping : bool, default False
+            If True, skip snapshot expiration and garbage collection after commit.
 
         Returns
         -------
@@ -187,17 +190,48 @@ class IcechunkWriter:
                 session = self.repo.writable_session(branch=branch)
 
                 # Write the dataset
+                if self.debug:
+                    console.log('Writing dataset to Icechunk session...')
                 to_icechunk(dataset, session, mode='w')
 
-                # Commit with conflict detection and rebase
-                snapshot_id = session.commit(
-                    commit_message, rebase_with=icechunk.ConflictDetector()
+                # Rebase with BasicConflictSolver to resolve conflicts
+                if self.debug:
+                    console.log('Rebasing session with BasicConflictSolver (UseOurs)...')
+                session.rebase(
+                    icechunk.BasicConflictSolver(
+                        on_chunk_conflict=icechunk.VersionSelection.UseOurs
+                    )
                 )
+
+                # Commit the session
+                snapshot_id = session.commit(commit_message)
 
                 if self.debug:
                     console.log(
-                        f'Successfully wrote dataset (snapshot: {snapshot_id}): {commit_message}'
+                        f'Successfully committed dataset (snapshot: {snapshot_id}): {commit_message}'
                     )
+
+                # Housekeeping: expire old snapshots and garbage collect
+                if not skip_housekeeping:
+                    if self.debug:
+                        console.log(
+                            'Performing housekeeping (expire snapshots + garbage collect)...'
+                        )
+
+                    latest_commit = list(self.repo.ancestry(branch=branch))[0]
+                    if self.debug:
+                        console.log(f'Latest commit: {latest_commit}')
+
+                    # Expire snapshots older than the latest commit
+                    expired = self.repo.expire_snapshots(older_than=latest_commit.written_at)
+                    console.log(
+                        f'Expired {len(expired)} old snapshot(s) in s3://{self.bucket}/{self.prefix}'
+                    )
+
+                    # Garbage collect unreferenced chunks
+                    gc_results = self.repo.garbage_collect(latest_commit.written_at)
+                    if self.debug:
+                        console.log(f'Garbage collection results: {gc_results}')
 
                 return snapshot_id
 

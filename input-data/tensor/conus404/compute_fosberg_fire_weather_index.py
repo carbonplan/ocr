@@ -2,6 +2,32 @@
 # COILED --region us-west-2
 # COILED --tag Project=OCR
 
+# =============================================================================
+# DEPRECATION NOTICE
+# =============================================================================
+# This script has been migrated to the unified OCR input dataset CLI.
+# Please use the new command instead:
+#
+#   ocr ingest-data process conus404-ffwi --ffwi-processing-step <STEP> --use-coiled --software <SOFTWARE_ENV>
+#
+# Available processing steps: compute, postprocess, reproject, all
+#
+# Examples:
+#   # Run all steps with dry-run
+#   ocr ingest-data process conus404-ffwi --ffwi-processing-step all --dry-run --use-coiled
+#
+#   # Compute base FFWI only
+#   ocr ingest-data process conus404-ffwi --ffwi-processing-step compute --use-coiled
+#
+#   # Postprocess with custom quantiles
+#   ocr ingest-data process conus404-ffwi --ffwi-processing-step postprocess --ffwi-quantiles 0.99 --ffwi-quantiles 0.95 --use-coiled
+#
+#   # Reproject wind direction distribution
+#   ocr ingest-data process conus404-ffwi --ffwi-processing-step reproject --use-coiled
+#
+# This script is kept for backward compatibility but may be removed in a future release.
+# =============================================================================
+
 import time
 from typing import Any
 

@@ -7,6 +7,7 @@ from rich.table import Table
 from ocr.console import console
 from ocr.input_datasets.base import InputDatasetConfig
 from ocr.input_datasets.tensor.calfire_fhsz import CalfireFHSZProcessor
+from ocr.input_datasets.tensor.conus404 import Conus404FFWIProcessor, Conus404SubsetProcessor
 from ocr.input_datasets.tensor.usfs_dillon_2023 import Dillon2023Processor
 from ocr.input_datasets.tensor.usfs_riley_2025 import RileyEtAl2025Processor
 from ocr.input_datasets.tensor.usfs_scott_2024 import ScottEtAl2024Processor
@@ -47,6 +48,16 @@ DATASET_REGISTRY = {
         'processor_class': CalfireFHSZProcessor,
         'type': 'tensor',
         'description': 'California Fire Hazard Severity Zones (FHSZ)',
+    },
+    'conus404-subset': {
+        'processor_class': Conus404SubsetProcessor,
+        'type': 'tensor',
+        'description': 'CONUS-404 hourly meteorological variables rechunked from Open Storage Network',
+    },
+    'conus404-ffwi': {
+        'processor_class': Conus404FFWIProcessor,
+        'type': 'tensor',
+        'description': 'Fosberg Fire Weather Index computed from CONUS404 hourly meteorological data',
     },
 }
 
@@ -125,6 +136,26 @@ def process(
         '--census-subset-states',
         help='For census-tiger: subset of states to process (e.g., California Oregon)',
     ),
+    conus404_variable: str = typer.Option(
+        'Q2',
+        '--conus404-variable',
+        help='For conus404-subset: variable to process (Q2, TD2, PSFC, T2, V10, U10)',
+    ),
+    conus404_spatial_tile_size: int = typer.Option(
+        10,
+        '--conus404-spatial-tile-size',
+        help='For conus404-subset: size of spatial tiles for chunking',
+    ),
+    ffwi_processing_step: str = typer.Option(
+        'all',
+        '--ffwi-processing-step',
+        help='For conus404-ffwi: which step to run (compute, postprocess, reproject, all)',
+    ),
+    ffwi_quantiles: list[float] = typer.Option(
+        [0.99],
+        '--ffwi-quantiles',
+        help='For conus404-ffwi: quantiles to compute in postprocess step (e.g., 0.99 0.95)',
+    ),
 ):
     """Process downloaded data and upload to S3/Icechunk."""
     if dataset not in DATASET_REGISTRY:
@@ -144,6 +175,12 @@ def process(
     elif dataset == 'census-tiger':
         processor_kwargs['geography_type'] = census_geography_type
         processor_kwargs['subset_states'] = census_subset_states
+    elif dataset == 'conus404-subset':
+        processor_kwargs['variable'] = conus404_variable
+        processor_kwargs['spatial_tile_size'] = conus404_spatial_tile_size
+    elif dataset == 'conus404-ffwi':
+        processor_kwargs['processing_step'] = ffwi_processing_step
+        processor_kwargs['quantiles'] = list(ffwi_quantiles)
 
     processor_kwargs['use_coiled'] = use_coiled
     processor_kwargs['coiled_software'] = coiled_software
@@ -194,6 +231,26 @@ def run_all(
         '--census-subset-states',
         help='For census-tiger: subset of states to process (e.g., California Oregon)',
     ),
+    conus404_variable: str = typer.Option(
+        'Q2',
+        '--conus404-variable',
+        help='For conus404-subset: variable to process (Q2, TD2, PSFC, T2, V10, U10)',
+    ),
+    conus404_spatial_tile_size: int = typer.Option(
+        10,
+        '--conus404-spatial-tile-size',
+        help='For conus404-subset: size of spatial tiles for chunking',
+    ),
+    ffwi_processing_step: str = typer.Option(
+        'all',
+        '--ffwi-processing-step',
+        help='For conus404-ffwi: which step to run (compute, postprocess, reproject, all)',
+    ),
+    ffwi_quantiles: list[float] = typer.Option(
+        [0.99],
+        '--ffwi-quantiles',
+        help='For conus404-ffwi: quantiles to compute in postprocess step (e.g., 0.99 0.95)',
+    ),
 ):
     """Run the complete pipeline: download, process, and cleanup."""
     if dataset not in DATASET_REGISTRY:
@@ -212,6 +269,12 @@ def run_all(
     elif dataset == 'census-tiger':
         processor_kwargs['geography_type'] = census_geography_type
         processor_kwargs['subset_states'] = census_subset_states
+    elif dataset == 'conus404-subset':
+        processor_kwargs['variable'] = conus404_variable
+        processor_kwargs['spatial_tile_size'] = conus404_spatial_tile_size
+    elif dataset == 'conus404-ffwi':
+        processor_kwargs['processing_step'] = ffwi_processing_step
+        processor_kwargs['quantiles'] = list(ffwi_quantiles)
 
     processor_kwargs['use_coiled'] = use_coiled
 
