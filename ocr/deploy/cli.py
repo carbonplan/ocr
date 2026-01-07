@@ -294,8 +294,8 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.16xlarge',
-                'scheduler_vm_type': 'c8g.16xlarge',
+                'vm_type': 'm8g.16xlarge',
+                'scheduler_vm_type': 'm8g.16xlarge',
                 'software': COILED_SOFTWARE,
             },
         )
