@@ -84,7 +84,7 @@ theme:
     language: en
     name: material
     logo: assets/monogram-light-cropped.png
-    favicon: assets/monogram-light-cropped.png
+    favicon: assets/favicon-180x180-light.png
     palette:
         # Palette toggle for light mode
         - media: "(prefers-color-scheme: light)"
