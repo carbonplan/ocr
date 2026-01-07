@@ -46,6 +46,7 @@ extra_css:
 nav:
     - Home: index.md
     - Access Data: access-data.md
+    - Terms of Data Access: terms-of-data-access.md
     - How-to Guides:
           - User Guides:
                 - Getting Started: how-to/getting-started.md
