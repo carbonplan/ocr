@@ -597,7 +597,7 @@ def aggregate_region_risk_summary_stats(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        'c8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+        'm8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
