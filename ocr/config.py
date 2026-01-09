@@ -874,6 +874,18 @@ class VectorConfig(pydantic_settings.BaseSettings):
         geo_table_name = 'counties'
         return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
+    @functools.cached_property
+    def states_summary_stats_uri(self) -> UPath:
+        """URI for the states summary statistics file."""
+        geo_table_name = 'states'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
+
+    @functools.cached_property
+    def nation_summary_stats_uri(self) -> UPath:
+        """URI for the nation summary statistics file."""
+        geo_table_name = 'nation'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
+
     def upath_delete(self, path: UPath) -> None:
         """Use UPath to handle deletion in a cloud-agnostic way"""
         if not path.exists():
@@ -936,8 +948,10 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Block summary stats', str(self.block_summary_stats_uri)),
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
+                nv('States summary stats', str(self.states_summary_stats_uri)),
+                nv('Nation summary stats', str(self.nation_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
-                nv('Buildings PMTiles', str(self.building_centroids_pmtiles_uri)),
+                nv('Building centroids PMTiles', str(self.building_centroids_pmtiles_uri)),
                 nv('Region PMTiles', str(self.region_pmtiles_uri)),
             ]
         )
