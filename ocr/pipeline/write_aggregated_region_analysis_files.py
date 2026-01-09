@@ -17,10 +17,17 @@ def write_stats_table(
     region_stats_path = region_analysis_path / stats_table_name
     region_stats_path.mkdir(parents=True, exist_ok=True)
 
+    extra_columns = ''
+    if stats_table_name == 'states':
+        extra_columns = 'STUSPS, NAME,'  # the state summary stats also has state name and abbv.
+    elif stats_table_name == 'counties':
+        extra_columns = 'NAME,'
+
     con.execute(f"""
         CREATE TEMP TABLE {stats_table_name} AS
         SELECT
             GEOID,
+            {extra_columns}
             building_count,
             mean_wind_risk_2011 as avg_wind_risk_2011,
             mean_wind_risk_2047 as avg_wind_risk_2047,
