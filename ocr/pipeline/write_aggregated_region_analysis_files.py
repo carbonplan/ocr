@@ -63,6 +63,7 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
     states_summary_stats_path = config.vector.states_summary_stats_uri
+    nation_summary_stats_path = config.vector.nation_summary_stats_uri
 
     connection = duckdb.connect(database=':memory:')
 
@@ -103,6 +104,15 @@ def write_aggregated_region_analysis_files(config: OCRConfig):
         config=config,
         stats_parquet_path=states_summary_stats_path,
         stats_table_name='states',
+    )
+
+    if config.debug:
+        console.log('Writing aggregated region analysis file for CONUS.')
+    write_stats_table(
+        con=connection,
+        config=config,
+        stats_parquet_path=nation_summary_stats_path,
+        stats_table_name='nation',
     )
 
     try:

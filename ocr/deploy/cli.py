@@ -723,7 +723,7 @@ def write_aggregated_region_analysis_files(
     ),
 ):
     """
-    Write aggregated statistical summaries for each region (county and tract).
+    Write aggregated statistical summaries for each region (CONUS, state, county, tract and block).
 
     Creates one file per region type containing aggregated statistics for ALL regions,
     including building counts, average/median risk values, percentiles (p90, p95, p99),
