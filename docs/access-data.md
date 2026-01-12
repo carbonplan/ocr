@@ -10,7 +10,7 @@ While OCR is in beta, there a few different ways to access the data, in addition
 
 <!-- prettier-ignore-start -->
 !!! warning "Terms of Data Use"
-    See the [terms of data access](terms-of-data-access.md) page for important information regarding the use of Open Climate Risk data.
+By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
 
 <!-- prettier-ignore-end -->
 
