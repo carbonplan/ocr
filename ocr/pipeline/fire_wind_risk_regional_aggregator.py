@@ -13,6 +13,8 @@ def create_summary_stat_tmp_tables(
     counties_path: UPath,
     tracts_path: UPath,
     block_path: UPath,
+    states_path: UPath,
+    nation_path: UPath,
     buildings_path_glob: str,
 ):
     con.execute(f"""
@@ -46,10 +48,24 @@ def create_summary_stat_tmp_tables(
         FROM read_parquet('{block_path}')
         """)
 
+    con.execute(f"""
+        CREATE TEMP TABLE state AS
+        SELECT GEOID, STUSPS, NAME, geometry
+        FROM read_parquet('{states_path}')
+        """)
+
+    con.execute(f"""
+        CREATE TEMP TABLE nation AS
+        SELECT GEOID, NAME, geometry
+        FROM read_parquet('{nation_path}')
+        """)
+
     con.execute('CREATE INDEX buildings_spatial_idx ON buildings USING RTREE (geometry)')
     con.execute('CREATE INDEX counties_spatial_idx ON county USING RTREE (geometry)')
     con.execute('CREATE INDEX tracts_spatial_idx ON tract USING RTREE (geometry)')
     con.execute('CREATE INDEX block_spatial_idx ON block USING RTREE (geometry)')
+    con.execute('CREATE INDEX states_spatial_idx ON state USING RTREE (geometry)')
+    con.execute('CREATE INDEX nation_spatial_idx ON nation USING RTREE (geometry)')
 
 
 def custom_histogram_query(
@@ -59,8 +75,18 @@ def custom_histogram_query(
     summary_stats_path: UPath,
     hist_bins: list[int] | None = [0.01, 0.02, 0.035, 0.06, 0.1, 0.2, 0.5, 1, 3, 100],
 ):
-    name_column = 'b.NAME as NAME,' if geo_table_name == 'county' else ''
-    name_group_by = ', NAME' if geo_table_name == 'county' else ''
+    if geo_table_name == 'county':
+        name_column = 'b.NAME as NAME,'
+        name_group_by = ', NAME'
+    elif geo_table_name == 'state':
+        name_column = 'b.STUSPS as STUSPS, b.NAME as NAME,'
+        name_group_by = ', STUSPS, NAME'
+    elif geo_table_name == 'nation':
+        name_column = 'b.NAME as NAME,'
+        name_group_by = ', NAME'
+    else:
+        name_column = ''
+        name_group_by = ''
 
     hist_bin_padding = len(hist_bins)
 
@@ -165,6 +191,8 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     block_summary_stats_path = config.vector.block_summary_stats_uri
     tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
     counties_summary_stats_path = config.vector.counties_summary_stats_uri
+    states_summary_stats_path = config.vector.states_summary_stats_uri
+    nation_summary_stats_path = config.vector.nation_summary_stats_uri
     buildings_path_glob = f'{config.vector.region_geoparquet_uri}/*.parquet'
 
     dataset = catalog.get_dataset('us-census-counties')
@@ -175,6 +203,12 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
 
     dataset = catalog.get_dataset('us-census-blocks')
     block_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+
+    dataset = catalog.get_dataset('us-census-states')
+    states_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
+
+    dataset = catalog.get_dataset('us-census-nation')
+    nation_path = UPath(f's3://{dataset.bucket}/{dataset.prefix}')
 
     hist_bins = [0.01, 0.02, 0.035, 0.06, 0.1, 0.2, 0.5, 1, 3, 100]
     if config.debug:
@@ -190,6 +224,8 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
         counties_path=counties_path,
         tracts_path=tracts_path,
         block_path=block_path,
+        states_path=states_path,
+        nation_path=nation_path,
         buildings_path_glob=buildings_path_glob,
     )
 
@@ -225,5 +261,27 @@ def compute_regional_fire_wind_risk_statistics(config: OCRConfig):
     )
     if config.debug:
         console.log(f'Wrote summary statistics for block to {block_summary_stats_path}')
+
+    if config.debug:
+        console.log('Computing state summary statistics')
+    custom_histogram_query(
+        con=connection,
+        geo_table_name='state',
+        summary_stats_path=states_summary_stats_path,
+        hist_bins=hist_bins,
+    )
+    if config.debug:
+        console.log(f'Wrote summary statistics for state to {states_summary_stats_path}')
+
+    if config.debug:
+        console.log('Computing nation summary statistics')
+    custom_histogram_query(
+        con=connection,
+        geo_table_name='nation',
+        summary_stats_path=nation_summary_stats_path,
+        hist_bins=hist_bins,
+    )
+    if config.debug:
+        console.log(f'Wrote summary statistics for nation to {nation_summary_stats_path}')
 
     connection.close()

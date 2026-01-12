@@ -1,4 +1,3 @@
-# inspired by: https://github.com/developmentseed/obstore & others
 site_name: OCR
 repo_name: carbonplan/ocr
 repo_url: https://github.com/carbonplan/ocr
@@ -42,6 +41,7 @@ extra_javascript:
 
 extra_css:
     - https://unpkg.com/katex@0/dist/katex.min.css
+    - assets/custom.css
 
 nav:
     - Home: index.md
@@ -83,7 +83,8 @@ nav:
 theme:
     language: en
     name: material
-    logo: assets/monogram-dark-cropped.png
+    logo: assets/monogram-light-cropped.png
+    favicon: assets/favicon-180x180-light.png
     palette:
         # Palette toggle for light mode
         - media: "(prefers-color-scheme: light)"

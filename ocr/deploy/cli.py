@@ -294,8 +294,8 @@ def run(
             name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.16xlarge',
-                'scheduler_vm_type': 'c8g.16xlarge',
+                'vm_type': 'm8g.16xlarge',
+                'scheduler_vm_type': 'm8g.16xlarge',
                 'software': COILED_SOFTWARE,
             },
         )
@@ -597,7 +597,7 @@ def aggregate_region_risk_summary_stats(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        'c8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+        'm8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -723,7 +723,7 @@ def write_aggregated_region_analysis_files(
     ),
 ):
     """
-    Write aggregated statistical summaries for each region (county and tract).
+    Write aggregated statistical summaries for each region (CONUS, state, county, tract and block).
 
     Creates one file per region type containing aggregated statistics for ALL regions,
     including building counts, average/median risk values, percentiles (p90, p95, p99),
