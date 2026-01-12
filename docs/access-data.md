@@ -34,7 +34,7 @@ By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms
 
 ### Schema
 
-The schemas for each of the full datasets are described on the [data schema](./data-schema.md) page.
+The schemas for each of the full datasets are described on the [data schema](./reference/data-schema.md) page.
 
 ## Regional statistics downloads
 
@@ -92,7 +92,7 @@ The [web tool](https://ocr.carbonplan.org/) can be used to access region-specifi
 3. Select your region of interest (county, census tract, or census block) and view trends inline.
 4. Click `CSV ↓` or `GeoPackage ↓` to download building-level data for the selected region.
 
-![](../assets/web-data-downloads.png)
+![](./assets/web-data-downloads.png)
 
 ### Schema
 
