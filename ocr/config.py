@@ -778,12 +778,14 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 f'Wiping vector data storage at these locations:\n'
                 f'- {self.building_geoparquet_uri.parent}\n'
                 f'- {self.buildings_pmtiles_uri.parent}\n'
+                f'- {self.building_centroids_pmtiles_uri.parent}\n'
                 f'- {self.region_geoparquet_uri}\n'
                 f'- {self.aggregated_region_analysis_uri}\n'
                 f'- {self.tracts_summary_stats_uri.parent}\n'
             )
         self.upath_delete(self.building_geoparquet_uri.parent)
         self.upath_delete(self.buildings_pmtiles_uri.parent)
+        self.upath_delete(self.building_centroids_pmtiles_uri.parent)
         self.upath_delete(self.region_geoparquet_uri)
         self.upath_delete(self.aggregated_region_analysis_uri)
         self.upath_delete(self.tracts_summary_stats_uri.parent)
@@ -799,6 +801,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def buildings_pmtiles_uri(self) -> UPath:
         path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/buildings.pmtiles')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @functools.cached_property
+    def building_centroids_pmtiles_uri(self) -> UPath:
+        path = UPath(f'{self.storage_root}/{self.pmtiles_prefix}/building_centroids.pmtiles')
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -866,6 +874,18 @@ class VectorConfig(pydantic_settings.BaseSettings):
         geo_table_name = 'counties'
         return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
 
+    @functools.cached_property
+    def states_summary_stats_uri(self) -> UPath:
+        """URI for the states summary statistics file."""
+        geo_table_name = 'states'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
+
+    @functools.cached_property
+    def nation_summary_stats_uri(self) -> UPath:
+        """URI for the nation summary statistics file."""
+        geo_table_name = 'nation'
+        return self.region_summary_stats_prefix / f'{geo_table_name}_summary_stats.parquet'
+
     def upath_delete(self, path: UPath) -> None:
         """Use UPath to handle deletion in a cloud-agnostic way"""
         if not path.exists():
@@ -928,7 +948,10 @@ class VectorConfig(pydantic_settings.BaseSettings):
                 nv('Block summary stats', str(self.block_summary_stats_uri)),
                 nv('Tracts summary stats', str(self.tracts_summary_stats_uri)),
                 nv('Counties summary stats', str(self.counties_summary_stats_uri)),
+                nv('States summary stats', str(self.states_summary_stats_uri)),
+                nv('Nation summary stats', str(self.nation_summary_stats_uri)),
                 nv('Buildings PMTiles', str(self.buildings_pmtiles_uri)),
+                nv('Building centroids PMTiles', str(self.building_centroids_pmtiles_uri)),
                 nv('Region PMTiles', str(self.region_pmtiles_uri)),
             ]
         )
@@ -1376,10 +1399,29 @@ class OCRConfig(pydantic_settings.BaseSettings):
         error_message += "\nPlease provide valid region IDs that haven't been processed yet."
         return error_message
 
-    def resolve_region_ids(self, provided_region_ids: set[str]) -> 'RegionIDStatus':
+    def resolve_region_ids(
+        self, provided_region_ids: set[str], *, allow_all_processed: bool = False
+    ) -> 'RegionIDStatus':
         """Validate provided region IDs against valid + processed sets.
 
-        Returns a RegionIDStatus object or raises ValueError if none are processable.
+        Parameters
+        ----------
+        provided_region_ids : set[str]
+            The set of region IDs to validate.
+        allow_all_processed : bool, optional
+            If True, don't raise an error when all regions are already processed.
+            This is useful for production reruns where you want to regenerate
+            vector outputs even if icechunk regions are complete. Default is False.
+
+        Returns
+        -------
+        RegionIDStatus
+            Status object with validation results.
+
+        Raises
+        ------
+        ValueError
+            If no valid unprocessed region IDs remain and allow_all_processed is False.
         """
         assert self.chunking is not None, 'Chunking configuration not initialized'
         assert self.icechunk is not None, 'Icechunk configuration not initialized'
@@ -1397,19 +1439,38 @@ class OCRConfig(pydantic_settings.BaseSettings):
             previously_processed_ids=previously_processed_ids,
             unprocessed_valid_region_ids=unprocessed_valid_region_ids,
         )
-        if len(unprocessed_valid_region_ids) == 0:
+        if len(unprocessed_valid_region_ids) == 0 and not allow_all_processed:
             raise ValueError(self._compose_region_id_error(status))
         return status
 
     def select_region_ids(
-        self, region_ids: list[str] | None, *, all_region_ids: bool = False
+        self,
+        region_ids: list[str] | None,
+        *,
+        all_region_ids: bool = False,
+        allow_all_processed: bool = False,
     ) -> 'RegionIDStatus':
         """Helper to pick the effective set of region IDs (all or user-provided) and
         return the validated status object.
+
+        Parameters
+        ----------
+        region_ids : list[str] | None
+            User-provided region IDs to process.
+        all_region_ids : bool, optional
+            If True, use all valid region IDs instead of user-provided ones. Default is False.
+        allow_all_processed : bool, optional
+            If True, don't raise an error when all regions are already processed.
+            Passed through to resolve_region_ids. Default is False.
+
+        Returns
+        -------
+        RegionIDStatus
+            Status object with validation results.
         """
         assert self.chunking is not None, 'Chunking configuration not initialized'
         provided = set(self.chunking.valid_region_ids) if all_region_ids else set(region_ids or [])
-        return self.resolve_region_ids(provided)
+        return self.resolve_region_ids(provided, allow_all_processed=allow_all_processed)
 
 
 def load_config(file_path: Path | None) -> OCRConfig:

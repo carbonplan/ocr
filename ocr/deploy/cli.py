@@ -174,6 +174,14 @@ def run(
         config.vector.wipe()
         # config.pyramid.wipe()
 
+    # Check if we should allow all regions to be already processed (for production reruns)
+    allow_all_processed = os.environ.get('OCR_ALLOW_ALL_PROCESSED', '').lower() == 'true'
+    if allow_all_processed and config.debug:
+        console.log(
+            '[yellow]OCR_ALLOW_ALL_PROCESSED is enabled: Will proceed with vector processing '
+            'even if all icechunk regions are already processed.[/yellow]'
+        )
+
     if platform == Platform.COILED:
         # ------------- 01 AU ---------------
 
@@ -185,46 +193,72 @@ def run(
                 'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
             )
 
-        attempt = 0
-        while True:
-            attempt += 1
-            # Use central config helper to resolve / validate region IDs
-            region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
-            remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
+        # Use central config helper to resolve / validate region IDs
+        region_status = config.select_region_ids(
+            region_id, all_region_ids=all_region_ids, allow_all_processed=allow_all_processed
+        )
+        remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-            manager = _get_manager(Platform.COILED, config.debug)
+        if remaining_to_process:
+            attempt = 0
+            while True:
+                attempt += 1
 
-            kwargs = _coiled_kwargs(config, env_file)
-            # remove ntasks so we use map semantics
-            kwargs.pop('ntasks', None)
-            manager.submit_job(
-                command=(
-                    f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
-                ),
-                name=f'process-region-{config.environment.value}-attempt-{attempt}',
-                kwargs={
-                    **kwargs,
-                    'map_over_values': remaining_to_process,
-                    'software': COILED_SOFTWARE,
-                },
-            )
-            completed, failed = manager.wait_for_completion(exit_on_failure=False)
+                # Recompute remaining regions on each attempt (after first attempt)
+                if attempt > 1:
+                    region_status = config.select_region_ids(
+                        region_id,
+                        all_region_ids=all_region_ids,
+                        allow_all_processed=allow_all_processed,
+                    )
+                    remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-            if not failed:
-                break
-            # map_over_values failure detection: we need to infer failures by difference
-            # coiled batch currently only tracks job level; re-submit failed values if any remain
-            # For now we conservatively retry all remaining values if any task failed.
-            console.log(
-                f'[yellow]Attempt {attempt} finished with failures. Retrying up to {process_retries} times.[/yellow]'
-            )
-            if attempt > process_retries:
-                raise RuntimeError(
-                    f'process-region mapping failed after {attempt} attempts. Failed job ids: {failed}'
+                    if not remaining_to_process:
+                        console.log('[green]All regions processed successfully on retry.[/green]')
+                        break
+
+                    console.log(
+                        f'[yellow]Retry attempt {attempt}: {len(remaining_to_process)} regions remaining to process.[/yellow]'
+                    )
+
+                manager = _get_manager(Platform.COILED, config.debug)
+
+                kwargs = _coiled_kwargs(config, env_file)
+                # remove ntasks so we use map semantics
+                kwargs.pop('ntasks', None)
+                manager.submit_job(
+                    command=(
+                        f'ocr process-region $COILED_BATCH_TASK_INPUT --risk-type {risk_type.value}'
+                    ),
+                    name=f'process-region-{config.environment.value}-attempt-{attempt}',
+                    kwargs={
+                        **kwargs,
+                        'map_over_values': remaining_to_process,
+                        'software': COILED_SOFTWARE,
+                    },
                 )
-            # Retry all values (could refine by inspecting logs later)
-            # small backoff
-            time.sleep(5 * attempt)
+                completed, failed = manager.wait_for_completion(exit_on_failure=False)
+
+                if not failed:
+                    break
+                # map_over_values failure detection: we need to infer failures by difference
+                # coiled batch currently only tracks job level; re-submit failed values if any remain
+                # For now we conservatively retry all remaining values if any task failed.
+                console.log(
+                    f'[yellow]Attempt {attempt} finished with failures. Retrying up to {process_retries} times.[/yellow]'
+                )
+                if attempt > process_retries:
+                    raise RuntimeError(
+                        f'process-region mapping failed after {attempt} attempts. Failed job ids: {failed}'
+                    )
+                # Retry all values (could refine by inspecting logs later)
+                # small backoff
+                time.sleep(5 * attempt)
+        else:
+            if config.debug:
+                console.log(
+                    '[yellow]No unprocessed regions to process. Skipping region processing step.[/yellow]'
+                )
 
         # ----------- Pyramid   -------------
         if pyramid:
@@ -234,8 +268,8 @@ def run(
                 name=f'create-pyramid-{config.environment.value}',
                 kwargs={
                     **_coiled_kwargs(config, env_file),
-                    'vm_type': 'm8g.16xlarge',
-                    'scheduler_vm_type': 'm8g.16xlarge',
+                    'vm_type': 'm8g.4xlarge',
+                    'scheduler_vm_type': 'm8g.4xlarge',
                     'software': COILED_SOFTWARE,
                 },
             )
@@ -247,14 +281,28 @@ def run(
             name=f'partition-buildings-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'software': COILED_SOFTWARE,
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
+            command='ocr aggregate-region-risk-summary-stats',
+            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
+            kwargs={
+                **_coiled_kwargs(config, env_file),
+                'vm_type': 'm8g.16xlarge',
+                'scheduler_vm_type': 'm8g.16xlarge',
+                'software': COILED_SOFTWARE,
+            },
+        )
+
         if write_regional_stats:
+            manager.wait_for_completion(exit_on_failure=True)
+
             manager = _get_manager(Platform.COILED, config.debug)
 
             manager.submit_job(
@@ -267,20 +315,6 @@ def run(
                     'software': COILED_SOFTWARE,
                 },
             )
-
-        manager = _get_manager(Platform.COILED, config.debug)
-        manager.submit_job(
-            command='ocr aggregate-region-risk-summary-stats',
-            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
-            kwargs={
-                **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
-                'software': COILED_SOFTWARE,
-            },
-        )
-        manager.wait_for_completion(exit_on_failure=True)
-
         # create summary stats PMTiles layer
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
@@ -288,8 +322,8 @@ def run(
             name=f'create-aggregated-region-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'disk_size': 250,
                 'software': COILED_SOFTWARE,
             },
@@ -299,12 +333,25 @@ def run(
 
         manager = _get_manager(Platform.COILED, config.debug)
         manager.submit_job(
+            command='ocr create-building-centroid-pmtiles',
+            name=f'create-building-centroid-pmtiles-{config.environment.value}',
+            kwargs={
+                **_coiled_kwargs(config, env_file),
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
+                'disk_size': 250,
+                'software': COILED_SOFTWARE,
+            },  # PMTiles creation needs more disk space
+        )
+
+        manager = _get_manager(Platform.COILED, config.debug)
+        manager.submit_job(
             command='ocr create-building-pmtiles',
             name=f'create-building-pmtiles-{config.environment.value}',
             kwargs={
                 **_coiled_kwargs(config, env_file),
-                'vm_type': 'c8g.8xlarge',
-                'scheduler_vm_type': 'c8g.8xlarge',
+                'vm_type': 'c8g.12xlarge',
+                'scheduler_vm_type': 'c8g.12xlarge',
                 'disk_size': 250,
                 'software': COILED_SOFTWARE,
             },  # PMTiles creation needs more disk space
@@ -313,27 +360,45 @@ def run(
         manager.wait_for_completion(exit_on_failure=True)
 
     elif platform == Platform.LOCAL:
-        manager = _get_manager(Platform.LOCAL, config.debug)
-
         # Use central config helper to resolve / validate region IDs
-        region_status = config.select_region_ids(region_id, all_region_ids=all_region_ids)
+        region_status = config.select_region_ids(
+            region_id, all_region_ids=all_region_ids, allow_all_processed=allow_all_processed
+        )
         remaining_to_process = sorted(list(region_status.unprocessed_valid_region_ids))
 
-        for rid in remaining_to_process:
-            manager.submit_job(
-                command=f'ocr process-region {rid} --risk-type {risk_type.value}',
-                name=f'process-region-{rid}-{config.environment.value}',
-                kwargs={
-                    **_local_kwargs(),
-                },
-            )
-        manager.wait_for_completion(exit_on_failure=True)
+        if remaining_to_process:
+            manager = _get_manager(Platform.LOCAL, config.debug)
+            for rid in remaining_to_process:
+                manager.submit_job(
+                    command=f'ocr process-region {rid} --risk-type {risk_type.value}',
+                    name=f'process-region-{rid}-{config.environment.value}',
+                    kwargs={
+                        **_local_kwargs(),
+                    },
+                )
+            manager.wait_for_completion(exit_on_failure=True)
+        else:
+            if config.debug:
+                console.log(
+                    '[yellow]No unprocessed regions to process. Skipping region processing step.[/yellow]'
+                )
 
         # Partition buildings by geography
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
             command='ocr partition-buildings',
             name=f'partition-buildings-{config.environment.value}',
+            kwargs={
+                **_local_kwargs(),
+            },
+        )
+        manager.wait_for_completion(exit_on_failure=True)
+
+        manager = _get_manager(Platform.LOCAL, config.debug)
+        # Aggregate regional fire and wind risk statistics
+        manager.submit_job(
+            command='ocr aggregate-region-risk-summary-stats',
+            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
             kwargs={
                 **_local_kwargs(),
             },
@@ -350,18 +415,6 @@ def run(
                     **_local_kwargs(),
                 },
             )
-
-        manager = _get_manager(Platform.LOCAL, config.debug)
-        # Aggregate regional fire and wind risk statistics
-        manager.submit_job(
-            command='ocr aggregate-region-risk-summary-stats',
-            name=f'create-aggregated-region-summary-stats-{config.environment.value}',
-            kwargs={
-                **_local_kwargs(),
-            },
-        )
-        manager.wait_for_completion(exit_on_failure=True)
-
         # Create summary stats PMTiles layer
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
@@ -373,6 +426,15 @@ def run(
         )
         manager.wait_for_completion(exit_on_failure=True)
 
+        # Create building centroid PMTiles from the consolidated geoparquet file
+        manager = _get_manager(Platform.LOCAL, config.debug)
+        manager.submit_job(
+            command='ocr create-building-centroid-pmtiles',
+            name=f'create-building-centroid-pmtiles-{config.environment.value}',
+            kwargs={
+                **_local_kwargs(),
+            },
+        )
         # Create PMTiles from the consolidated geoparquet file
         manager = _get_manager(Platform.LOCAL, config.debug)
         manager.submit_job(
@@ -383,18 +445,6 @@ def run(
             },
         )
         manager.wait_for_completion(exit_on_failure=True)
-
-        # TODO: Should we run this locally? It will most likely break due to lack of resources
-        # # Create pyramid
-        # manager = _get_manager(Platform.LOCAL, config.debug)
-        # manager.submit_job(
-        #     command='ocr create-pyramid',
-        #     name=f'create-pyramid-{config.environment.value}',
-        #     kwargs={
-        #         **_local_kwargs(),
-        #     },
-        # )
-        # manager.wait_for_completion(exit_on_failure=True)
 
     if config.debug:
         # Print out the pretty paths
@@ -489,7 +539,7 @@ def partition_buildings(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.12xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -504,9 +554,16 @@ def partition_buildings(
         name = f'partition-buildings-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -540,7 +597,7 @@ def aggregate_region_risk_summary_stats(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'm8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -555,9 +612,16 @@ def aggregate_region_risk_summary_stats(
         name = f'create-aggregated-region-summary-stats-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -594,8 +658,9 @@ def create_regional_pmtiles(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
 ):
     """
     Create PMTiles for regional risk statistics (counties and tracts).
@@ -609,9 +674,17 @@ def create_regional_pmtiles(
         name = f'create-aggregated-region-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -646,11 +719,11 @@ def write_aggregated_region_analysis_files(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'r8g.4xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
-    Write aggregated statistical summaries for each region (county and tract).
+    Write aggregated statistical summaries for each region (CONUS, state, county, tract and block).
 
     Creates one file per region type containing aggregated statistics for ALL regions,
     including building counts, average/median risk values, percentiles (p90, p95, p99),
@@ -665,9 +738,16 @@ def write_aggregated_region_analysis_files(
         name = f'write-aggregated-region-analysis-files-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -704,8 +784,9 @@ def create_building_pmtiles(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
 ):
     """
     Create PMTiles from the consolidated geoparquet file.
@@ -719,9 +800,17 @@ def create_building_pmtiles(
         name = f'create-building-pmtiles-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 
@@ -734,6 +823,67 @@ def create_building_pmtiles(
     config = load_config(env_file)
 
     create_building_pmtiles(config=config)
+
+
+@app.command()
+def create_building_centroid_pmtiles(
+    env_file: Path | None = typer.Option(
+        None,
+        '-e',
+        '--env-file',
+        help='Path to the environment variables file. These will be used to set up the OCRConfiguration',
+        show_default=True,
+        exists=True,
+        file_okay=True,
+        resolve_path=True,
+    ),
+    platform: Platform | None = typer.Option(
+        None,
+        '-p',
+        '--platform',
+        help='If set, schedule this command on the specified platform instead of running inline.',
+        show_default=True,
+    ),
+    vm_type: str | None = typer.Option(
+        'c8g.8xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
+    ),
+    disk_size: int | None = typer.Option(250, '--disk-size', help='Disk size in GB (Coiled only).'),
+):
+    """
+    Create building centroid PMTiles from the consolidated geoparquet file.
+    """
+
+    # Schedule if requested and not already inside a batch task
+    if platform is not None and not _in_batch():
+        config = load_config(env_file)
+        manager = _get_manager(platform, config.debug)
+        command = 'ocr create-building-pmtiles'
+        name = f'create-building-pmtiles-{config.environment.value}'
+
+        if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
+            kwargs = {**_coiled_kwargs(config, env_file)}
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['disk_size'] = disk_size
+            kwargs['software'] = COILED_SOFTWARE
+        else:
+            kwargs = {**_local_kwargs()}
+
+        manager.submit_job(command=command, name=name, kwargs=kwargs)
+        manager.wait_for_completion(exit_on_failure=True)
+        return
+
+    from ocr.pipeline.create_building_centroid_pmtiles import create_building_centroid_pmtiles
+
+    config = load_config(env_file)
+
+    create_building_centroid_pmtiles(config=config)
 
 
 @app.command()
@@ -756,7 +906,7 @@ def create_pyramid(
         show_default=True,
     ),
     vm_type: str | None = typer.Option(
-        None, '--vm-type', help='Coiled VM type override (Coiled only).'
+        'm8g.16xlarge', '--vm-type', help='Coiled VM type override (Coiled only).'
     ),
 ):
     """
@@ -771,10 +921,16 @@ def create_pyramid(
         name = f'create-pyramid-{config.environment.value}'
 
         if platform == Platform.COILED:
+            COILED_SOFTWARE = os.environ.get('COILED_SOFTWARE_ENV_NAME')
+            if COILED_SOFTWARE is None or not COILED_SOFTWARE.strip():
+                console.log(
+                    '[red]Error: COILED_SOFTWARE_ENV_NAME environment variable is not set. '
+                    'This must be set to the name of a Coiled software environment with OCR installed. Proceeding with package sync...[/red]'
+                )
             kwargs = {**_coiled_kwargs(config, env_file)}
-            if vm_type:
-                kwargs['vm_type'] = vm_type
-            kwargs['scheduler_vm_type'] = 'm8g.16xlarge'
+            kwargs['vm_type'] = vm_type
+            kwargs['scheduler_vm_type'] = vm_type
+            kwargs['software'] = COILED_SOFTWARE
         else:
             kwargs = {**_local_kwargs()}
 

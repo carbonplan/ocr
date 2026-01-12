@@ -6,26 +6,20 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 **Open Climate Risk (OCR)** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. OCR provides:
 
--   **Building-level fire risk scores** for ~180 million structures
+-   **Building-level fire risk** for ~160 million structures
 -   **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
 -   **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
--   **Present and future scenarios**: Current conditions (circa 2023) and future projections (circa 2047)
+-   **Present and future scenarios**: Current conditions (circa 2011) and future projections (circa 2047)
 
 ## Quick Access Options
 
 ### Option 1: Explore the Web Tool
 
-The fastest way to explore OCR data is through our interactive web map:
-
-**🌐 [ocr.carbonplan.org](https://ocr.carbonplan.org)**
-
-The web tool allows you to:
+The fastest way to explore OCR data is through our [interactive web map](https://ocr.carbonplan.org). The web tool allows you to:
 
 -   Search for specific addresses or locations
 -   View building-level risk scores on a 1-10 scale
--   Explore county and census tract aggregations
--   Compare baseline vs. wind-adjusted risk
--   Examine different time horizons (1, 15, and 30-year)
+-   Explore county, census tract, and census block aggregations
 
 ### Option 2: Access Production Data
 
@@ -33,14 +27,14 @@ If you want to analyze OCR data programmatically, you can access our production 
 
 ## Accessing Production Data
 
-OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with xarray and other Python geospatial tools.
+OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
 
 ### Prerequisites
 
 You'll need Python with a few packages installed:
 
 ```bash
-pip install xarray icechunk
+python -m pip install xarray icechunk
 ```
 
 ### Load the Dataset
@@ -52,10 +46,10 @@ import icechunk
 import xarray as xr
 
 # Connect to OCR's production Icechunk repository
-version = 'v0.5.0'  # Check GitHub releases for latest version
+version = 'v0.13.1'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
-    bucket='carbonplan-ocr',
-    prefix=f'output/fire-risk/tensor/production/{version}/ocr.icechunk',
+    bucket='us-west-2.opendata.source.coop',
+    prefix=f'carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/{version}/ocr.icechunk',
     anonymous=True,
 )
 
@@ -84,7 +78,8 @@ The dataset contains several key variables:
 -   Risk scores are for a "generic" or "potential" structure at each location
 
 !!! note "Important Limitation"
-Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management. See [Caveats & Limitations](../methods/fire-risk/limitations.md) for details.
+
+    Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management.
 
 ## Next Steps
 
@@ -92,13 +87,12 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 
 -   **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing OCR datasets
 -   **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
--   **[Data Downloads](../reference/data-downloads.md)**: Direct download links and bulk access options
+-   **[Data Downloads](../access-data.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 
 -   **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
 -   **[Data Sources and Provenance](../methods/fire-risk/data-sources-and-provenance.md)**: Learn about input datasets
--   **[Validation and Uncertainty](../methods/fire-risk/validation-and-uncertainty.ipynb)**: Model evaluation and limitations
 
 ### For Developers
 

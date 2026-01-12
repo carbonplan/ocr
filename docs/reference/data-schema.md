@@ -18,7 +18,7 @@ graph TD
 
 ## Raster (Tensor) Datasets
 
-Raster datasets are gridded geospatial layers stored at 30m resolution in EPSG:4326 (WGS84) projection. These datasets are organized by region and stored in Icechunk format.
+Raster datasets are gridded geospatial layers stored at 30m resolution in EPSG:4326 (WGS84) projection. These datasets are organized by region and stored in the Icechunk format.
 
 ### Spatial Characteristics
 
@@ -156,7 +156,6 @@ This single-file format enables:
 
 | Variable          | Expected Range | Notes                                               |
 | ----------------- | -------------- | --------------------------------------------------- |
-| Burn Probability  | [0, 1]         | Values < 0.01 are trimmed to 0 for frontend binning |
 | Risk Scores (RPS) | [0, ∞)         | Product of BP and CRPS                              |
 | Wind Distribution | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist) |
 
@@ -197,5 +196,5 @@ All datasets include descriptive metadata attributes:
 
 ## Related Documentation
 
--   [Data Downloads](data-downloads.md): Information on accessing and downloading datasets
+-   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
 -   [Deployment](deployment.md): Details on data storage infrastructure

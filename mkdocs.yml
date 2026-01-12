@@ -1,4 +1,3 @@
-# inspired by: https://github.com/developmentseed/obstore & others
 site_name: OCR
 repo_name: carbonplan/ocr
 repo_url: https://github.com/carbonplan/ocr
@@ -36,10 +35,18 @@ extra:
 
 extra_javascript:
     - https://unpkg.com/mermaid@10/dist/mermaid.min.js
-    - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+    - javascripts/katex.js
+    - https://unpkg.com/katex@0/dist/katex.min.js
+    - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+    - https://unpkg.com/katex@0/dist/katex.min.css
+    - assets/custom.css
 
 nav:
     - Home: index.md
+    - Access Data: access-data.md
+    - Terms of Data Access: terms-of-data-access.md
     - How-to Guides:
           - User Guides:
                 - Getting Started: how-to/getting-started.md
@@ -51,29 +58,34 @@ nav:
                 - Snapshot Testing: how-to/snapshot-testing.md
 
     - Methods:
-          - Fire Risk:
-                - Overview: methods/fire-risk/overview.md
-                - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
-                - Implementation: methods/fire-risk/implementation.ipynb
-                - Validation and Uncertainty: methods/fire-risk/validation-and-uncertainty.ipynb
-                - Caveats & Limitations: methods/fire-risk/limitations.md
-                - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+          - Overview: methods/fire-risk/overview.md
+          - Data Sources and Provenance: methods/fire-risk/data-sources-and-provenance.md
+          - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+          - Evaluation:
+                - Overview: methods/fire-risk/evaluation.md
+                - Benchmarking: methods/fire-risk/benchmarking.ipynb
+                - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
+                - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                - California Comparison: methods/fire-risk/california-comparison.ipynb
+                - Score Bins: methods/fire-risk/score-bins.ipynb
+                - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
+                - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
 
     - Tutorials:
-          - Data Pipeline: tutorials/data-pipeline.md
           - Calculate Wind-Adjusted Fire Risk: tutorials/calculate-wind-adjusted-fire-risk-for-a-region.ipynb
+          - Data Pipeline: tutorials/data-pipeline.md
 
     - Reference:
           - API: reference/api.md
           - Project Structure: reference/project-structure.md
           - Deployment: reference/deployment.md
           - Data Schema: reference/data-schema.md
-          - Data Downloads: reference/data-downloads.md
 
 theme:
     language: en
     name: material
-    logo: assets/monogram-dark-cropped.png
+    logo: assets/monogram-light-cropped.png
+    favicon: assets/favicon-180x180-light.png
     palette:
         # Palette toggle for light mode
         - media: "(prefers-color-scheme: light)"
@@ -104,6 +116,7 @@ theme:
 
 plugins:
     - search
+    - autorefs
     - markdown-exec
     - social
     - material-plausible

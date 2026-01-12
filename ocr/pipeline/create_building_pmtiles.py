@@ -79,6 +79,7 @@ def create_building_pmtiles(
                 '-q',
                 '--extend-zooms-if-still-dropping',
                 '-zg',
+                '-Z 6',
                 '--generate-ids',
                 str(ndjson_path),
             ]
