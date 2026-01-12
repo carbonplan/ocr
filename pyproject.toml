@@ -8,7 +8,7 @@
     requires-python = ">= 3.13"
     # All runtime dependencies are managed by Pixi via conda-forge.
     # for conda/pixi users this section is intentionally empty.
-    dependencies = ["topozarr @ git+https://github.com/norlandrhagen/topozarr.git"]
+    dependencies = ["topozarr"]
 
 [project.scripts]
     ocr        = "ocr.deploy.cli:app"
