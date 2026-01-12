@@ -4,10 +4,10 @@
 
 ## Quick Links
 
-- [**Web Tool**](https://ocr.carbonplan.org)
-- [**Explainer Article**](https://ocr.carbonplan.org/research/climate-risk-explainer)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr) (currently private)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases) (currently private)
+-   [**Web Tool**](https://ocr.carbonplan.org)
+-   [**Explainer Article**](https://ocr.carbonplan.org/research/climate-risk-explainer)
+-   [**GitHub Repository**](https://github.com/carbonplan/ocr) (currently private)
+-   [**Dataset Releases**](https://github.com/carbonplan/ocr/releases) (currently private)
 
 ## Getting Started
 
@@ -17,7 +17,7 @@
 
     1. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
     2. Explore the [Data Schema][data-schema] to understand available variables
-    3. Check [Data Downloads](reference/data-downloads.md) for an overview of all available formats
+    3. Check [Data Downloads](access-data.md) for an overview of all available formats
 
 === "Contributing to OCR"
 
@@ -40,7 +40,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 <div class="grid cards" markdown>
 
-- :material-school:{ .lg .middle } **Tutorials**
+-   :material-school:{ .lg .middle } **Tutorials**
 
     ***
 
@@ -48,7 +48,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
     [:octicons-arrow-right-24: Browse tutorials](tutorials/data-pipeline.md)
 
-- :material-hammer-wrench:{ .lg .middle } **How-to Guides**
+-   :material-hammer-wrench:{ .lg .middle } **How-to Guides**
 
     ***
 
@@ -57,7 +57,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
     [:octicons-arrow-right-24: User guides](how-to/work-with-data.ipynb)
     [:octicons-arrow-right-24: Developer guides](how-to/installation.md)
 
-- :material-book-open-variant:{ .lg .middle } **Methods**
+-   :material-book-open-variant:{ .lg .middle } **Methods**
 
     ***
 
@@ -65,7 +65,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
     [:octicons-arrow-right-24: Fire risk methods](methods/fire-risk/overview.md)
 
-- :material-file-document:{ .lg .middle } **Reference**
+-   :material-file-document:{ .lg .middle } **Reference**
 
     ***
 
@@ -78,9 +78,9 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 ## Support
 
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
-- **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
+-   **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+-   **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
 ## License
 
-OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](reference/data-downloads.md) for information about data licensing.
+OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](access-data.md) for information about data licensing.

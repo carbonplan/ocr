@@ -4,13 +4,13 @@ While OCR is in beta, there a few different ways to access the data, in addition
 
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
-  Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
+    Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
 
 <!-- prettier-ignore-end -->
 
 <!-- prettier-ignore-start -->
 !!! warning "Terms of Data Use"
-By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
+    By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
 
 <!-- prettier-ignore-end -->
 
