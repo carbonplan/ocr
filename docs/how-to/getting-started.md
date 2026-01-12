@@ -87,7 +87,7 @@ The dataset contains several key variables:
 
 -   **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing OCR datasets
 -   **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
--   **[Data Downloads](../reference/data-downloads.md)**: Direct download links and bulk access options
+-   **[Data Downloads](../access-data.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 

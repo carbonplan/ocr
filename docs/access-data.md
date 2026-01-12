@@ -4,14 +4,13 @@ While OCR is in beta, there a few different ways to access the data, in addition
 
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
-    Each data download is made available under the license listed below. By downloading the data, you agree to adhere to the license terms.
+    Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
 
 <!-- prettier-ignore-end -->
 
 <!-- prettier-ignore-start -->
 !!! warning "Terms of Data Use"
-    By viewing Open Climate Risk data, you agree to CarbonPlan’s [Terms of Use](https://carbonplan.org/terms) and [Privacy Policy](https://carbonplan.org/privacy), and that the data is in a beta state and may not be used for decision-making purposes, cited, or otherwise shared.
-
+    By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
 
 <!-- prettier-ignore-end -->
 
@@ -28,14 +27,14 @@ While OCR is in beta, there a few different ways to access the data, in addition
 
 ### Links
 
-| Option                   | Path                                                                                                                                    | Notes                                                                        |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Raster (tensor) data** | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/v0.13.1/ocr.icechunk/`                | See [guide for working with Icehunk data](../how-to/work-with-data.ipynb)    |
-| **Vector (point) data**  | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/vector/production/v0.13.1/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](../how-to/work-with-data.ipynb) |
+| Option                   | Path                                                                                                                                    | Notes                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Raster (tensor) data** | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/v0.13.1/ocr.icechunk/`                | See [guide for working with Icehunk data](./how-to/work-with-data.ipynb)    |
+| **Vector (point) data**  | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/vector/production/v0.13.1/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](./how-to/work-with-data.ipynb) |
 
 ### Schema
 
-The schemas for each of the full datasets are described on the [data schema](./data-schema.md) page.
+The schemas for each of the full datasets are described on the [data schema](./reference/data-schema.md) page.
 
 ## Regional statistics downloads
 
@@ -93,7 +92,7 @@ The [web tool](https://ocr.carbonplan.org/) can be used to access region-specifi
 3. Select your region of interest (county, census tract, or census block) and view trends inline.
 4. Click `CSV ↓` or `GeoPackage ↓` to download building-level data for the selected region.
 
-![](../assets/web-data-downloads.png)
+![](./assets/web-data-downloads.png)
 
 ### Schema
 
