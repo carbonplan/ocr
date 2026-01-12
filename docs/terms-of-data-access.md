@@ -1,8 +1,6 @@
-<!-- prettier-ignore-start -->
-!!! warning "License Agreement"
-    Open Climate Risk data are made available under the licenses listed on the [data access page](access-data.md#download-options). By accessing the data, you agree to adhere to the license terms.
+## License Agreement
 
-<!-- prettier-ignore-end -->
+Open Climate Risk data are made available under the licenses listed on the [Access Data](access-data.md#download-options) page. By accessing the data, you agree to adhere to the license terms.
 
 <!-- prettier-ignore-start -->
 !!! warning "Our Terms of Use Apply To Open Climate Risk"
