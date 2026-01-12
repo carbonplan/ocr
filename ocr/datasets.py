@@ -532,6 +532,20 @@ datasets = [
         prefix='input/fire-risk/vector/census-tiger/counties/counties.parquet',
         data_format='geoparquet',
     ),
+    Dataset(
+        name='us-census-states',
+        description='US Census States',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/census-tiger/states/states.parquet',
+        data_format='geoparquet',
+    ),
+    Dataset(
+        name='us-census-nation',
+        description='US Census CONUS States',
+        bucket='carbonplan-ocr',
+        prefix='input/fire-risk/vector/census-tiger/nation/nation.parquet',
+        data_format='geoparquet',
+    ),
     # CONUS404 Fosberg Fire Weather Index (FFWI) datasets
     Dataset(
         name='conus404-ffwi',

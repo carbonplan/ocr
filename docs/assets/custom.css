@@ -1,0 +1,5 @@
+/* Match admonition font-size with body text */
+.md-typeset .admonition,
+.md-typeset details {
+    font-size: inherit;
+}
