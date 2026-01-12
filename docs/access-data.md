@@ -3,6 +3,12 @@
 While OCR is in beta, there a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
 <!-- prettier-ignore-start -->
+!!! warning "License Agreement"
+  Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
+  
+<!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
 !!! warning "Terms of Data Use"
     See the [terms of data access](terms-of-data-access.md) page for important information regarding the use of Open Climate Risk data.
 
