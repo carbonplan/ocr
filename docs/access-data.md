@@ -5,7 +5,7 @@ While OCR is in beta, there a few different ways to access the data, in addition
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
   Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
-  
+
 <!-- prettier-ignore-end -->
 
 <!-- prettier-ignore-start -->
@@ -27,10 +27,10 @@ By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms
 
 ### Links
 
-| Option                   | Path                                                                                                                                    | Notes                                                                        |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Raster (tensor) data** | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/v0.13.1/ocr.icechunk/`                | See [guide for working with Icehunk data](../how-to/work-with-data.ipynb)    |
-| **Vector (point) data**  | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/vector/production/v0.13.1/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](../how-to/work-with-data.ipynb) |
+| Option                   | Path                                                                                                                                    | Notes                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Raster (tensor) data** | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/v0.13.1/ocr.icechunk/`                | See [guide for working with Icehunk data](./how-to/work-with-data.ipynb)    |
+| **Vector (point) data**  | `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/output/fire-risk/vector/production/v0.13.1/geoparquet/buildings.parquet` | See [guide for working with GeoParquet data](./how-to/work-with-data.ipynb) |
 
 ### Schema
 
