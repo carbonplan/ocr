@@ -1100,6 +1100,9 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         ds['CRPS'].encoding = {}
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
+
+        template.attrs.update(config.metadata_dict)
+
         var_encoding_dict = {
             'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
             'fill_value': np.nan,
@@ -1286,6 +1289,16 @@ class OCRConfig(pydantic_settings.BaseSettings):
     debug: bool = pydantic.Field(False, description='Enable debugging mode')
 
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
+
+    @property
+    def metadata_dict(self) -> dict[str, str]:
+        return {
+            'version': str(self.version) if self.version else 'unversioned',
+            'provider': 'CarbonPlan',
+            'license_name': 'ODBL',
+            'license_url': 'https://opendatacommons.org/licenses/odbl/',
+            'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
+        }
 
     def model_post_init(self, __context):
         # Pass environment and wipe to VectorConfig if not already set
