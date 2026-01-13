@@ -154,10 +154,12 @@ This single-file format enables:
 
 ### Expected Value Ranges
 
-| Variable          | Expected Range | Notes                                               |
-| ----------------- | -------------- | --------------------------------------------------- |
-| Risk Scores (RPS) | [0, ∞)         | Product of BP and CRPS                              |
-| Wind Distribution | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist) |
+| Variable                                        | Expected Range | Notes                              |
+| ----------------------------------------------- | -------------- | ---------------------------------- |
+| Risk to potential structures (RPS)              | [0, 100]       | Product of BP and CRPS. TK.        |
+| Burn probability (BP)                           | [0, 1]         | TK                                 |
+| Conditional risk to potential structures (CRPS) | [0, 100]       | TK                                 |
+| Risk Scores                                     | [0, 10]        | Discretized score representing RPS |
 
 ### Quality Checks
 
