@@ -49,7 +49,7 @@ Vector data are building footprints, administrative boundaries, and other GIS ve
 
 Overture buildings
 
-- Source: Overture building datasets (see <a href=https://docs.overturemaps.org> Overture docs </a>)
+- Source: Overture building datasets (see [Overture docs](https://docs.overturemaps.org))
 - Ingested subset for CONUS in `input-data/vector/overture_vector/`
 
 ```python
