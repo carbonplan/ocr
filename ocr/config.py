@@ -1320,30 +1320,29 @@ class OCRConfig(pydantic_settings.BaseSettings):
 
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
-
-def model_post_init(self, __context):
-    if self.vector is None:
-        object.__setattr__(
-            self,
-            'vector',
-            VectorConfig(
-                storage_root=self.storage_root,
-                environment=self.environment,
-                debug=self.debug,
-                version=self.version,
-            ),
-        )
-    if self.icechunk is None:
-        object.__setattr__(
-            self,
-            'icechunk',
-            IcechunkConfig(
-                storage_root=self.storage_root,
-                environment=self.environment,
-                debug=self.debug,
-                version=self.version,
-            ),
-        )
+    def model_post_init(self, __context):
+        if self.vector is None:
+            object.__setattr__(
+                self,
+                'vector',
+                VectorConfig(
+                    storage_root=self.storage_root,
+                    environment=self.environment,
+                    debug=self.debug,
+                    version=self.version,
+                ),
+            )
+        if self.icechunk is None:
+            object.__setattr__(
+                self,
+                'icechunk',
+                IcechunkConfig(
+                    storage_root=self.storage_root,
+                    environment=self.environment,
+                    debug=self.debug,
+                    version=self.version,
+                ),
+            )
         if self.pyramid is None:
             object.__setattr__(
                 self,
