@@ -739,6 +739,13 @@ class VectorConfig(pydantic_settings.BaseSettings):
         None, description='metadata to add to datasets'
     )
 
+    @property
+    def license_info(self) -> dict[str, str]:
+        return {
+            'license_name': 'ODBL',
+            'license_url': 'https://opendatacommons.org/licenses/odbl/',
+        }
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
         common_part = f'fire-risk/vector/{self.environment.value}'
@@ -987,6 +994,13 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     metadata: dict[str, str] | None = pydantic.Field(
         None, description='metadata to add to datasets'
     )
+
+    @property
+    def license_info(self) -> dict[str, str]:
+        return {
+            'license_name': 'CC-BY-4.0',
+            'license_url': 'https://creativecommons.org/licenses/by/4.0/',
+        }
 
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
@@ -1299,17 +1313,30 @@ class OCRConfig(pydantic_settings.BaseSettings):
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
     @property
-    def metadata_dict(self) -> dict[str, str]:
-        return {
+    def get_metadata_dict(
+        self, config_type: typing.Literal['vector', 'icechunk']
+    ) -> dict[str, str]:
+        """Get metadata dict with appropriate license for config type."""
+        base = {
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
-            'license_name': 'ODBL',
-            'license_url': 'https://opendatacommons.org/licenses/odbl/',
             'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
         }
 
+        if config_type == 'vector':
+            license_info = {
+                'license_name': 'ODBL',
+                'license_url': 'https://opendatacommons.org/licenses/odbl/',
+            }
+        else:  # icechunk
+            license_info = {
+                'license_name': 'CC-BY-4.0',
+                'license_url': 'https://creativecommons.org/licenses/by/4.0/',
+            }
+
+        return {**base, **license_info}
+
     def model_post_init(self, __context):
-        # Pass environment and wipe to VectorConfig if not already set
         if self.vector is None:
             object.__setattr__(
                 self,
@@ -1319,7 +1346,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     environment=self.environment,
                     debug=self.debug,
                     version=self.version,
-                    metadata=self.metadata_dict,
+                    metadata=self.get_metadata_dict('vector'),
                 ),
             )
         if self.icechunk is None:
@@ -1331,7 +1358,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     environment=self.environment,
                     debug=self.debug,
                     version=self.version,
-                    metadata=self.metadata_dict,
+                    metadata=self.get_metadata_dict('icechunk'),
                 ),
             )
         if self.pyramid is None:
