@@ -1331,7 +1331,6 @@ def model_post_init(self, __context):
                 environment=self.environment,
                 debug=self.debug,
                 version=self.version,
-                metadata=None,
             ),
         )
     if self.icechunk is None:
@@ -1343,7 +1342,6 @@ def model_post_init(self, __context):
                 environment=self.environment,
                 debug=self.debug,
                 version=self.version,
-                metadata=None,
             ),
         )
         if self.pyramid is None:
