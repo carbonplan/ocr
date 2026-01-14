@@ -735,6 +735,10 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     model_config = {'env_prefix': 'ocr_vector_', 'case_sensitive': False}
 
+    metadata: dict[str, str] | None = pydantic.Field(
+        None, description='metadata to add to datasets'
+    )
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
         common_part = f'fire-risk/vector/{self.environment.value}'
@@ -980,6 +984,10 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
     debug: bool = pydantic.Field(default=False, description='Enable debugging mode')
 
+    metadata: dict[str, str] | None = pydantic.Field(
+        None, description='metadata to add to datasets'
+    )
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
         common_part = f'fire-risk/tensor/{self.environment.value}'
@@ -1101,7 +1109,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
 
-        template.attrs.update(self.metadata_dict)
+        template.attrs.update(self.metadata or {})
 
         var_encoding_dict = {
             'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
@@ -1311,6 +1319,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     environment=self.environment,
                     debug=self.debug,
                     version=self.version,
+                    metadata=self.metadata_dict,
                 ),
             )
         if self.icechunk is None:
@@ -1322,6 +1331,7 @@ class OCRConfig(pydantic_settings.BaseSettings):
                     environment=self.environment,
                     debug=self.debug,
                     version=self.version,
+                    metadata=self.metadata_dict,
                 ),
             )
         if self.pyramid is None:
