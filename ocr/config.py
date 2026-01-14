@@ -740,8 +740,12 @@ class VectorConfig(pydantic_settings.BaseSettings):
     )
 
     @property
-    def license_info(self) -> dict[str, str]:
+    def metadata_dict(self) -> dict[str, str]:
+        """Get metadata dict with ODBL license for vector data."""
         return {
+            'version': str(self.version) if self.version else 'unversioned',
+            'provider': 'CarbonPlan',
+            'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
             'license_name': 'ODBL',
             'license_url': 'https://opendatacommons.org/licenses/odbl/',
         }
@@ -996,8 +1000,12 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     )
 
     @property
-    def license_info(self) -> dict[str, str]:
+    def metadata_dict(self) -> dict[str, str]:
+        """Get metadata dict with CC-BY-4.0 license for icechunk data."""
         return {
+            'version': str(self.version) if self.version else 'unversioned',
+            'provider': 'CarbonPlan',
+            'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
             'license_name': 'CC-BY-4.0',
             'license_url': 'https://creativecommons.org/licenses/by/4.0/',
         }
@@ -1123,7 +1131,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
 
-        template.attrs.update(self.metadata or {})
+        template.attrs.update(self.metadata_dict)
 
         var_encoding_dict = {
             'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
@@ -1312,55 +1320,32 @@ class OCRConfig(pydantic_settings.BaseSettings):
 
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
-    @property
-    def get_metadata_dict(
-        self, config_type: typing.Literal['vector', 'icechunk']
-    ) -> dict[str, str]:
-        """Get metadata dict with appropriate license for config type."""
-        base = {
-            'version': str(self.version) if self.version else 'unversioned',
-            'provider': 'CarbonPlan',
-            'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
-        }
 
-        if config_type == 'vector':
-            license_info = {
-                'license_name': 'ODBL',
-                'license_url': 'https://opendatacommons.org/licenses/odbl/',
-            }
-        else:  # icechunk
-            license_info = {
-                'license_name': 'CC-BY-4.0',
-                'license_url': 'https://creativecommons.org/licenses/by/4.0/',
-            }
-
-        return {**base, **license_info}
-
-    def model_post_init(self, __context):
-        if self.vector is None:
-            object.__setattr__(
-                self,
-                'vector',
-                VectorConfig(
-                    storage_root=self.storage_root,
-                    environment=self.environment,
-                    debug=self.debug,
-                    version=self.version,
-                    metadata=self.get_metadata_dict('vector'),
-                ),
-            )
-        if self.icechunk is None:
-            object.__setattr__(
-                self,
-                'icechunk',
-                IcechunkConfig(
-                    storage_root=self.storage_root,
-                    environment=self.environment,
-                    debug=self.debug,
-                    version=self.version,
-                    metadata=self.get_metadata_dict('icechunk'),
-                ),
-            )
+def model_post_init(self, __context):
+    if self.vector is None:
+        object.__setattr__(
+            self,
+            'vector',
+            VectorConfig(
+                storage_root=self.storage_root,
+                environment=self.environment,
+                debug=self.debug,
+                version=self.version,
+                metadata=None,
+            ),
+        )
+    if self.icechunk is None:
+        object.__setattr__(
+            self,
+            'icechunk',
+            IcechunkConfig(
+                storage_root=self.storage_root,
+                environment=self.environment,
+                debug=self.debug,
+                version=self.version,
+                metadata=None,
+            ),
+        )
         if self.pyramid is None:
             object.__setattr__(
                 self,

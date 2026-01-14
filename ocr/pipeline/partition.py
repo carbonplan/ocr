@@ -53,7 +53,7 @@ def partition_buildings_by_geography(config: OCRConfig):
     if config.debug:
         console.log(f'partitioned buildings written to: {output_path}')
 
-    metadata_dict = config.metadata_dict
+    metadata_dict = config.vector.metadata_dict
 
     if config.debug:
         console.log('writing _common_metadata sidecar')

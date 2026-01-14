@@ -25,7 +25,7 @@ def write_stats_table(
     elif stats_table_name == 'counties':
         extra_columns = 'NAME,'
 
-    metadata_dict = config.metadata_dict
+    metadata_dict = config.vector.metadata_dict
     metadata_json = json.dumps(metadata_dict)
 
     con.execute(f"""
