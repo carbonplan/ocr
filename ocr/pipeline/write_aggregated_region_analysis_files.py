@@ -61,7 +61,7 @@ def write_stats_table(
         FROM read_parquet('{stats_parquet_path}')
     """)
 
-    # create GeoJSON with metadata at top level instead of per-row
+    # create geojson with metadata at top level
     con.execute(f"""
         COPY (
             SELECT json_object(
@@ -102,8 +102,8 @@ def write_stats_table(
                     )
                     FROM {stats_table_name}
                 )
-            ) AS geojson
-        ) TO '{region_stats_path}/stats.geojson' (FORMAT json);
+            )::VARCHAR as content
+        ) TO '{region_stats_path}/stats.geojson' (FORMAT csv, HEADER false, QUOTE '');
     """)
 
     csv_path = region_stats_path / 'stats.csv'
