@@ -1005,7 +1005,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         return {
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
-            'terms_of_access': 'https://carbonplan.github.io/ocr/terms-of-data-access/',
+            'terms_of_access': 'https://github.com/carbonplan/ocr/blob/main/docs/terms-of-data-access.md',
             'license_name': 'CC-BY-4.0',
             'license_url': 'https://creativecommons.org/licenses/by/4.0/',
         }
