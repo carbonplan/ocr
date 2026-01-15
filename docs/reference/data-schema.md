@@ -36,21 +36,21 @@ The primary output dataset contains the following variables:
 
 #### Core Risk Variables
 
-| Variable                | Type    | Units         | Description                                                                                                       |
-| ----------------------- | ------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `wind_risk_2011`        | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × CRPS` |
-| `wind_risk_2047`        | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × CRPS` |
-| `burn_probability_2011` | float32 | dimensionless | Wind-adjusted burn probability for 2011 climate conditions, incorporating directional fire spread                 |
-| `burn_probability_2047` | float32 | dimensionless | Wind-adjusted burn probability for 2047 climate conditions, incorporating directional fire spread                 |
+| Variable                | Type    | Units         | Description                                                                                                                         |
+| ----------------------- | ------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `risk_2011`             | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × conditional_risk_scott` |
+| `risk_2047`             | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × conditional_risk_scott` |
+| `burn_probability_2011` | float32 | dimensionless | Wind-adjusted burn probability for 2011 climate conditions, incorporating directional fire spread                                   |
+| `burn_probability_2047` | float32 | dimensionless | Wind-adjusted burn probability for 2047 climate conditions, incorporating directional fire spread                                   |
 
 #### Reference Variables (USFS Data)
 
-| Variable                     | Type    | Units         | Description                                                                            |
-| ---------------------------- | ------- | ------------- | -------------------------------------------------------------------------------------- |
-| `USFS_RPS`                   | float32 | dimensionless | Original USFS Relative Risk Score from Scott (2024) baseline dataset (RDS-2020-0016-2) |
-| `conditional_risk_usfs`      | float32 | dimensionless | USFS Conditional Risk to Potential Structures (CRPS) from Scott (2024)                 |
-| `burn_probability_usfs_2011` | float32 | dimensionless | Original USFS burn probability for 2011 from Riley et al. (2025) (RDS-2025-0006)       |
-| `burn_probability_usfs_2047` | float32 | dimensionless | Original USFS burn probability for 2047 from Riley et al. (2025) (RDS-2025-0006)       |
+| Variable                      | Type    | Units         | Description                                                                            |
+| ----------------------------- | ------- | ------------- | -------------------------------------------------------------------------------------- |
+| `USFS_RPS`                    | float32 | dimensionless | Original USFS Relative Risk Score from Scott (2024) baseline dataset (RDS-2020-0016-2) |
+| `conditional_risk_scott`      | float32 | dimensionless | USFS Conditional Risk to Potential Structures (CRPS) from Scott (2024)                 |
+| `burn_probability_2011_riley` | float32 | dimensionless | Original USFS burn probability for 2011 from Riley et al. (2025) (RDS-2025-0006)       |
+| `burn_probability_2047_riley` | float32 | dimensionless | Original USFS burn probability for 2047 from Riley et al. (2025) (RDS-2025-0006)       |
 
 #### Coordinate Variables
 
@@ -108,16 +108,16 @@ Vector datasets contain building-level risk samples stored as a consolidated Geo
 
 Vector datasets contain the same risk variables as raster datasets, sampled at each building location:
 
-| Column                       | Type    | Description                                                  |
-| ---------------------------- | ------- | ------------------------------------------------------------ |
-| `wind_risk_2011`             | float32 | Wind-informed RPS for 2011 at building location              |
-| `wind_risk_2047`             | float32 | Wind-informed RPS for 2047 at building location              |
-| `burn_probability_2011`      | float32 | Wind-adjusted burn probability for 2011 at building location |
-| `burn_probability_2047`      | float32 | Wind-adjusted burn probability for 2047 at building location |
-| `USFS_RPS`                   | float32 | Original USFS RPS at building location                       |
-| `conditional_risk_usfs`      | float32 | USFS CRPS at building location                               |
-| `burn_probability_usfs_2011` | float32 | Original USFS BP (2011) at building location                 |
-| `burn_probability_usfs_2047` | float32 | Original USFS BP (2047) at building location                 |
+| Column                        | Type    | Description                                                  |
+| ----------------------------- | ------- | ------------------------------------------------------------ |
+| `risk_2011`                   | float32 | Wind-informed RPS for 2011 at building location              |
+| `risk_2047`                   | float32 | Wind-informed RPS for 2047 at building location              |
+| `burn_probability_2011`       | float32 | Wind-adjusted burn probability for 2011 at building location |
+| `burn_probability_2047`       | float32 | Wind-adjusted burn probability for 2047 at building location |
+| `USFS_RPS`                    | float32 | Original USFS RPS at building location                       |
+| `conditional_risk_scott`      | float32 | USFS CRPS at building location                               |
+| `burn_probability_2011_riley` | float32 | Original USFS BP (2011) at building location                 |
+| `burn_probability_2047_riley` | float32 | Original USFS BP (2047) at building location                 |
 
 ### Storage Characteristics
 
