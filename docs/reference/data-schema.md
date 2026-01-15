@@ -154,11 +154,11 @@ This single-file format enables:
 
 ### Expected Value Ranges
 
-| Variable                                        | Expected Range | Notes                              |
-| ----------------------------------------------- | -------------- | ---------------------------------- |
-| Risk to potential structures (RPS)              | [0, 100]       | Product of BP and cRPS. Annual expected relative risk of loss.        |
-| Burn probability (BP)                           | [0, 1]         | Annual likelihood of a pixel burning.                                 |
-| Conditional risk to potential structures (cRPS) | [0, 100]       | Potential consequences to a hypothetical structure in a particular location if the pixel were to burn.                                  |
+| Variable                                        | Expected Range | Notes                                                                                                  |
+| ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| Risk to potential structures (RPS)              | [0, 100]       | Product of BP and cRPS. Annual expected relative risk of loss.                                         |
+| Burn probability (BP)                           | [0, 1]         | Annual likelihood of a pixel burning.                                                                  |
+| Conditional risk to potential structures (cRPS) | [0, 100]       | Potential consequences to a hypothetical structure in a particular location if the pixel were to burn. |
 
 ### Quality Checks
 
