@@ -36,21 +36,24 @@ The primary output dataset contains the following variables:
 
 #### Core Risk Variables
 
-| Variable                | Type    | Units         | Description                                                                                                       |
-| ----------------------- | ------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `wind_risk_2011`        | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × CRPS` |
-| `wind_risk_2047`        | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × CRPS` |
-| `burn_probability_2011` | float32 | dimensionless | Wind-adjusted burn probability for 2011 climate conditions, incorporating directional fire spread                 |
-| `burn_probability_2047` | float32 | dimensionless | Wind-adjusted burn probability for 2047 climate conditions, incorporating directional fire spread                 |
+| Variable                | Type    | Units         | Description                                                                                                                             |
+| ----------------------- | ------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `risk_2011`             | float32 | dimensionless | Relative risk to potential structures (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × conditional_risk_scott` |
+| `risk_2047`             | float32 | dimensionless | Relative risk to potential structures (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × conditional_risk_scott` |
+| `burn_probability_2011` | float32 | dimensionless | Burn probability for 2011 climate conditions                                                                                            |
+| `burn_probability_2047` | float32 | dimensionless | Burn probability for 2047 climate conditions                                                                                            |
 
 #### Reference Variables (USFS Data)
 
-| Variable                     | Type    | Units         | Description                                                                            |
-| ---------------------------- | ------- | ------------- | -------------------------------------------------------------------------------------- |
-| `USFS_RPS`                   | float32 | dimensionless | Original USFS Relative Risk Score from Scott (2024) baseline dataset (RDS-2020-0016-2) |
-| `conditional_risk_usfs`      | float32 | dimensionless | USFS Conditional Risk to Potential Structures (CRPS) from Scott (2024)                 |
-| `burn_probability_usfs_2011` | float32 | dimensionless | Original USFS burn probability for 2011 from Riley et al. (2025) (RDS-2025-0006)       |
-| `burn_probability_usfs_2047` | float32 | dimensionless | Original USFS burn probability for 2047 from Riley et al. (2025) (RDS-2025-0006)       |
+| Variable | Type | Units | Description |
+| -------- | ---- | ----- | ----------- |
+
+# do we need the scott RPS?
+
+| `USFS_RPS` | float32 | dimensionless | USFS Relative Risk Score from Scott et al. (2024) baseline dataset (RDS-2020-0016-2) |
+| `conditional_risk_scott` | float32 | dimensionless | USFS Conditional Risk to Potential Structures (CRPS) from Scott (2024) |
+| `burn_probability_2011_riley` | float32 | dimensionless | Original USFS burn probability for 2011 from Riley et al. (2025) (RDS-2025-0006) |
+| `burn_probability_2047_riley` | float32 | dimensionless | Original USFS burn probability for 2047 from Riley et al. (2025) (RDS-2025-0006) |
 
 #### Coordinate Variables
 
@@ -72,9 +75,9 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 
 **Properties:**
 
--   Values sum to 1.0 for pixels with fire-weather hours
--   Values are 0 for pixels with no fire-weather hours
--   Derived from CONUS404 data using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
+- Values sum to 1.0 for pixels with fire-weather hours
+- Values are 0 for pixels with no fire-weather hours
+- Derived from CONUS404 data using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
 
 ### Data Processing Flow
 
@@ -108,16 +111,22 @@ Vector datasets contain building-level risk samples stored as a consolidated Geo
 
 Vector datasets contain the same risk variables as raster datasets, sampled at each building location:
 
-| Column                       | Type    | Description                                                  |
-| ---------------------------- | ------- | ------------------------------------------------------------ |
-| `wind_risk_2011`             | float32 | Wind-informed RPS for 2011 at building location              |
-| `wind_risk_2047`             | float32 | Wind-informed RPS for 2047 at building location              |
-| `burn_probability_2011`      | float32 | Wind-adjusted burn probability for 2011 at building location |
-| `burn_probability_2047`      | float32 | Wind-adjusted burn probability for 2047 at building location |
-| `USFS_RPS`                   | float32 | Original USFS RPS at building location                       |
-| `conditional_risk_usfs`      | float32 | USFS CRPS at building location                               |
-| `burn_probability_usfs_2011` | float32 | Original USFS BP (2011) at building location                 |
-| `burn_probability_usfs_2047` | float32 | Original USFS BP (2047) at building location                 |
+| Column                  | Type    | Description                                                  |
+| ----------------------- | ------- | ------------------------------------------------------------ |
+| `risk_2011`             | float32 | Wind-informed RPS for 2011 at building location              |
+| `risk_2047`             | float32 | Wind-informed RPS for 2047 at building location              |
+| `burn_probability_2011` | float32 | Wind-adjusted burn probability for 2011 at building location |
+| `burn_probability_2047` | float32 | Wind-adjusted burn probability for 2047 at building location |
+
+# do we need the scott RPS?
+
+| `USFS_RPS` | float32 | Original USFS RPS at building location |
+| `conditional_risk_scott` | float32 | CRPS at building location from Scott et al. (2024) |
+
+# do we need these BPs?
+
+| `burn_probability_2011_riley` | float32 | BP (2011) at building location |
+| `burn_probability_2047_riley` | float32 | BP (2047) at building location |
 
 ### Storage Characteristics
 
@@ -132,9 +141,9 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 ### Data Quality
 
--   Buildings with NaN values (outside CONUS or unburnable areas) are excluded
--   Risk values < 0.01 are trimmed to 0 to match frontend binning
--   Building locations sourced from Overture Maps dataset
+- Buildings with NaN values (outside CONUS or unburnable areas) are excluded
+- Risk values < 0.01 are trimmed to 0 to match frontend binning
+- Building locations sourced from Overture Maps dataset
 
 ### File Location
 
@@ -146,9 +155,9 @@ The consolidated building dataset is available at:
 
 This single-file format enables:
 
--   Efficient CONUS-wide spatial queries
--   Direct access for analysis tools and workflows
--   Simplified data distribution and versioning
+- Efficient CONUS-wide spatial queries
+- Direct access for analysis tools and workflows
+- Simplified data distribution and versioning
 
 ## Data Validation
 
@@ -156,14 +165,14 @@ This single-file format enables:
 
 | Variable          | Expected Range | Notes                                               |
 | ----------------- | -------------- | --------------------------------------------------- |
-| Risk Scores (RPS) | [0, ∞)         | Product of BP and CRPS                              |
+| Risk (RPS)        | [0, 100]       | Product of BP and CRPS                              |
+| Risk score        | [0, 10]        | Categorical representation of RPS                   |
 | Wind Distribution | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist) |
 
 ### Quality Checks
 
 1. **Spatial Consistency**: All raster layers share identical coordinate systems and extents
 2. **Missing Data**: NaN values appear only in:
-
     - Unburnable areas (water, urban, etc.)
     - Regions with no fire-weather hours (for wind distributions)
 
@@ -173,28 +182,28 @@ This single-file format enables:
 
 All datasets include descriptive metadata attributes:
 
--   `description`: Human-readable description of the variable
--   `long_name`: Extended variable name
--   `units`: Physical units (if applicable)
--   `composition`: Method used for compositing (e.g., "weighted")
--   `direction_labels`: Cardinal/ordinal direction labels for wind data
--   `weights_source`: Source of weights used in calculations
+- `description`: Human-readable description of the variable
+- `long_name`: Extended variable name
+- `units`: Physical units (if applicable)
+- `composition`: Method used for compositing (e.g., "weighted")
+- `direction_labels`: Cardinal/ordinal direction labels for wind data
+- `weights_source`: Source of weights used in calculations
 
 ## Access Patterns
 
 ### Raster Data
 
--   **By Region**: Query specific regional chunks using latitude/longitude slices
--   **Full CONUS**: Access complete dataset via Icechunk storage
+- **By Region**: Query specific regional chunks using latitude/longitude slices
+- **Full CONUS**: Access complete dataset via Icechunk storage
 
 ### Vector Data
 
--   **Full Dataset**: Query the consolidated CONUS-wide building dataset
--   **Spatial Query**: Use bounding box attributes for efficient spatial filtering
--   **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
--   **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
+- **Full Dataset**: Query the consolidated CONUS-wide building dataset
+- **Spatial Query**: Use bounding box attributes for efficient spatial filtering
+- **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
+- **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
 
 ## Related Documentation
 
--   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
--   [Deployment](deployment.md): Details on data storage infrastructure
+- [Data Downloads](../access-data.md): Information on accessing and downloading datasets
+- [Deployment](deployment.md): Details on data storage infrastructure

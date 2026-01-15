@@ -1,6 +1,6 @@
-# Data Downloads (Beta)
+# Data Downloads
 
-While OCR is in beta, there a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
+There a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
@@ -50,36 +50,42 @@ The schemas for each of the full datasets are described on the [data schema](./r
 
 ### Schema
 
-| Variable                            | Type    | Description                                                                                                                                                                                                                        |
-| ----------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Region identifiers**              |         | _Identifying information for region--a county, census tract, or census block--represented in each row_                                                                                                                             |
-| `GEOID`                             | int     | [Geographic Identifier](https://www.census.gov/programs-surveys/geography/guidance/geo-identifiers.html) for region                                                                                                                |
-| `building_count`                    | int     | Total number of buildings in region                                                                                                                                                                                                |
-| `centroid_longitude`                | degrees | Longitude of centroid of region                                                                                                                                                                                                    |
-| `centroid_latitude`                 | degrees | Latitude of centroid of region                                                                                                                                                                                                     |
-| **Risk values**                     |         | _Risk values from output, input, or comparison datasets_                                                                                                                                                                           |
-| `avg_wind_risk_2011`                | float   | Mean risk score (wind-informed, 2011 climate conditions) across all buildings in region                                                                                                                                            |
-| `avg_wind_risk_2047`                | float   | Mean risk score (wind-informed, 2047 climate conditions) across all buildings in region                                                                                                                                            |
-| `avg_burn_probability_2011`         | float   | Mean burn probability (wind-informed, 2011 climate conditions) across all buildings in region                                                                                                                                      |
-| `avg_burn_probability_2047`         | float   | Mean burn probability (wind-informed, 2047 climate conditions) across all buildings in region                                                                                                                                      |
-| `avg_conditional_risk_usfs`         | float   | Mean USFS Conditional Risk to Potential Structures (cRPS) from Scott (2024)                                                                                                                                                        |
-| `avg_burn_probability_usfs_2011`    | float   | Mean burn probability (2011 climate conditions) across all buildings in region from Riley et al. (2025)                                                                                                                            |
-| `avg_burn_probability_usfs_2047`    | float   | Mean burn probability (2047 climate conditions) across all buildings in region from Riley et al. (2025)                                                                                                                            |
-| `median_wind_risk_2011`             | float   | Median risk score (wind-informed, 2011 climate conditions) across all buildings in region                                                                                                                                          |
-| `median_wind_risk_2047`             | float   | Median risk score (wind-informed, 2047 climate conditions) across all buildings in region                                                                                                                                          |
-| `median_burn_probability_2011`      | float   | Median burn probability (wind-informed, 2011 climate conditions) across all buildings in region                                                                                                                                    |
-| `median_burn_probability_2047`      | float   | Median burn probability (wind-informed, 2047 climate conditions) across all buildings in region                                                                                                                                    |
-| `median_conditional_risk_usfs`      | float   | Median USFS Conditional Risk to Potential Structures (cRPS) from Scott (2024)                                                                                                                                                      |
-| `median_burn_probability_usfs_2011` | float   | Median burn probability (2011 climate conditions) across all buildings in region from Riley et al. (2025)                                                                                                                          |
-| `median_burn_probability_usfs_2047` | float   | Median burn probability (2047 climate conditions) across all buildings in region from Riley et al. (2025)                                                                                                                          |
-| **Histogram values**                |         | _Index in array corresponds to integer risk score (e.g., first value reflects number buildings with `0` score, next value reflects number buildings with `1` score, final value reflects number buildings with `10` score, etc.)._ |
-| `wind_risk_2011_hist`               | float[] | Count of buildings with each risk score (wind-informed, 2011 climate conditions).                                                                                                                                                  |
-| `wind_risk_2047_hist`               | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
-| `burn_probability_2011_hist`        | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
-| `burn_probability_2047_hist`        | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
-| `conditional_risk_usfs_hist`        | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
-| `burn_probability_usfs_2011_hist`   | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
-| `burn_probability_usfs_2047_hist`   | float[] | Median risk score (wind-informed, 2047 climate conditions) across all buildings in                                                                                                                                                 |
+| Variable                      | Type    | Description                                                                                                         |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Region identifiers**        |         | _Identifying information for region--a county, census tract, or census block--represented in each row_              |
+| `GEOID`                       | int     | [Geographic Identifier](https://www.census.gov/programs-surveys/geography/guidance/geo-identifiers.html) for region |
+| `building_count`              | int     | Total number of buildings in region                                                                                 |
+| `longitude`                   | degrees | Longitude of centroid of region                                                                                     |
+| `latitude`                    | degrees | Latitude of centroid of region                                                                                      |
+| **Risk values**               |         | _Risk values from output, input, or comparison datasets_                                                            |
+| `mean_risk_score_2011`        | float   | Mean risk score (2011 climate conditions) across all buildings in region                                            |
+| `mean_risk_score_2047`        | float   | Mean risk score (2047 climate conditions) across all buildings in region                                            |
+| `mean_burn_probability_2011`  | float   | Mean burn probability (2011 climate conditions) across all buildings in region                                      |
+| `mean_burn_probability_2047`  | float   | Mean burn probability (2047 climate conditions) across all buildings in region                                      |
+| `mean_conditional_risk_scott` | float   | Mean USFS conditional risk to potential structures (cRPS) from Scott et al. (2024)                                  |
+
+# do we need these two riley BPs?
+
+| `mean_burn_probability_2011_riley` | float | Mean burn probability (2011 climate conditions) across all buildings in region from Riley et al. (2025) |
+| `mean_burn_probability_2047_riley` | float | Mean burn probability (2047 climate conditions) across all buildings in region from Riley et al. (2025) |
+| `median_risk_score_2011` | float | Median risk score (2011 climate conditions) across all buildings in region |
+| `median_risk_score_2047` | float | Median risk score (2047 climate conditions) across all buildings in region |
+| `median_burn_probability_2011` | float | Median burn probability (2011 climate conditions) across all buildings in region |
+| `median_burn_probability_2047` | float | Median burn probability (2047 climate conditions) across all buildings in region |
+| `median_conditional_risk_scott` | float | Median conditional risk to potential structures (cRPS) from Scott et al. (2024) |
+
+# do we need these two riley BPs?
+
+| `median_burn_probability_2011_riley` | float | Median burn probability (2011 climate conditions) across all buildings in region from Riley et al. (2025) |
+| `median_burn_probability_2047_riley` | float | Median burn probability (2047 climate conditions) across all buildings in region from Riley et al. (2025) |
+| **Histogram values** | | _Index in array corresponds to integer risk score (e.g., first value reflects number buildings with `0` score, next value reflects number buildings with `1` score, final value reflects number buildings with `10` score, etc.)._ |
+| `risk_score_2011_hist` | float[] | Count of buildings with each risk score (2011 climate conditions). |
+| `risk_score_2047_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
+| `burn_probability_2011_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
+| `burn_probability_2047_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
+| `conditional_risk_scott_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
+| `burn_probability_scott_2011_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
+| `burn_probability_scott_2047_hist` | float[] | Median risk score (2047 climate conditions) across all buildings in region |
 
 ## Downloading subsetted data in the web tool
 
@@ -96,17 +102,20 @@ The [web tool](https://ocr.carbonplan.org/) can be used to access region-specifi
 
 ### Schema
 
-| Variable                     | Type    | Description                                                                                                                                                                        |
-| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Building identifiers**     |         |                                                                                                                                                                                    |
-| `GEOID`                      | int     | [Geographic Identifier](https://www.census.gov/programs-surveys/geography/guidance/geo-identifiers.html) representing building (multiple buildings might belong to the same GEOID) |
-| `centroid_longitude`         | degrees | Longitude of building centroid                                                                                                                                                     |
-| `centroid_latitude`          | degrees | Latitude of building centroid                                                                                                                                                      |
-| **Risk values**              |         |                                                                                                                                                                                    |
-| `wind_risk_2011`             | float   | Risk score (wind-informed, 2011 climate conditions)                                                                                                                                |
-| `wind_risk_2047`             | float   | Risk score (wind-informed, 2047 climate conditions)                                                                                                                                |
-| `burn_probability_2011`      | float   | Burn probability (wind-informed, 2011 climate conditions)                                                                                                                          |
-| `burn_probability_2047`      | float   | Burn probability (wind-informed, 2047 climate conditions)                                                                                                                          |
-| `conditional_risk_usfs`      | float   | USFS Conditional Risk to Potential Structures (cRPS) from Scott (2024)                                                                                                             |
-| `burn_probability_usfs_2011` | float   | Burn probability (2011 climate conditions) from Riley et al. (2025)                                                                                                                |
-| `burn_probability_usfs_2047` | float   | Burn probability (2047 climate conditions) from Riley et al. (2025)                                                                                                                |
+| Variable                 | Type    | Description                                                                                                                                                                        |
+| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Building identifiers** |         |                                                                                                                                                                                    |
+| `GEOID`                  | int     | [Geographic Identifier](https://www.census.gov/programs-surveys/geography/guidance/geo-identifiers.html) representing building (multiple buildings might belong to the same GEOID) |
+| `longitude`              | degrees | Longitude of building centroid                                                                                                                                                     |
+| `latitude`               | degrees | Latitude of building centroid                                                                                                                                                      |
+| **Risk values**          |         |                                                                                                                                                                                    |
+| `risk_score_2011`        | float   | Risk score (2011 climate conditions)                                                                                                                                               |
+| `risk_score_2047`        | float   | Risk score (2047 climate conditions)                                                                                                                                               |
+| `burn_probability_2011`  | float   | Burn probability (2011 climate conditions)                                                                                                                                         |
+| `burn_probability_2047`  | float   | Burn probability (2047 climate conditions)                                                                                                                                         |
+| `conditional_risk_scott` | float   | Conditional risk to potential structures (cRPS) from Scott et al. (2024)                                                                                                           |
+
+# do we need these two riley BPs?
+
+| `burn_probability_riley_2011` | float | Burn probability (2011 climate conditions) from Riley et al. (2025) |
+| `burn_probability_riley_2047` | float | Burn probability (2047 climate conditions) from Riley et al. (2025) |
