@@ -36,12 +36,12 @@ The primary output dataset contains the following variables:
 
 #### Core Risk Variables
 
-| Variable                | Type    | Units         | Description                                                                                                                         |
-| ----------------------- | ------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `risk_2011`             | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × conditional_risk_scott` |
-| `risk_2047`             | float32 | dimensionless | Wind-informed relative risk score (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × conditional_risk_scott` |
-| `burn_probability_2011` | float32 | dimensionless | Wind-adjusted burn probability for 2011 climate conditions, incorporating directional fire spread                                   |
-| `burn_probability_2047` | float32 | dimensionless | Wind-adjusted burn probability for 2047 climate conditions, incorporating directional fire spread                                   |
+| Variable                | Type    | Units         | Description                                                                                                                        |
+| ----------------------- | ------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fire_risk_2011`        | float32 | dimensionless | Wind-informed relative fire risk (RPS) for 2011 climate conditions. Calculated as `burn_probability_2011 × conditional_risk_scott` |
+| `fire_risk_2047`        | float32 | dimensionless | Wind-informed relative fire risk (RPS) for 2047 climate conditions. Calculated as `burn_probability_2047 × conditional_risk_scott` |
+| `burn_probability_2011` | float32 | dimensionless | Wind-adjusted burn probability for 2011 climate conditions, incorporating directional fire spread                                  |
+| `burn_probability_2047` | float32 | dimensionless | Wind-adjusted burn probability for 2047 climate conditions, incorporating directional fire spread                                  |
 
 #### Reference Variables (USFS Data)
 
@@ -110,8 +110,8 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 | Column                        | Type    | Description                                                  |
 | ----------------------------- | ------- | ------------------------------------------------------------ |
-| `risk_2011`                   | float32 | Wind-informed RPS for 2011 at building location              |
-| `risk_2047`                   | float32 | Wind-informed RPS for 2047 at building location              |
+| `fire_risk_2011`              | float32 | Wind-informed RPS for 2011 at building location              |
+| `fire_risk_2047`              | float32 | Wind-informed RPS for 2047 at building location              |
 | `burn_probability_2011`       | float32 | Wind-adjusted burn probability for 2011 at building location |
 | `burn_probability_2047`       | float32 | Wind-adjusted burn probability for 2047 at building location |
 | `USFS_RPS`                    | float32 | Original USFS RPS at building location                       |
