@@ -64,7 +64,7 @@ This differs from the uniform circular blurring in USFS methods. The wind-inform
     - Coverage: CONUS-wide
     - Attributes: Building geometries, centroid coordinates for risk sampling
 
-See [Data Sources and Provenance](./data-sources-and-provenance.md) for detailed information on data access, versions, and preprocessing.
+See [Input Datasets](./input-datasets.md) for detailed information on data access, versions, and preprocessing.
 
 ## Processing Workflow
 

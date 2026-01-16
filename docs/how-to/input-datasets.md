@@ -14,11 +14,11 @@ print(catalog)
 # rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()
 ```
 
-Tensor data (raster / Zarr)
+## Tensor data (raster / Zarr)
 
 These are n-dimensional raster datasets stored in Zarr/Icechunk stores.
 
-USFS Wildfire Risk to Communities
+### USFS Wildfire Risk to Communities
 
 - Source: USFS wildfire risk products (see USFS data catalog).
 - Ingested to: `input-data/tensor/USFS_fire_risk/`
@@ -29,7 +29,7 @@ from ocr import catalog
 rps_30 = catalog.get_dataset('USFS-wildfire-risk-communities').to_xarray()
 ```
 
-USFS climate runs (2011 / 2047)
+### USFS climate runs (2011 / 2047)
 
 - Source: probabilistic wildfire risk components for historical and future climates.
 - These are stored as zipped archives that the ingestion scripts expand into Icechunk stores.
@@ -39,15 +39,15 @@ climate_run_2011 = catalog.get_dataset('2011-climate-run-30m-4326').to_xarray()
 climate_run_2047 = catalog.get_dataset('2047-climate-run-30m-4326').to_xarray()
 ```
 
-Wind datasets
+### Wind datasets
 
 - Wind datasets and versions may change; if you add or switch wind sources, update the ingestion script under `input-data/` and register the new dataset with the `ocr` catalog.
 
-Vector data
+## Vector data
 
 Vector data are building footprints, administrative boundaries, and other GIS vector layers used for exposure and aggregation.
 
-Overture buildings
+### Overture buildings
 
 - Source: Overture building datasets (see [Overture docs](https://docs.overturemaps.org))
 - Ingested subset for CONUS in `input-data/vector/overture_vector/`
@@ -56,7 +56,7 @@ Overture buildings
 conus_buildings = catalog.get_dataset('conus-overture-buildings')
 ```
 
-Ingestion notes
+## Ingestion notes
 
 - All ingestion scripts live in `input-data/`. When adding a new dataset:
     1. Add a script under `input-data/` that downloads, preprocesses, and writes data to an Icechunk store or geoparquet.
