@@ -80,6 +80,7 @@ nav:
           - Project Structure: reference/project-structure.md
           - Deployment: reference/deployment.md
           - Data Schema: reference/data-schema.md
+          - Data Sources: reference/data-sources.md
 
 theme:
     language: en
