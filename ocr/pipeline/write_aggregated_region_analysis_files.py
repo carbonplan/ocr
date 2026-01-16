@@ -29,35 +29,35 @@ def write_stats_table(
             GEOID,
             {extra_columns}
             building_count,
-            mean_wind_risk_2011 as avg_wind_risk_2011,
-            mean_wind_risk_2047 as avg_wind_risk_2047,
-            mean_burn_probability_2011 as avg_burn_probability_2011,
-            mean_burn_probability_2047 as avg_burn_probability_2047,
-            mean_conditional_risk_usfs as avg_conditional_risk_usfs,
-            mean_burn_probability_usfs_2011 as avg_burn_probability_usfs_2011,
-            mean_burn_probability_usfs_2047 as avg_burn_probability_usfs_2047,
-            median_wind_risk_2011,
-            median_wind_risk_2047,
-            median_burn_probability_2011,
-            median_burn_probability_2047,
-            median_conditional_risk_usfs,
-            median_burn_probability_usfs_2011,
-            median_burn_probability_usfs_2047,
-            array_to_json(wind_risk_2011_hist) as wind_risk_2011_hist,
-            array_to_json(wind_risk_2047_hist) as wind_risk_2047_hist,
-            array_to_json(burn_probability_2011_hist) as burn_probability_2011_hist,
-            array_to_json(burn_probability_2047_hist) as burn_probability_2047_hist,
-            array_to_json(conditional_risk_usfs_hist) as conditional_risk_usfs_hist,
-            array_to_json(burn_probability_usfs_2011_hist) as burn_probability_usfs_2011_hist,
-            array_to_json(burn_probability_usfs_2047_hist) as burn_probability_usfs_2047_hist,
-            ST_X(ST_Centroid(geometry)) AS centroid_longitude,
-            ST_Y(ST_Centroid(geometry)) AS centroid_latitude,
+            mean_wind_risk_2011 as rps_2011_mean,
+            mean_wind_risk_2047 as rps_2047_mean,
+            mean_burn_probability_2011 as bp_2011_mean,
+            mean_burn_probability_2047 as bp_2047_mean,
+            mean_conditional_risk_usfs as crps_scott_mean,
+            mean_burn_probability_usfs_2011 as bp_2011_riley_mean,
+            mean_burn_probability_usfs_2047 as bp_2011_riley_mean,
+            rps_2011_median,
+            rps_2047_median,
+            bp_2011_median,
+            bp_2047_median,
+            crps_scott_median,
+            bp_2011_riley_median,
+            bp_2047_riley_median,
+            array_to_json(risk_score_2011_hist) as risk_score_2011_hist,
+            array_to_json(risk_score_2047_hist) as risk_score_2047_hist,
+            array_to_json(bp_2011_hist) as bp_2011_hist,
+            array_to_json(bp_2047_hist) as bp_2047_hist,
+            array_to_json(crps_scott_hist) as crps_scott_hist,
+            array_to_json(bp_2011_riley_hist) as bp_2011_riley_hist,
+            array_to_json(bp_2047_riley_hist) as bp_2047_riley_hist,
+            ST_X(ST_Centroid(geometry)) AS longitude,
+            ST_Y(ST_Centroid(geometry)) AS latitude,
             geometry
         FROM read_parquet('{stats_parquet_path}')
     """)
 
     con.execute(
-        f"""COPY (SELECT * EXCLUDE (centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
+        f"""COPY (SELECT * EXCLUDE (longitude, latitude) FROM {stats_table_name}) TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
     )
 
     con.execute(
