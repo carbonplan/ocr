@@ -630,40 +630,40 @@ def calculate_wind_adjusted_risk(
 
     # Note: for QA. Remove in further production versions
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
-    fire_risk['USFS_RPS'] = rps_30_subset['RPS']
+    fire_risk['rps_scott'] = rps_30_subset['RPS']
 
     with xr.set_options(arithmetic_join='exact'):
-        # wind_risk_2011 (our wind-informed RPS value)
-        fire_risk['wind_risk_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
-        fire_risk['wind_risk_2011'].attrs['description'] = (
+        # rps_2011 (our wind-informed RPS value)
+        fire_risk['rps_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
+        fire_risk['rps_2011'].attrs['description'] = (
             'Wind-informed RPS for 2011 calculated as wind-informed BP * CRPS'
         )
-        # wind_risk_2047 (our wind-informed RPS value)
-        fire_risk['wind_risk_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
-        fire_risk['wind_risk_2047'].attrs['description'] = (
+        # rps_2047 (our wind-informed RPS value)
+        fire_risk['rps_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
+        fire_risk['rps_2047'].attrs['description'] = (
             'Wind-informed RPS for 2047 calculated as wind-informed BP * CRPS'
         )
 
-        # burn_probability_2011 (our wind-informed BP value)
-        fire_risk['burn_probability_2011'] = wind_informed_bp_combined_2011
-        fire_risk['burn_probability_2011'].attrs['description'] = (
+        # bp_2011 (our wind-informed BP value)
+        fire_risk['bp_2011'] = wind_informed_bp_combined_2011
+        fire_risk['bp_2011'].attrs['description'] = (
             'Wind-informed burn probability for 2011 calculated as wind-informed BP'
         )
 
-        # burn_probability_2047 (our wind-informed BP value)
-        fire_risk['burn_probability_2047'] = wind_informed_bp_combined_2047
-        fire_risk['burn_probability_2047'].attrs['description'] = (
+        # bp_2047 (our wind-informed BP value)
+        fire_risk['bp_2047'] = wind_informed_bp_combined_2047
+        fire_risk['bp_2047'].attrs['description'] = (
             'Wind-informed burn probability for 2047 calculated as wind-informed BP'
         )
 
         # conditional_risk (from USFS Scott 2024)(RDS-2020-0016-2)
-        fire_risk['conditional_risk_usfs'] = rps_30_subset['CRPS']
+        fire_risk['crps_scott'] = rps_30_subset['CRPS']
 
-        # burn_probability_usfs_2011 (BP from Riley 2025 (RDS-2025-0006))
-        fire_risk['burn_probability_usfs_2011'] = riley_2011_30m_4326_subset['BP']
+        # bp_2011_riley (BP from Riley 2025 (RDS-2025-0006))
+        fire_risk['bp_2011_riley'] = riley_2011_30m_4326_subset['BP']
 
-        # burn_probability_usfs_2047 (BP from Riley 2025 (RDS-2025-0006))
-        fire_risk['burn_probability_usfs_2047'] = riley_2047_30m_4326_subset['BP']
+        # bp_2047_riley (BP from Riley 2025 (RDS-2025-0006))
+        fire_risk['bp_2047_riley'] = riley_2047_30m_4326_subset['BP']
 
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 
