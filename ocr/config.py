@@ -745,8 +745,8 @@ class VectorConfig(pydantic_settings.BaseSettings):
         return {
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
-            'terms_of_access': 'https://github.com/carbonplan/ocr/blob/main/docs/terms-of-data-access.md',
-            'data_sources': 'https://carbonplan.github.io/ocr/reference/data-sources',
+            'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',
+            'data_sources': 'https://docs.carbonplan.org/ocr/en/latest/reference/data-sources.html',
             'license_name': 'ODBL',
             'license_url': 'https://opendatacommons.org/licenses/odbl/',
             'notice': 'Contains information from the Overture Maps Foundation database, which is made available here under the Open Database License (ODbL), a copy of which is available at https://opendatacommons.org/licenses/odbl/1-0/.',
@@ -1007,8 +1007,8 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         return {
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
-            'terms_of_access': 'https://github.com/carbonplan/ocr/blob/main/docs/terms-of-data-access.md',
-            'data_sources': 'https://carbonplan.github.io/ocr/reference/data-sources',
+            'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',
+            'data_sources': 'https://docs.carbonplan.org/ocr/en/latest/reference/data-sources.html',
             'license_name': 'CC-BY-4.0',
             'license_url': 'https://creativecommons.org/licenses/by/4.0/',
         }
