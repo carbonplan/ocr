@@ -170,11 +170,6 @@ def custom_histogram_query(
         b.bp_2047_riley_median,
         list_concat([z.zero_count_rps_2011], b.nonzero_hist_rps_2011) as risk_score_2011_hist,
         list_concat([z.zero_count_rps_2047], b.nonzero_hist_rps_2047) as risk_score_2047_hist,
-        list_concat([z.zero_count_bp_2011], b.nonzero_hist_bp_2011) as bp_2011_hist,
-        list_concat([z.zero_count_bp_2047], b.nonzero_hist_bp_2047) as bp_2047_hist,
-        list_concat([z.zero_count_crps_scott], b.nonzero_hist_crps_scott) as crps_scott_hist,
-        list_concat([z.zero_count_bp_2011_riley], b.nonzero_hist_bp_2011_riley) as bp_2011_riley_hist,
-        list_concat([z.zero_count_bp_2047_riley], b.nonzero_hist_bp_2047_riley) as bp_2047_riley_hist,
         b.geometry
     FROM temp_nonzero_histograms_{geo_table_name} b
     JOIN temp_zero_counts_{geo_table_name} z ON b.GEOID = z.GEOID)

@@ -45,11 +45,6 @@ def write_stats_table(
             bp_2047_riley_median,
             array_to_json(risk_score_2011_hist) as risk_score_2011_hist,
             array_to_json(risk_score_2047_hist) as risk_score_2047_hist,
-            array_to_json(bp_2011_hist) as bp_2011_hist,
-            array_to_json(bp_2047_hist) as bp_2047_hist,
-            array_to_json(crps_scott_hist) as crps_scott_hist,
-            array_to_json(bp_2011_riley_hist) as bp_2011_riley_hist,
-            array_to_json(bp_2047_riley_hist) as bp_2047_riley_hist,
             ST_X(ST_Centroid(geometry)) AS longitude,
             ST_Y(ST_Centroid(geometry)) AS latitude,
             geometry
