@@ -746,8 +746,10 @@ class VectorConfig(pydantic_settings.BaseSettings):
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
             'terms_of_access': 'https://github.com/carbonplan/ocr/blob/main/docs/terms-of-data-access.md',
+            'data_sources': 'https://carbonplan.github.io/ocr/reference/data-sources',
             'license_name': 'ODBL',
             'license_url': 'https://opendatacommons.org/licenses/odbl/',
+            'notice': 'Contains information from the Overture Maps Foundation database, which is made available here under the Open Database License (ODbL), a copy of which is available at https://opendatacommons.org/licenses/odbl/1-0/.',
         }
 
     def model_post_init(self, __context):
@@ -1006,6 +1008,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
             'version': str(self.version) if self.version else 'unversioned',
             'provider': 'CarbonPlan',
             'terms_of_access': 'https://github.com/carbonplan/ocr/blob/main/docs/terms-of-data-access.md',
+            'data_sources': 'https://carbonplan.github.io/ocr/reference/data-sources',
             'license_name': 'CC-BY-4.0',
             'license_url': 'https://creativecommons.org/licenses/by/4.0/',
         }
