@@ -56,9 +56,6 @@ def write_stats_table(
         FROM read_parquet('{stats_parquet_path}')
     """)
 
-    con.execute(
-        f"""COPY (SELECT * EXCLUDE (longitude, latitude) FROM {stats_table_name}) TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
-    )
     # create geojson with metadata at top level
     con.execute(f"""
         COPY (
@@ -73,20 +70,20 @@ def write_stats_table(
                                 'GEOID', GEOID,
                                 {"'STUSPS', STUSPS, 'NAME', NAME," if stats_table_name == 'states' else "'NAME', NAME," if stats_table_name == 'counties' else ''}
                                 'building_count', building_count,
-                                'avg_wind_risk_2011', avg_wind_risk_2011,
-                                'avg_wind_risk_2047', avg_wind_risk_2047,
-                                'avg_burn_probability_2011', avg_burn_probability_2011,
-                                'avg_burn_probability_2047', avg_burn_probability_2047,
-                                'avg_conditional_risk_usfs', avg_conditional_risk_usfs,
-                                'avg_burn_probability_usfs_2011', avg_burn_probability_usfs_2011,
-                                'avg_burn_probability_usfs_2047', avg_burn_probability_usfs_2047,
-                                'median_wind_risk_2011', median_wind_risk_2011,
-                                'median_wind_risk_2047', median_wind_risk_2047,
-                                'median_burn_probability_2011', median_burn_probability_2011,
-                                'median_burn_probability_2047', median_burn_probability_2047,
-                                'median_conditional_risk_usfs', median_conditional_risk_usfs,
-                                'median_burn_probability_usfs_2011', median_burn_probability_usfs_2011,
-                                'median_burn_probability_usfs_2047', median_burn_probability_usfs_2047,
+                                'rps_2011_mean', rps_2011_mean,
+                                'rps_2047_mean', rps_2047_mean,
+                                'bp_2011_mean', bp_2011_mean,
+                                'bp_2047_mean', bp_2047_mean,
+                                'crps_scott_mean', crps_scott_mean,
+                                'bp_2011_riley_mean', bp_2011_riley_mean,
+                                'bp_2047_riley_mean', bp_2047_riley_mean,
+                                'rps_2011_median', rps_2011_median,
+                                'rps_2047_median', rps_2047_median,
+                                'bp_2011_median', bp_2011_median,
+                                'bp_2047_median', bp_2047_median,
+                                'crps_scott_median', crps_scott_median,
+                                'bp_2011_riley_median', bp_2011_riley_median,
+                                'bp_2047_riley_median', bp_2047_riley_median,
                                 'wind_risk_2011_hist', wind_risk_2011_hist,
                                 'wind_risk_2047_hist', wind_risk_2047_hist,
                                 'burn_probability_2011_hist', burn_probability_2011_hist,
