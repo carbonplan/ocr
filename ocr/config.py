@@ -735,6 +735,23 @@ class VectorConfig(pydantic_settings.BaseSettings):
 
     model_config = {'env_prefix': 'ocr_vector_', 'case_sensitive': False}
 
+    metadata: dict[str, str] | None = pydantic.Field(
+        None, description='metadata to add to datasets'
+    )
+
+    @property
+    def metadata_dict(self) -> dict[str, str]:
+        """Get metadata dict with ODBL license for vector data."""
+        return {
+            'version': str(self.version) if self.version else 'unversioned',
+            'provider': 'CarbonPlan',
+            'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',
+            'data_sources': 'https://docs.carbonplan.org/ocr/en/latest/reference/data-sources.html',
+            'license_name': 'ODBL',
+            'license_url': 'https://opendatacommons.org/licenses/odbl/',
+            'notice': 'Contains information from the Overture Maps Foundation database, which is made available here under the Open Database License (ODbL), a copy of which is available at https://opendatacommons.org/licenses/odbl/1-0/.',
+        }
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
         common_part = f'fire-risk/vector/{self.environment.value}'
@@ -980,6 +997,22 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
     prefix: str | None = pydantic.Field(None, description='Sub-path within the storage root')
     debug: bool = pydantic.Field(default=False, description='Enable debugging mode')
 
+    metadata: dict[str, str] | None = pydantic.Field(
+        None, description='metadata to add to datasets'
+    )
+
+    @property
+    def metadata_dict(self) -> dict[str, str]:
+        """Get metadata dict with CC-BY-4.0 license for icechunk data."""
+        return {
+            'version': str(self.version) if self.version else 'unversioned',
+            'provider': 'CarbonPlan',
+            'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',
+            'data_sources': 'https://docs.carbonplan.org/ocr/en/latest/reference/data-sources.html',
+            'license_name': 'CC-BY-4.0',
+            'license_url': 'https://creativecommons.org/licenses/by/4.0/',
+        }
+
     def model_post_init(self, __context):
         """Post-initialization to set up prefixes and URIs based on environment."""
         common_part = f'fire-risk/tensor/{self.environment.value}'
@@ -1100,6 +1133,9 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         ds['CRPS'].encoding = {}
 
         template = xr.Dataset(ds.coords).drop_vars('spatial_ref')
+
+        template.attrs.update(self.metadata_dict)
+
         var_encoding_dict = {
             'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
             'fill_value': np.nan,
@@ -1288,7 +1324,6 @@ class OCRConfig(pydantic_settings.BaseSettings):
     model_config = {'env_prefix': 'ocr_', 'case_sensitive': False}
 
     def model_post_init(self, __context):
-        # Pass environment and wipe to VectorConfig if not already set
         if self.vector is None:
             object.__setattr__(
                 self,
