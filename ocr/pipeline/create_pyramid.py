@@ -27,7 +27,7 @@ def create_pyramid(config: OCRConfig):
     INPUT_RASTER_PREFIX = config.icechunk.prefix
     PYRAMID_BUCKET = config.pyramid.storage_root.strip('s3://')
     PYRAMID_PREFIX = config.pyramid.output_prefix
-    VAR_LIST = ['wind_risk_2011', 'wind_risk_2047']
+    VAR_LIST = ['rps_2011', 'rps_2047']
 
     tms = morecantile.tms.get('WebMercatorQuad')
     level = tms.zoom_for_res(30)
@@ -47,7 +47,7 @@ def create_pyramid(config: OCRConfig):
     # -------------------------------------------------
     pyramid_encoding = pyramid.encoding
     for lvl in pyramid_encoding:
-        for var in ['wind_risk_2011', 'wind_risk_2047']:
+        for var in ['rps_2011', 'rps_2047']:
             pyramid_encoding[lvl][var].pop('shards', None)
     # -------------------------------------------------
 
