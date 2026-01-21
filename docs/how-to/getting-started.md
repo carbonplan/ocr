@@ -91,14 +91,15 @@ The dataset contains several key variables:
 
 ### For Researchers & Analysts
 
-- **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
-- **[Data Sources and Provenance](../methods/fire-risk/data-sources-and-provenance.md)**: Learn about input datasets
+-   **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
+-   **[Data Sources](../reference/data-sources.md)**: Learn about data sources
 
 ### For Developers
 
-- **[Installation](installation.md)**: Set up OCR for local development
-- **[Project Structure](../reference/project-structure.md)**: Understand the codebase
-- **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
+-   **[Installation](installation.md)**: Set up OCR for local development
+-   **[Project Structure](../reference/project-structure.md)**: Understand the codebase
+-   **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
+-   **[Input datasets](../methods/input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support
 
