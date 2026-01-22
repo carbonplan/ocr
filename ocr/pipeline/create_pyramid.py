@@ -41,15 +41,9 @@ def create_pyramid(config: OCRConfig):
     ds = ds.proj.assign_crs({'EPSG': 4326})
 
     pyramid = create_pyramid(
-        ds, levels=level, x_dim='longitude', y_dim='latitude', spec='zarr-multiscales'
+        ds, levels=level, x_dim='longitude', y_dim='latitude', target_shard_bytes=None
     )
-    # TEMP PATCH TO REMOVE SHARDING while this PR is open: github.com/manzt/zarrita.js/pull/326
-    # -------------------------------------------------
-    pyramid_encoding = pyramid.encoding
-    for lvl in pyramid_encoding:
-        for var in ['rps_2011', 'rps_2047']:
-            pyramid_encoding[lvl][var].pop('shards', None)
-    # -------------------------------------------------
+    # shards = None while this PR is open: github.com/manzt/zarrita.js/pull/326
 
     store = from_url(url=f's3://{PYRAMID_BUCKET}/{PYRAMID_PREFIX}', region='us-west-2')
     zstore = ObjectStore(store)
