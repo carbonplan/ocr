@@ -20,13 +20,13 @@ def create_summary_stat_tmp_tables(
     con.execute(f"""
         CREATE TEMP TABLE buildings AS
         SELECT geometry,
-        wind_risk_2011,
-        wind_risk_2047,
-        burn_probability_2011,
-        burn_probability_2047,
-        conditional_risk_usfs,
-        burn_probability_usfs_2011,
-        burn_probability_usfs_2047
+        rps_2011,
+        rps_2047,
+        bp_2011,
+        bp_2047,
+        crps_scott,
+        bp_2011_riley,
+        bp_2047_riley
         FROM read_parquet('{buildings_path_glob}')
         """)
 
@@ -98,13 +98,13 @@ def custom_histogram_query(
     SELECT
         b.GEOID as GEOID,
         {name_column}
-        count(CASE WHEN a.wind_risk_2011 = 0 THEN 1 END) as zero_count_wind_risk_2011,
-        count(CASE WHEN a.wind_risk_2047 = 0 THEN 1 END) as zero_count_wind_risk_2047,
-        count(CASE WHEN a.burn_probability_2011 = 0 THEN 1 END) as zero_count_burn_probability_2011,
-        count(CASE WHEN a.burn_probability_2047 = 0 THEN 1 END) as zero_count_burn_probability_2047,
-        count(CASE WHEN a.conditional_risk_usfs = 0 THEN 1 END) as zero_count_conditional_risk_usfs,
-        count(CASE WHEN a.burn_probability_usfs_2011 = 0 THEN 1 END) as zero_count_burn_probability_usfs_2011,
-        count(CASE WHEN a.burn_probability_usfs_2047 = 0 THEN 1 END) as zero_count_burn_probability_usfs_2047
+        count(CASE WHEN a.rps_2011 = 0 THEN 1 END) as zero_count_rps_2011,
+        count(CASE WHEN a.rps_2047 = 0 THEN 1 END) as zero_count_rps_2047,
+        count(CASE WHEN a.bp_2011 = 0 THEN 1 END) as zero_count_bp_2011,
+        count(CASE WHEN a.bp_2047 = 0 THEN 1 END) as zero_count_bp_2047,
+        count(CASE WHEN a.crps_scott = 0 THEN 1 END) as zero_count_crps_scott,
+        count(CASE WHEN a.bp_2011_riley = 0 THEN 1 END) as zero_count_bp_2011_riley,
+        count(CASE WHEN a.bp_2047_riley = 0 THEN 1 END) as zero_count_bp_2047_riley
     FROM buildings a
     JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
     GROUP BY GEOID{name_group_by}
@@ -118,29 +118,29 @@ def custom_histogram_query(
         {name_column}
         count(b.GEOID) as building_count,
 
-        avg(a.wind_risk_2011) as mean_wind_risk_2011,
-        avg(a.wind_risk_2047) as mean_wind_risk_2047,
-        avg(a.burn_probability_2011) as mean_burn_probability_2011,
-        avg(a.burn_probability_2047) as mean_burn_probability_2047,
-        avg(a.conditional_risk_usfs) as mean_conditional_risk_usfs,
-        avg(a.burn_probability_usfs_2011) as mean_burn_probability_usfs_2011,
-        avg(a.burn_probability_usfs_2047) as mean_burn_probability_usfs_2047,
+        avg(a.rps_2011) as mean_rps_2011,
+        avg(a.rps_2047) as mean_rps_2047,
+        avg(a.bp_2011) as mean_bp_2011,
+        avg(a.bp_2047) as mean_bp_2047,
+        avg(a.crps_scott) as mean_crps_scott,
+        avg(a.bp_2011_riley) as mean_bp_2011_riley,
+        avg(a.bp_2047_riley) as mean_bp_2047_riley,
 
-        median(a.wind_risk_2011) as median_wind_risk_2011,
-        median(a.wind_risk_2047) as median_wind_risk_2047,
-        median(a.burn_probability_2011) as median_burn_probability_2011,
-        median(a.burn_probability_2047) as median_burn_probability_2047,
-        median(a.conditional_risk_usfs) as median_conditional_risk_usfs,
-        median(a.burn_probability_usfs_2011) as median_burn_probability_usfs_2011,
-        median(a.burn_probability_usfs_2047) as median_burn_probability_usfs_2047,
+        median(a.rps_2011) as rps_2011_median,
+        median(a.rps_2047) as rps_2047_median,
+        median(a.bp_2011) as bp_2011_median,
+        median(a.bp_2047) as bp_2047_median,
+        median(a.crps_scott) as crps_scott_median,
+        median(a.bp_2011_riley) as bp_2011_riley_median,
+        median(a.bp_2047_riley) as bp_2047_riley_median,
 
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2011 <> 0 THEN a.wind_risk_2011 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2011,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.wind_risk_2047 <> 0 THEN a.wind_risk_2047 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_wind_risk_2047,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.burn_probability_2011 <> 0 THEN a.burn_probability_2011 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_burn_probability_2011,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.burn_probability_2047 <> 0 THEN a.burn_probability_2047 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_burn_probability_2047,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.conditional_risk_usfs <> 0 THEN a.conditional_risk_usfs END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_conditional_risk_usfs,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.burn_probability_usfs_2011 <> 0 THEN a.burn_probability_usfs_2011 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_burn_probability_usfs_2011,
-        list_resize(COALESCE(map_values(histogram(CASE WHEN a.burn_probability_usfs_2047 <> 0 THEN a.burn_probability_usfs_2047 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_burn_probability_usfs_2047,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.rps_2011 <> 0 THEN a.rps_2011 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_rps_2011,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.rps_2047 <> 0 THEN a.rps_2047 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_rps_2047,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.bp_2011 <> 0 THEN a.bp_2011 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_bp_2011,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.bp_2047 <> 0 THEN a.bp_2047 END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_bp_2047,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.crps_scott <> 0 THEN a.crps_scott END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_crps_scott,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.bp_2011_riley <> 0 THEN a.bp_2011_riley END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_bp_2011_riley,
+        list_resize(COALESCE(map_values(histogram(CASE WHEN a.bp_2047_riley <> 0 THEN a.bp_2047_riley END, {hist_bins})), []), {hist_bin_padding}, 0) as nonzero_hist_bp_2047_riley,
 
         b.geometry as geometry
     FROM buildings a
@@ -154,27 +154,22 @@ def custom_histogram_query(
         b.GEOID,
         {name_column}
         b.building_count,
-        b.mean_wind_risk_2011,
-        b.mean_wind_risk_2047,
-        b.mean_burn_probability_2011,
-        b.mean_burn_probability_2047,
-        b.mean_conditional_risk_usfs,
-        b.mean_burn_probability_usfs_2011,
-        b.mean_burn_probability_usfs_2047,
-        b.median_wind_risk_2011,
-        b.median_wind_risk_2047,
-        b.median_burn_probability_2011,
-        b.median_burn_probability_2047,
-        b.median_conditional_risk_usfs,
-        b.median_burn_probability_usfs_2011,
-        b.median_burn_probability_usfs_2047,
-        list_concat([z.zero_count_wind_risk_2011], b.nonzero_hist_wind_risk_2011) as wind_risk_2011_hist,
-        list_concat([z.zero_count_wind_risk_2047], b.nonzero_hist_wind_risk_2047) as wind_risk_2047_hist,
-        list_concat([z.zero_count_burn_probability_2011], b.nonzero_hist_burn_probability_2011) as burn_probability_2011_hist,
-        list_concat([z.zero_count_burn_probability_2047], b.nonzero_hist_burn_probability_2047) as burn_probability_2047_hist,
-        list_concat([z.zero_count_conditional_risk_usfs], b.nonzero_hist_conditional_risk_usfs) as conditional_risk_usfs_hist,
-        list_concat([z.zero_count_burn_probability_usfs_2011], b.nonzero_hist_burn_probability_usfs_2011) as burn_probability_usfs_2011_hist,
-        list_concat([z.zero_count_burn_probability_usfs_2047], b.nonzero_hist_burn_probability_usfs_2047) as burn_probability_usfs_2047_hist,
+        b.mean_rps_2011,
+        b.mean_rps_2047,
+        b.mean_bp_2011,
+        b.mean_bp_2047,
+        b.mean_crps_scott,
+        b.mean_bp_2011_riley,
+        b.mean_bp_2047_riley,
+        b.rps_2011_median,
+        b.rps_2047_median,
+        b.bp_2011_median,
+        b.bp_2047_median,
+        b.crps_scott_median,
+        b.bp_2011_riley_median,
+        b.bp_2047_riley_median,
+        list_concat([z.zero_count_rps_2011], b.nonzero_hist_rps_2011) as risk_score_2011_hist,
+        list_concat([z.zero_count_rps_2047], b.nonzero_hist_rps_2047) as risk_score_2047_hist,
         b.geometry
     FROM temp_nonzero_histograms_{geo_table_name} b
     JOIN temp_zero_counts_{geo_table_name} z ON b.GEOID = z.GEOID)

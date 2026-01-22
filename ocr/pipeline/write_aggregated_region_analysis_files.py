@@ -1,3 +1,5 @@
+import json
+
 import duckdb
 from upath import UPath
 
@@ -23,46 +25,96 @@ def write_stats_table(
     elif stats_table_name == 'counties':
         extra_columns = 'NAME,'
 
+    metadata_dict = config.vector.metadata_dict
+    metadata_json = json.dumps(metadata_dict)
+
     con.execute(f"""
         CREATE TEMP TABLE {stats_table_name} AS
         SELECT
             GEOID,
             {extra_columns}
             building_count,
-            mean_wind_risk_2011 as avg_wind_risk_2011,
-            mean_wind_risk_2047 as avg_wind_risk_2047,
-            mean_burn_probability_2011 as avg_burn_probability_2011,
-            mean_burn_probability_2047 as avg_burn_probability_2047,
-            mean_conditional_risk_usfs as avg_conditional_risk_usfs,
-            mean_burn_probability_usfs_2011 as avg_burn_probability_usfs_2011,
-            mean_burn_probability_usfs_2047 as avg_burn_probability_usfs_2047,
-            median_wind_risk_2011,
-            median_wind_risk_2047,
-            median_burn_probability_2011,
-            median_burn_probability_2047,
-            median_conditional_risk_usfs,
-            median_burn_probability_usfs_2011,
-            median_burn_probability_usfs_2047,
-            array_to_json(wind_risk_2011_hist) as wind_risk_2011_hist,
-            array_to_json(wind_risk_2047_hist) as wind_risk_2047_hist,
-            array_to_json(burn_probability_2011_hist) as burn_probability_2011_hist,
-            array_to_json(burn_probability_2047_hist) as burn_probability_2047_hist,
-            array_to_json(conditional_risk_usfs_hist) as conditional_risk_usfs_hist,
-            array_to_json(burn_probability_usfs_2011_hist) as burn_probability_usfs_2011_hist,
-            array_to_json(burn_probability_usfs_2047_hist) as burn_probability_usfs_2047_hist,
-            ST_X(ST_Centroid(geometry)) AS centroid_longitude,
-            ST_Y(ST_Centroid(geometry)) AS centroid_latitude,
+            rps_2011_mean,
+            rps_2047_mean,
+            bp_2011_mean,
+            bp_2047_mean,
+            crps_scott_mean,
+            bp_2011_riley_mean,
+            bp_2011_riley_mean,
+            rps_2011_median,
+            rps_2047_median,
+            bp_2011_median,
+            bp_2047_median,
+            crps_scott_median,
+            bp_2011_riley_median,
+            bp_2047_riley_median,
+            array_to_json(risk_score_2011_hist) as risk_score_2011_hist,
+            array_to_json(risk_score_2047_hist) as risk_score_2047_hist,
+            ST_X(ST_Centroid(geometry)) AS longitude,
+            ST_Y(ST_Centroid(geometry)) AS latitude,
             geometry
         FROM read_parquet('{stats_parquet_path}')
     """)
 
+    # create geojson with metadata at top level
+    con.execute(f"""
+        COPY (
+            SELECT json_object(
+                'type', 'FeatureCollection',
+                'metadata', '{metadata_json}'::JSON,
+                'features', (
+                    SELECT json_group_array(
+                        json_object(
+                            'type', 'Feature',
+                            'properties', json_object(
+                                'GEOID', GEOID,
+                                {"'STUSPS', STUSPS, 'NAME', NAME," if stats_table_name == 'states' else "'NAME', NAME," if stats_table_name == 'counties' else ''}
+                                'building_count', building_count,
+                                'rps_2011_mean', rps_2011_mean,
+                                'rps_2047_mean', rps_2047_mean,
+                                'bp_2011_mean', bp_2011_mean,
+                                'bp_2047_mean', bp_2047_mean,
+                                'crps_scott_mean', crps_scott_mean,
+                                'bp_2011_riley_mean', bp_2011_riley_mean,
+                                'bp_2047_riley_mean', bp_2047_riley_mean,
+                                'rps_2011_median', rps_2011_median,
+                                'rps_2047_median', rps_2047_median,
+                                'bp_2011_median', bp_2011_median,
+                                'bp_2047_median', bp_2047_median,
+                                'crps_scott_median', crps_scott_median,
+                                'bp_2011_riley_median', bp_2011_riley_median,
+                                'bp_2047_riley_median', bp_2047_riley_median,
+                                'wind_risk_2011_hist', wind_risk_2011_hist,
+                                'wind_risk_2047_hist', wind_risk_2047_hist,
+                                'burn_probability_2011_hist', burn_probability_2011_hist,
+                                'burn_probability_2047_hist', burn_probability_2047_hist,
+                                'conditional_risk_usfs_hist', conditional_risk_usfs_hist,
+                                'burn_probability_usfs_2011_hist', burn_probability_usfs_2011_hist,
+                                'burn_probability_usfs_2047_hist', burn_probability_usfs_2047_hist
+                            ),
+                            'geometry', json(ST_AsGeoJSON(geometry))
+                        )
+                    )
+                    FROM {stats_table_name}
+                )
+            )::VARCHAR as content
+        ) TO '{region_stats_path}/stats.geojson' (FORMAT csv, HEADER false, QUOTE '');
+    """)
+
+    csv_path = region_stats_path / 'stats.csv'
+
+    temp_csv_path = region_stats_path / 'stats_temp.csv'
     con.execute(
-        f"""COPY (SELECT * EXCLUDE (centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{region_stats_path}/stats.geojson' WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_NAME 'STATS', OVERWRITE_OR_IGNORE true);"""
+        f"""COPY (SELECT * EXCLUDE (geometry, centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{temp_csv_path}';"""
     )
 
-    con.execute(
-        f"""COPY (SELECT * EXCLUDE geometry FROM {stats_table_name}) TO '{region_stats_path}/stats.csv';"""
-    )
+    csv_content = temp_csv_path.read_text()
+
+    metadata_header = '\n'.join([f'# {key}: {value}' for key, value in metadata_dict.items()])
+
+    csv_path.write_text(f'{metadata_header}\n{csv_content}')
+
+    temp_csv_path.unlink()
 
 
 def write_aggregated_region_analysis_files(config: OCRConfig):

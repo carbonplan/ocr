@@ -41,15 +41,15 @@ def create_building_centroid_pmtiles(
                 SELECT
                     'Feature' AS type,
                     json_object(
-                    '0', ROUND(CAST(wind_risk_2011 AS DOUBLE), 3),
-                    '1', ROUND(CAST(wind_risk_2047 AS DOUBLE), 3)
+                    '0', ROUND(CAST(rps_2011 AS DOUBLE), 3),
+                    '1', ROUND(CAST(rps_2047 AS DOUBLE), 3)
                     ) AS properties,
                     json(ST_AsGeoJson(ST_Centroid(geometry))) AS geometry
                 FROM read_parquet('{input_path}')
                 WHERE
-                    wind_risk_2011 > 0
+                    rps_2011 > 0
                     AND
-                    wind_risk_2047 > 0
+                    rps_2047 > 0
             ) TO '{ndjson_path.as_posix()}' (FORMAT json);
             """
             connection.execute(copy_sql)
