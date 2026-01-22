@@ -47,7 +47,7 @@ The primary output dataset contains the following variables. To support transpar
 
 | Variable        | Type    | Units         | Description                                                               |
 | --------------- | ------- | ------------- | ------------------------------------------------------------------------- |
-| `rps_scott`     | float32 | dimensionless | Risk to potential structures from Scott et al., (2024)                    |
+| `rps_scott`     | float32 | dimensionless | Annual risk to potential structures from Scott et al., (2024)             |
 | `crps_scott`    | float32 | dimensionless | Conditional risk to potential structures (cRPS) from Scott et al., (2024) |
 | `bp_2011_riley` | float32 | dimensionless | Burn probability for ~2011 from Riley et al. (2025) (RDS-2025-0006)       |
 | `bp_2047_riley` | float32 | dimensionless | Burn probability for ~2047 from Riley et al. (2025)                       |
@@ -85,7 +85,7 @@ flowchart LR
     B --> D
     D --> E[Wind-Adjusted BP]
     E --> F[Multiply by CRPS]
-    F --> G[Wind Risk Output]
+    F --> G[RPS]
 
     style A fill:#e1f5ff
     style C fill:#e1f5ff
@@ -110,11 +110,11 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 | Column          | Type    | Description                                                                        |
 | --------------- | ------- | ---------------------------------------------------------------------------------- |
-| `rps_2011`      | float32 | Risk to potential structures for ~2011 at building location                        |
-| `rps_2047`      | float32 | Risk to potential structures for ~2047 at building location                        |
+| `rps_2011`      | float32 | Annual risk to potential structures for ~2011 at building location                 |
+| `rps_2047`      | float32 | Annual risk to potential structures for ~2047 at building location                 |
 | `bp_2011`       | float32 | Annual burn probability for ~2011 at building location                             |
 | `bp_2047`       | float32 | Annual burn probability for ~2047 at building location                             |
-| `rps_scott`     | float32 | Risk to potential structures (Scott et al., 2024) at building location             |
+| `rps_scott`     | float32 | Annual risk to potential structures (Scott et al., 2024) at building location      |
 | `crps_scott`    | float32 | Conditional risk to potential structures (Scott et al., 2024) at building location |
 | `bp_2011_riley` | float32 | Annual burn probability ~2011 (Riley et al, 2025) at building location             |
 | `bp_2047_riley` | float32 | Annual burn probability ~2047 (Riley et al, 2025) at building location             |
@@ -154,12 +154,12 @@ This single-file format enables:
 
 ### Expected Value Ranges
 
-| Variable                                        | Expected Range | Notes                                                      |
-| ----------------------------------------------- | -------------- | ---------------------------------------------------------- |
-| Risk to potential structures (RPS)              | [0, ∞)         | Product of BP and CRPS                                     |
-| Conditional risk to potential structures (cRPS) | [0, 100]       | Consequence to a hypothetical structure if it were to burn |
-| Burn probability (BP)                           | [0, 1]         | Annual likelihood of a pixel burning                       |
-| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist)        |
+| Variable                                        | Expected Range | Notes                                                                    |
+| ----------------------------------------------- | -------------- | ------------------------------------------------------------------------ |
+| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS. |
+| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn          |
+| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                 |
+| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist)                      |
 
 ### Quality Checks
 
