@@ -47,8 +47,8 @@ The primary output dataset contains the following variables. To support transpar
 
 | Variable        | Type    | Units         | Description                                                               |
 | --------------- | ------- | ------------- | ------------------------------------------------------------------------- |
-| `rps_scott`     | float32 | dimensionless | Annual risk to potential structures from Scott et al., (2024)             |
-| `crps_scott`    | float32 | dimensionless | Conditional risk to potential structures (cRPS) from Scott et al., (2024) |
+| `rps_scott`     | float32 | %             | Annual risk to potential structures from Scott et al., (2024)             |
+| `crps_scott`    | float32 | %             | Conditional risk to potential structures (cRPS) from Scott et al., (2024) |
 | `bp_2011_riley` | float32 | dimensionless | Burn probability for ~2011 from Riley et al. (2025) (RDS-2025-0006)       |
 | `bp_2047_riley` | float32 | dimensionless | Burn probability for ~2047 from Riley et al. (2025)                       |
 
