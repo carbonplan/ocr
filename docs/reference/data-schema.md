@@ -36,12 +36,12 @@ The primary output dataset contains the following variables. To support transpar
 
 #### Core Risk Variables
 
-| Variable   | Type    | Units         | Description                                                                                                    |
-| ---------- | ------- | ------------- | -------------------------------------------------------------------------------------------------------------- |
-| `rps_2011` | float32 | %             | Relative risk to potential structures (RPS) for ~2011 climate conditions. Calculated as `bp_2011 × crps_scott` |
-| `rps_2047` | float32 | %             | Relative risk to potential structures (RPS) for ~2047 climate conditions. Calculated as `bp_2047 × crps_scott` |
-| `bp_2011`  | float32 | dimensionless | Annual burn probability for ~2011 climate conditions                                                           |
-| `bp_2047`  | float32 | dimensionless | Annual burn probability for ~2047 climate conditions                                                           |
+| Variable   | Type    | Units         | Description                                                                                                           |
+| ---------- | ------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `rps_2011` | float32 | %             | Annual relative risk to potential structures (RPS) for ~2011 climate conditions. Calculated as `bp_2011 × crps_scott` |
+| `rps_2047` | float32 | %             | Annual risk to potential structures (RPS) for ~2047 climate conditions. Calculated as `bp_2047 × crps_scott`          |
+| `bp_2011`  | float32 | dimensionless | Annual burn probability for ~2011 climate conditions                                                                  |
+| `bp_2047`  | float32 | dimensionless | Annual burn probability for ~2047 climate conditions                                                                  |
 
 #### Reference Variables (Data from USFS and Wildfire Risk to Communities project)
 
@@ -63,9 +63,9 @@ The primary output dataset contains the following variables. To support transpar
 
 A separate dataset provides the statistical distribution of wind directions during fire-weather conditions:
 
-| Variable                      | Type    | Dimensions                            | Description                                                                                                   |
-| ----------------------------- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `wind_direction_distribution` | float32 | (latitude, longitude, wind_direction) | Fraction of fire-weather hours in each of 8 cardinal/ordinal directions according to Rasmussen et al., (2023) |
+| Variable                      | Type    | Dimensions                            | Description                                                                                                            |
+| ----------------------------- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `wind_direction_distribution` | float32 | (latitude, longitude, wind_direction) | Fraction of fire-weather hours coming from each of 8 cardinal/ordinal directions derived from Rasmussen et al., (2023) |
 
 **Wind Direction Dimension:**
 The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']`
