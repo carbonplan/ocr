@@ -108,8 +108,22 @@ For each 30m pixel:
 
 ### 6. Convert to Categorical Scores
 
-- Convert continuous RPS values to categorical risk scores (1-10 scale)
-- Scores based on percentile bins of RPS across full CONUS domain
+- Convert continuous RPS values to categorical risk scores (0-10 scale)
+- Scores are calculated using percentile-based RPS bins defined [here](./score-bins.ipynb)
+
+| Score | Criteria              |
+| ----- | --------------------- |
+| 0     | `RPS == 0`            |
+| 1     | `0 < RPS < 0.01`      |
+| 2     | `0.01 <= RPS < 0.02`  |
+| 3     | `0.02 <= RPS < 0.035` |
+| 4     | `0.035 <= RPS < 0.06` |
+| 5     | `0.06 <= RPS < 0.1`   |
+| 6     | `0.1 <= RPS < 0.2`    |
+| 7     | `0.2 <= RPS < 0.5`    |
+| 8     | `0.5 <= RPS < 1`      |
+| 9     | `1 <= RPS < 3`        |
+| 10    | `3 <= RPS <= 100`     |
 
 ## Spatial Processing Architecture
 
