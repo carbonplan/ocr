@@ -40,7 +40,7 @@ def write_stats_table(
             bp_2047_mean,
             crps_scott_mean,
             bp_2011_riley_mean,
-            bp_2011_riley_mean,
+            bp_2047_riley_mean,
             rps_2011_median,
             rps_2047_median,
             bp_2011_median,
