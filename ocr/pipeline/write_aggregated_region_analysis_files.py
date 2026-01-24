@@ -40,7 +40,7 @@ def write_stats_table(
             bp_2047_mean,
             crps_scott_mean,
             bp_2011_riley_mean,
-            bp_2011_riley_mean,
+            bp_2047_riley_mean,
             rps_2011_median,
             rps_2047_median,
             bp_2011_median,
@@ -83,14 +83,7 @@ def write_stats_table(
                                 'bp_2047_median', bp_2047_median,
                                 'crps_scott_median', crps_scott_median,
                                 'bp_2011_riley_median', bp_2011_riley_median,
-                                'bp_2047_riley_median', bp_2047_riley_median,
-                                'wind_risk_2011_hist', wind_risk_2011_hist,
-                                'wind_risk_2047_hist', wind_risk_2047_hist,
-                                'burn_probability_2011_hist', burn_probability_2011_hist,
-                                'burn_probability_2047_hist', burn_probability_2047_hist,
-                                'conditional_risk_usfs_hist', conditional_risk_usfs_hist,
-                                'burn_probability_usfs_2011_hist', burn_probability_usfs_2011_hist,
-                                'burn_probability_usfs_2047_hist', burn_probability_usfs_2047_hist
+                                'bp_2047_riley_median', bp_2047_riley_median
                             ),
                             'geometry', json(ST_AsGeoJSON(geometry))
                         )
@@ -105,7 +98,7 @@ def write_stats_table(
 
     temp_csv_path = region_stats_path / 'stats_temp.csv'
     con.execute(
-        f"""COPY (SELECT * EXCLUDE (geometry, centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{temp_csv_path}';"""
+        f"""COPY (SELECT * EXCLUDE (geometry, longitude, latitude) FROM {stats_table_name}) TO '{temp_csv_path}';"""
     )
 
     csv_content = temp_csv_path.read_text()
