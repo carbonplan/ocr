@@ -98,7 +98,7 @@ def write_stats_table(
 
     temp_csv_path = region_stats_path / 'stats_temp.csv'
     con.execute(
-        f"""COPY (SELECT * EXCLUDE (geometry, centroid_longitude, centroid_latitude) FROM {stats_table_name}) TO '{temp_csv_path}';"""
+        f"""COPY (SELECT * EXCLUDE (geometry, longitude, latitude) FROM {stats_table_name}) TO '{temp_csv_path}';"""
     )
 
     csv_content = temp_csv_path.read_text()
