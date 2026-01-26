@@ -15,9 +15,9 @@
 
     If you want to **access and analyze OCR's fire risk data**:
 
-    1. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
-    2. Explore the [Data Schema][data-schema] to understand available variables
-    3. Check [Data Downloads](access-data.md) for an overview of all available formats
+    1. Check [Data Downloads](access-data.md) for an overview of all available formats
+    2. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
+    3. Explore the [Data Schema][data-schema] to understand available variables
 
 === "Contributing to OCR"
 
@@ -32,7 +32,8 @@
     If you want to **understand how fire risk is calculated**:
 
     1. Read the [Fire Risk Overview][fire-risk-methods-overview] for conceptual background
-    2. Explore [Data Sources and Provenance][input-datasets-technical-reference-how-to]
+    2. Learn about how we performed [Evaluation][evaluation] of our fire risk estimates
+    2. Review our [Data Sources][data-sources]
 
 ## Documentation Structure
 
