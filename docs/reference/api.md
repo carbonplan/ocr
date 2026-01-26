@@ -1,6 +1,6 @@
 # API reference
 
-This page provides a structured, auto-generated reference for the OCR Python package using mkdocstrings. Each section links to the corresponding module(s) and surfaces docstrings, type hints, and signatures.
+This page provides a structured, auto-generated reference for the `ocr` Python package using mkdocstrings. Each section links to the corresponding module(s) and surfaces docstrings, type hints, and signatures.
 
 ---
 

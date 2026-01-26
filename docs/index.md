@@ -1,27 +1,27 @@
-# Open Climate Risk (Beta)
+# Open Climate Risk
 
-**Open Climate Risk (OCR)** is CarbonPlan's platform, currently in beta, for analyzing and visualizing climate-related risks at a building-level resolution across the Continental United States (CONUS). While in beta, you may notice broken links to code references (GitHub project is currently private).
+**Open Climate Risk** is CarbonPlan's platform for analyzing and visualizing climate-related risks at a building-level resolution across the Continental United States (CONUS).
 
 ## Quick Links
 
-- [**Web Tool**](https://ocr.carbonplan.org)
-- [**Explainer Article**](https://ocr.carbonplan.org/research/climate-risk-explainer)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr) (currently private)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases) (currently private)
+- [**Web Tool**](https://carbonplan.org/research/climate-risk)
+- [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
+- [**GitHub Repository**](https://github.com/carbonplan/ocr)
+- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
-=== "Using OCR Data"
+=== "Using Open Climate Risk Data"
 
-    If you want to **access and analyze OCR's fire risk data**:
+    If you want to **access and analyze fire risk data**:
 
-    1. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
-    2. Explore the [Data Schema][data-schema] to understand available variables
-    3. Check [Data Downloads](access-data.md) for an overview of all available formats
+    1. Visit [Access Data](access-data.md) for an overview of all available formats
+    2. Start with [Working with Data](./how-to/work-with-data.ipynb) to learn how to load production datasets
+    3. Explore the [Data Schema][data-schema] to understand available variables
 
-=== "Contributing to OCR"
+=== "Contributing to Open Climate Risk"
 
-    If you want to **develop or contribute to OCR**:
+    If you want to **develop or contribute**:
 
     1. Follow the [Installation][install-ocr-for-development] guide to set up your development environment
     2. Read the [Project Structure][project-structure] to understand the codebase
@@ -32,7 +32,8 @@
     If you want to **understand how fire risk is calculated**:
 
     1. Read the [Fire Risk Overview][fire-risk-methods-overview] for conceptual background
-    2. Explore [Data Sources and Provenance][input-datasets-technical-reference-how-to]
+    2. Learn about how we performed [Evaluation][evaluation] of our fire risk estimates
+    2. Review our [Data Sources][data-sources]
 
 ## Documentation Structure
 
@@ -72,7 +73,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
     Technical specifications, API documentation, and configuration details.
 
     [:octicons-arrow-right-24: API reference](reference/api.md)
-    [:octicons-arrow-right-24: Deployment](reference/deployment.md)
+    [:octicons-arrow-right-24: Data sources](reference/data-sources.md)
 
 </div>
 
@@ -83,4 +84,4 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 ## License
 
-OCR code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](access-data.md) for information about data licensing.
+Open Climate Risk code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](access-data.md) for information about data licensing.

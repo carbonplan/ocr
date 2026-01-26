@@ -1,6 +1,6 @@
-# OCR Deployment Reference
+# Open Climate Risk Deployment Reference
 
-This document provides a comprehensive reference for the OCR deployment workflow, detailing the complete pipeline from data processing through deployment automation.
+This document provides a comprehensive reference for the Open Climate Risk (OCR) deployment workflow, detailing the complete pipeline from data processing through deployment automation.
 
 ## Overview
 
@@ -134,11 +134,11 @@ The deployment workflow automates the entire release process from development th
 
 ### Deployment Environments
 
-| Environment    | Trigger                         | Purpose                     | URL                          |
-| -------------- | ------------------------------- | --------------------------- | ---------------------------- |
-| **QA**         | PR with `e2e` or `QA/QC` labels | Testing and validation      | `ocr.qa.carbonplan.org`      |
-| **Staging**    | Push to `main` branch           | Pre-production verification | `ocr.staging.carbonplan.org` |
-| **Production** | Release publication             | Live system                 | `ocr.carbonplan.org`         |
+| Environment    | Trigger                         | Purpose                     | URL                                    |
+| -------------- | ------------------------------- | --------------------------- | -------------------------------------- |
+| **QA**         | PR with `e2e` or `QA/QC` labels | Testing and validation      | `ocr.qa.carbonplan.org`                |
+| **Staging**    | Push to `main` branch           | Pre-production verification | `ocr.staging.carbonplan.org`           |
+| **Production** | Release publication             | Live system                 | `carbonplan.org/research/climate-risk` |
 
 ### Deployment Workflow Visualization
 
@@ -189,8 +189,8 @@ graph TB
     QA_PR_Details[["<b>QA Deploy</b><br/>• Regions: y2_x5-x7<br/>• Wipe: true<br/>• URL: ocr.qa.carbonplan.org"]]
     Staging_Main_Details[["<b>Staging Deploy</b><br/>• Regions: Multiple specified<br/>• Wipe: true<br/>• URL: ocr.staging.carbonplan.org"]]
     Manual_Deploy_Details[["<b>Manual Deploy</b><br/>• Regions: User choice<br/>• Wipe: User choice<br/>• URL: Based on environment"]]
-    Production_Details[["<b>Production Deploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
-    Production_Rerun_Details[["<b>Production Redeploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: ocr.carbonplan.org"]]
+    Production_Details[["<b>Production Deploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: carbonplan.org/research/climate-risk"]]
+    Production_Rerun_Details[["<b>Production Redeploy</b><br/>• Regions: All<br/>• Wipe: false<br/>• URL: carbonplan.org/research/climate-risk"]]
 
     QA_PR --> QA_PR_Details
     Staging_Main --> Staging_Main_Details
