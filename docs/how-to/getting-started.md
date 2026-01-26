@@ -1,12 +1,12 @@
-# Getting Started with OCR
+# Getting Started
 
-This guide helps you get started with accessing and using OCR's wind-adjusted fire risk data for the continental United States.
+This guide helps you get started with accessing and using Open Climate Risk fire risk data for the continental United States.
 
-## What is OCR?
+## What is Open Climate Risk?
 
-**Open Climate Risk (OCR)** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. OCR provides:
+**Open Climate Risk** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. It includes:
 
-- **Building-level fire risk** for ~160 million structures
+- **Building-level fire risk** for 156 million structures
 - **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
 - **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
 - **Present and future scenarios**: Current conditions (circa 2011) and future projections (circa 2047)
@@ -15,19 +15,19 @@ This guide helps you get started with accessing and using OCR's wind-adjusted fi
 
 ### Option 1: Explore the Web Tool
 
-The fastest way to explore OCR data is through our [interactive web map](https://ocr.carbonplan.org). The web tool allows you to:
+The fastest way to explore Open Climate Risk data is through our [interactive web map](https://carbonplan.org/research/climate-risk). The web tool allows you to:
 
 - Search for specific addresses or locations
-- View building-level risk scores on a 1-10 scale
-- Explore county, census tract, and census block aggregations
+- View building-level risk scores on a 0-10 scale
+- Explore state, county, census tract, and census block aggregations
 
 ### Option 2: Access Production Data
 
-If you want to analyze OCR data programmatically, you can access our production datasets directly from cloud storage using Python.
+If you want to analyze Open Climate Risk data programmatically, you can access our production datasets directly from cloud storage using Python.
 
 ## Accessing Production Data
 
-OCR's output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
+Open Climate Risk output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
 
 ### Prerequisites
 
@@ -39,13 +39,13 @@ python -m pip install xarray icechunk
 
 ### Load the Dataset
 
-Here's a minimal example to load OCR's wind-adjusted fire risk data:
+Here's a minimal example to load Open Climate Risk wind-adjusted fire risk data:
 
 ```python
 import icechunk
 import xarray as xr
 
-# Connect to OCR's production Icechunk repository
+# Connect to production Icechunk repository
 version = 'v0.13.1'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
     bucket='us-west-2.opendata.source.coop',
@@ -85,21 +85,21 @@ The dataset contains several key variables:
 
 ### For Data Users
 
-- **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing OCR datasets
+- **[Working With Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
 - **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
 - **[Data Downloads](../access-data.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 
--   **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
--   **[Data Sources](../reference/data-sources.md)**: Learn about data sources
+- **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
+- **[Data Sources](../reference/data-sources.md)**: Learn about data sources
 
 ### For Developers
 
--   **[Installation](installation.md)**: Set up OCR for local development
--   **[Project Structure](../reference/project-structure.md)**: Understand the codebase
--   **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
--   **[Input datasets](../methods/input-datasets.md)**: View technical reference for working with input datasets
+- **[Installation](installation.md)**: Set up project for local development
+- **[Project Structure](../reference/project-structure.md)**: Understand the codebase
+- **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
+- **[Working With Input Datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support
 

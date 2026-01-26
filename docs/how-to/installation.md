@@ -1,6 +1,6 @@
-# Install OCR for Development
+# Install `ocr` for Development
 
-This guide shows how to set up OCR for local development using pixi.
+This guide shows how to set up Open Climate Risk (`ocr`) for local development using pixi.
 
 ## Prerequisites
 

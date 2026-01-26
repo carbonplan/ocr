@@ -1,6 +1,6 @@
 # Data Schema
 
-OCR produces two primary types of output data: **raster (tensor) datasets** and **vector (point) datasets**. This page documents the structure, variables, and schema of both output types.
+Open Climate Risk (OCR) produces two primary types of output data: **raster (tensor) datasets** and **vector (point) datasets**. This page documents the structure, variables, and schema of both output types.
 
 ## Overview
 

@@ -1,6 +1,6 @@
-# Release OCR to Production
+# Release to Production
 
-This guide shows how to release a new version of OCR to production.
+This guide shows how to release a new version of the project to production.
 
 ## Prerequisites
 
@@ -102,7 +102,7 @@ After deployment completes (check Actions page for ✓):
 
 ```bash
 # Check production environment
-open https://ocr.carbonplan.org
+open https://carbonplan.org/research/climate-risk
 ```
 
 Verify:
@@ -186,7 +186,7 @@ This redeploys the exact code from that existing release tag to production.
 
 ## Reference
 
-- **Production URL**: <https://ocr.carbonplan.org>
+- **Production URL**: <https://carbonplan.org/research/climate-risk>
 - **Staging URL**: <https://ocr.staging.carbonplan.org>
 - **Workflow file**: `.github/workflows/deploy.yaml`
 - **Deployment details**: See [deployment reference](../reference/deployment.md)
