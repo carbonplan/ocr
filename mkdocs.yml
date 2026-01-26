@@ -54,12 +54,12 @@ nav:
           - Developer Guides:
                 - Installation: how-to/installation.md
                 - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
+                - Working With Input Datasets: how-to/work-with-input-datasets.md
                 - Release Procedure: how-to/release-procedure.md
                 - Snapshot Testing: how-to/snapshot-testing.md
 
     - Methods:
           - Overview: methods/fire-risk/overview.md
-          - Input Datasets: methods/fire-risk/input-datasets.md
           - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
           - Evaluation:
                 - Overview: methods/fire-risk/evaluation.md

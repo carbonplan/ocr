@@ -1,6 +1,6 @@
 # Project structure
 
-This page documents the OCR repository layout and explains the purpose of key directories and files. Use this as a technical reference when contributing code, adding datasets, or extending documentation.
+This page documents the Open Climate Risk (OCR) repository layout and explains the purpose of key directories and files. Use this as a technical reference when contributing code, adding datasets, or extending documentation.
 
 ---
 
@@ -174,25 +174,14 @@ Follows the [Diátaxis framework](https://diataxis.fr/) for structured documenta
 
 ```text
 docs/
-├── how-to/              # Task-oriented guides
-│   ├── installation.md
-│   ├── getting-started.md
-│   ├── snapshot-testing.md
-│   ├── release-procedure.md
-│   └── work-with-data.ipynb
-├── tutorials/           # Learning-oriented lessons
-│   ├── calculate-wind-adjusted-fire-risk-for-a-region.ipynb
-│   └── data-pipeline.md
-├── reference/           # Information-oriented technical specs
-│   ├── api.md           # Auto-generated API docs
-│   ├── data-schema.md
-│   ├── data-downloads.md
-│   ├── deployment.md
-│   └── project-structure.md (this file)
-├── methods/             # Explanation-oriented background
-│   └── fire-risk/       # Scientific methodology
-├── assets/              # Images, stylesheets, static files
-└── index.md             # Documentation home page
+├── how-to/                    # Task-oriented guides
+├── tutorials/                 # Learning-oriented lessons
+├── reference/                 # Information-oriented technical specs
+├── methods/                   # Explanation-oriented background
+├── assets/                    # Images, stylesheets, static files
+└── access-data.md             # Quick reference for downloads
+└── terms-of-data-access.md    # Terms that apply to downloads
+└── index.md                   # Documentation home page
 ```
 
 Documentation is built with MkDocs Material and deployed automatically on merge to `main`.
@@ -285,8 +274,9 @@ GitHub Actions workflows for automated testing, building, and deployment:
 
 1. **Create ingestion script** under `input-data/tensor/` or `input-data/vector/`
 2. **Register dataset** in `ocr.datasets` catalog with metadata
-3. **Document provenance** under `docs/methods/` with sources, processing steps, and limitations
-4. **Add schema documentation** to `docs/reference/data-schema.md`
+3. **Document provenance**: Add new source information to `docs/reference/data-sources.md`
+4. **Document ingestion** Add information to `docs/how-to/input-dataset-ingestion.md`
+5. **Document workflow** Add information to `docs/how-to/work-with-input-datasets.md`
 
 ### Updating documentation
 
