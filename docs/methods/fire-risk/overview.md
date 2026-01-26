@@ -4,7 +4,7 @@ This page explains the high-level methodology used to compute building-level wil
 
 ## Summary
 
-OCR's fire risk model computes building-level wildfire risk scores by:
+The Open Climate Risk fire risk model computes building-level wildfire risk scores by:
 
 1. Taking baseline burn probability data from [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025) and spreading it into developed areas using wind-informed blurring
 2. Multiplying the wind-adjusted burn probability by [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024) conditional risk values (cRPS)

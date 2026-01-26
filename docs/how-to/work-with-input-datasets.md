@@ -1,6 +1,6 @@
 # Working With Input Datasets (technical reference + how-to)
 
-This page documents the main input datasets used by OCR and shows how to access them programmatically via the `ocr` dataset catalog. Treat this as a technical reference for dataset names, example usage, and ingestion notes. Information about data provenance is available on the [Data Sources](../../reference/data-sources.md) page.
+This page documents the main input datasets used in Open Climate Risk and shows how to access them programmatically via the `ocr` dataset catalog. Treat this as a technical reference for dataset names, example usage, and ingestion notes. Information about data provenance is available on the [Data Sources](../../reference/data-sources.md) page.
 
 Accessing the catalog
 

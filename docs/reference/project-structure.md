@@ -1,6 +1,6 @@
 # Project structure
 
-This page documents the OCR repository layout and explains the purpose of key directories and files. Use this as a technical reference when contributing code, adding datasets, or extending documentation.
+This page documents the Open Climate Risk (OCR) repository layout and explains the purpose of key directories and files. Use this as a technical reference when contributing code, adding datasets, or extending documentation.
 
 ---
 

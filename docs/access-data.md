@@ -1,6 +1,6 @@
-# Data Downloads (Beta)
+# Data Downloads
 
-While OCR is in beta, there a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
+There a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
 <!-- prettier-ignore-start -->
 !!! warning "License Agreement"
@@ -78,7 +78,7 @@ The schemas for each of the full datasets are described on the [data schema](./r
 
 ## Downloading subsetted data in the web tool
 
-The [web tool](https://ocr.carbonplan.org/) can be used to access region-specific, subsetted downloads.
+The [web tool](https://carbonplan.org/research/climate-risk) can be used to access region-specific, subsetted downloads.
 
 ### Steps
 
