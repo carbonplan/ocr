@@ -6,7 +6,7 @@ This guide helps you get started with accessing and using Open Climate Risk fire
 
 **Open Climate Risk** is CarbonPlan's platform for analyzing building-level wildfire risk across CONUS. It includes:
 
-- **Building-level fire risk** for ~160 million structures
+- **Building-level fire risk** for 156 million structures
 - **Wind-adjusted fire spread modeling** that accounts for directional fire propagation
 - **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
 - **Present and future scenarios**: Current conditions (circa 2011) and future projections (circa 2047)
