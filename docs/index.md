@@ -15,8 +15,8 @@
 
     If you want to **access and analyze fire risk data**:
 
-    1. Check [Data Downloads](access-data.md) for an overview of all available formats
-    2. Start with [Working with Data][access-ocr-output-data] to learn how to load production datasets
+    1. Visit [Access Data](access-data.md) for an overview of all available formats
+    2. Start with [Working with Data][./how-to/work-with-data.ipynb] to learn how to load production datasets
     3. Explore the [Data Schema][data-schema] to understand available variables
 
 === "Contributing to Open Climate Risk"
