@@ -73,7 +73,7 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
     Technical specifications, API documentation, and configuration details.
 
     [:octicons-arrow-right-24: API reference](reference/api.md)
-    [:octicons-arrow-right-24: Deployment](reference/deployment.md)
+    [:octicons-arrow-right-24: Data sources](reference/data-sources.md)
 
 </div>
 
