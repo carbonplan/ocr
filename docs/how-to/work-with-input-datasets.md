@@ -26,7 +26,7 @@ These are n-dimensional raster datasets stored in Zarr/Icechunk stores.
 
 ```python
 from ocr import catalog
-rps_30 = catalog.get_dataset('riley-et-al-2025-2047-30m-4326').to_xarray()
+crps = catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray()
 ```
 
 ### USFS climate runs (2011 / 2047)
