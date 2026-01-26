@@ -85,7 +85,7 @@ The dataset contains several key variables:
 
 ### For Data Users
 
-- **[Working with Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
+- **[Working With Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
 - **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
 - **[Data Downloads](../access-data.md)**: Direct download links and bulk access options
 
@@ -99,7 +99,7 @@ The dataset contains several key variables:
 - **[Installation](installation.md)**: Set up project for local development
 - **[Project Structure](../reference/project-structure.md)**: Understand the codebase
 - **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
-- **[Working With Input Datasets](../how-to/work-with-input-datasets.md)**: View technical reference for working with input datasets
+- **[Working With Input Datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support
 
