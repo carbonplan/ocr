@@ -211,8 +211,7 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 ### Data Quality
 
--   Buildings with NaN values (outside CONUS or unburnable areas) are excluded
--   Risk values < 0.01 are trimmed to 0 to match frontend binning
+-   Buildings with NaN values (outside CONUS) are excluded
 -   Building locations sourced from Overture Maps dataset
 
 ### File Location
@@ -233,12 +232,12 @@ This single-file format enables:
 
 ### Expected Value Ranges
 
-| Variable                                        | Expected Range | Notes                                                                                           |
-| ----------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS.                        |
-| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn                                 |
-| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                        |
-| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist) else 0 (if fire-weather hours do not exist) |
+| Variable                                        | Expected Range | Notes                                                                                                                                                                            |
+| ----------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS.                                                                                                         |
+| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn                                                                                                                  |
+| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                                                                                                         |
+| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (normalized across 8 directions); all values are 0 where no hours have Fosberg fire weather index (FFWI) at or above the pixel's 99th percentile threshold |
 
 ### Quality Checks
 
@@ -278,4 +277,4 @@ All datasets include descriptive metadata attributes:
 ## Related Documentation
 
 -   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
-    -Deployment](deployment.md): Details on data storage infrastructure
+-   [Deployment](deployment.md): Details on data storage infrastructure
