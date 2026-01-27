@@ -180,7 +180,6 @@ Exploratory Jupyter notebooks for prototyping and analysis:
 -   `wind_spread.ipynb` - Wind-driven fire spread modeling
 -   `wind-spreading-kernels.ipynb` - Wind spread kernel experiments
 -   `methods-figures.ipynb` - Generate figures for methodology documentation
--   `verify-data.ipynb` - Data validation and verification
 -   `benchmarking.ipynb` - Performance benchmarking experiments
 
 !!! note
@@ -274,7 +273,6 @@ GitHub Actions workflows for automated testing, building, and deployment:
 
 -   **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
 -   **`scripts/`** - Helper scripts for environment export and Coiled software creation
--   **`copilot-instructions.md`** - Project-specific instructions for GitHub Copilot
 -   **`dependabot.yaml`** - Automated dependency updates configuration
 -   **`release-drafter.yml`** - Automated release notes generation
 
