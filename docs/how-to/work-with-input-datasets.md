@@ -21,7 +21,7 @@ These are n-dimensional raster datasets stored in Zarr/Icechunk stores.
 ### USFS Wildfire Risk to Communities
 
 -   Source: [Scott et al. 2024](../reference/data-sources.md#scott-et-al-2024)
--   Ingested to: `input-data/tensor/USFS_fire_risk/`
+-   Ingested to: `ocr/input_datasets/tensor/usfs_scott_2024.py`
 -   Typical usage:
 
 ```python
@@ -51,18 +51,11 @@ Vector data are building footprints, administrative boundaries, and other GIS ve
 ### Overture buildings
 
 -   Source: [Overture Maps Foundation buildings dataset](../reference/data-sources.md#overture-maps-foundation-buildings-dataset)
--   Ingested subset for CONUS in `input-data/vector/overture_vector/`
+-   Ingested subset for CONUS in `ocr/input_datasets/vector/overture.py`
 
 ```python
 conus_buildings = catalog.get_dataset('conus-overture-buildings')
 ```
-
-## Ingestion notes
-
--   All ingestion scripts live in `input-data/`. When adding a new dataset:
-    1. Add a script under `input-data/` that downloads, preprocesses, and writes data to an Icechunk store or geoparquet.
-    2. Add a registration entry in the `ocr` catalog so `catalog.get_dataset(name)` returns a usable object.
-    3. Add update [this page](/) as well as the [Data Sources](../reference/data-sources.md) page.
 
 <!-- prettier-ignore-start -->
 !!! note "Accessing Private Data"

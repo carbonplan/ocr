@@ -53,5 +53,5 @@ pixi run tests
 
 ## Next steps
 
--   See [Data Pipeline Tutorial][tutorials/data-pipeline] to run the processing pipeline
--   Read [Project Structure][reference/project-structure] to understand the codebase
+-   See [Data Pipeline Tutorial](tutorials/data-pipeline) to run the processing pipeline
+-   Read [Project Structure](reference/project-structure) to understand the codebase
