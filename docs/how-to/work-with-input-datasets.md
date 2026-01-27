@@ -64,4 +64,8 @@ conus_buildings = catalog.get_dataset('conus-overture-buildings')
     2. Add a registration entry in the `ocr` catalog so `catalog.get_dataset(name)` returns a usable object.
     3. Add update [this page](/) as well as the [Data Sources](../reference/data-sources.md) page.
 
-Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
+<!-- prettier-ignore-start -->
+!!! note "Accessing Private Data"
+    Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
+
+<!-- prettier-ignore-end -->

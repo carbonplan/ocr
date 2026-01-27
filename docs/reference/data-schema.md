@@ -22,13 +22,13 @@ Raster datasets are gridded geospatial layers stored at 30m resolution in EPSG:4
 
 ### Spatial Characteristics
 
-| Property           | Value                          |
-| ------------------ | ------------------------------ |
-| **Resolution**     | 30m (~0.00028 degrees)         |
-| **Projection**     | EPSG:4326 (WGS84)              |
-| **Extent**         | CONUS                          |
-| **Chunking**       | Regional chunks (configurable) |
-| **Storage Format** | Icechunk (Zarr-based)          |
+| Property           | Value                  |
+| ------------------ | ---------------------- |
+| **Resolution**     | 30m (~0.00028 degrees) |
+| **Projection**     | EPSG:4326 (WGS84)      |
+| **Extent**         | CONUS                  |
+| **Chunking**       | Regional chunks        |
+| **Storage Format** | Icechunk (Zarr-based)  |
 
 ### Fire Risk Variables
 
@@ -72,9 +72,9 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 
 **Properties:**
 
-- Values sum to 1.0 for pixels with fire-weather hours
-- Values are 0 for pixels with no fire-weather hours
-- Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
+-   Values sum to 1.0 for pixels with fire-weather hours
+-   Values are 0 for pixels with no fire-weather hours
+-   Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
 
 ### Data Processing Flow
 
@@ -132,9 +132,9 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 ### Data Quality
 
-- Buildings with NaN values (outside CONUS or unburnable areas) are excluded
-- Risk values < 0.01 are trimmed to 0 to match frontend binning
-- Building locations sourced from Overture Maps dataset
+-   Buildings with NaN values (outside CONUS or unburnable areas) are excluded
+-   Risk values < 0.01 are trimmed to 0 to match frontend binning
+-   Building locations sourced from Overture Maps dataset
 
 ### File Location
 
@@ -146,25 +146,26 @@ The consolidated building dataset is available at:
 
 This single-file format enables:
 
-- Efficient CONUS-wide spatial queries
-- Direct access for analysis tools and workflows
-- Simplified data distribution and versioning
+-   Efficient CONUS-wide spatial queries
+-   Direct access for analysis tools and workflows
+-   Simplified data distribution and versioning
 
 ## Data Validation
 
 ### Expected Value Ranges
 
-| Variable                                        | Expected Range | Notes                                                                    |
-| ----------------------------------------------- | -------------- | ------------------------------------------------------------------------ |
-| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS. |
-| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn          |
-| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                 |
-| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist)                      |
+| Variable                                        | Expected Range | Notes                                                                                           |
+| ----------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS.                        |
+| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn                                 |
+| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                        |
+| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (if fire-weather hours exist) else 0 (if fire-weather hours do not exist) |
 
 ### Quality Checks
 
 1. **Spatial Consistency**: All raster layers share identical coordinate systems and extents
 2. **Missing Data**: NaN values appear only in:
+
     - Unburnable areas (water, urban, etc.)
     - Regions with no fire-weather hours (for wind distributions)
 
@@ -174,28 +175,28 @@ This single-file format enables:
 
 All datasets include descriptive metadata attributes:
 
-- `description`: Human-readable description of the variable
-- `long_name`: Extended variable name
-- `units`: Physical units (if applicable)
-- `composition`: Method used for compositing (e.g., "weighted")
-- `direction_labels`: Cardinal/ordinal direction labels for wind data
-- `weights_source`: Source of weights used in calculations
+-   `description`: Human-readable description of the variable
+-   `long_name`: Extended variable name
+-   `units`: Physical units (if applicable)
+-   `composition`: Method used for compositing (e.g., "weighted")
+-   `direction_labels`: Cardinal/ordinal direction labels for wind data
+-   `weights_source`: Source of weights used in calculations
 
 ## Access Patterns
 
 ### Raster Data
 
-- **By Region**: Query specific regional chunks using latitude/longitude slices
-- **Full CONUS**: Access complete dataset via Icechunk storage
+-   **By Region**: Query specific regional chunks using latitude/longitude slices
+-   **Full CONUS**: Access complete dataset via Icechunk storage
 
 ### Vector Data
 
-- **Full Dataset**: Query the consolidated CONUS-wide building dataset
-- **Spatial Query**: Use bounding box attributes for efficient spatial filtering
-- **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
-- **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
+-   **Full Dataset**: Query the consolidated CONUS-wide building dataset
+-   **Spatial Query**: Use bounding box attributes for efficient spatial filtering
+-   **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
+-   **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
 
 ## Related Documentation
 
-- [Data Downloads](../access-data.md): Information on accessing and downloading datasets
-- [Deployment](deployment.md): Details on data storage infrastructure
+-   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
+-   [Deployment](deployment.md): Details on data storage infrastructure

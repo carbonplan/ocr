@@ -28,8 +28,16 @@ graph TB
             PIPELINE --> PROCESS[process_region.py]
             PIPELINE --> PARTITION[partition.py]
             PIPELINE --> STATS[fire_wind_risk_regional_aggregator.py]
-            PIPELINE --> PMTILES[create_building_pmtiles.py + create_regional_pmtiles.py]
-            PIPELINE --> WRITERS[write_*_analysis_files.py]
+            PIPELINE --> PYRAMID[create_pyramid.py]
+            PIPELINE --> PMTILES[create_building_pmtiles.py<br/>create_building_centroid_pmtiles.py<br/>create_regional_pmtiles.py]
+            PIPELINE --> WRITERS[write_aggregated_region_analysis_files.py]
+
+            OCR --> INPUTDS[input_datasets/]
+            INPUTDS --> INPUTCLI[cli.py - Ingest CLI]
+            INPUTDS --> INPUTBASE[base.py - Base classes]
+            INPUTDS --> STORAGE[storage.py - Storage utils]
+            INPUTDS --> INPUTTENSOR[tensor/ - Tensor ingestion]
+            INPUTDS --> INPUTVECTOR[vector/ - Vector ingestion]
 
             OCR --> RISKS[risks/]
             RISKS --> FIRE[fire.py - Risk models]
@@ -107,26 +115,37 @@ Contains all production code organized into logical modules:
 
 Orchestration layer for local and cloud execution:
 
-- **`cli.py`** - Typer-based CLI application (`ocr` command) with commands for processing regions, aggregation, PMTiles generation, and analysis file creation
-- **`managers.py`** - Abstract batch manager interface with `CoiledBatchManager` (cloud) and `LocalBatchManager` (local) implementations
+-   **`cli.py`** - Typer-based CLI application (`ocr` command) with commands for processing regions, aggregation, PMTiles generation, and analysis file creation
+-   **`managers.py`** - Abstract batch manager interface with `CoiledBatchManager` (cloud) and `LocalBatchManager` (local) implementations
 
 ### Pipeline (`pipeline/`)
 
 Internal processing modules coordinated by the CLI. These implement the data processing workflow:
 
-- **`process_region.py`** - Sample risk values to building locations
-- **`partition.py`** - Partition GeoParquet by geographic regions
-- **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
-- **`create_building_pmtiles.py`** - Generate PMTiles for building data visualization
-- **`create_regional_pmtiles.py`** - Generate region-specific PMTiles
-- **`write_aggregated_region_analysis_files.py`** - Write regional summary tables
-- **`write_per_region_analysis_files.py`** - Write per-region analysis outputs (CSV/JSON)
+-   **`process_region.py`** - Sample risk values to building locations
+-   **`partition.py`** - Partition GeoParquet by geographic regions
+-   **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
+-   **`create_pyramid.py`** - Generate ndpyramid multiscale Zarr for web visualization
+-   **`create_building_pmtiles.py`** - Generate PMTiles for building footprint visualization
+-   **`create_building_centroid_pmtiles.py`** - Generate PMTiles for building centroid visualization
+-   **`create_regional_pmtiles.py`** - Generate PMTiles for regional aggregated statistics
+-   **`write_aggregated_region_analysis_files.py`** - Write regional summary tables for all regions
 
 ### Risk models (`risks/`)
 
 Domain-specific risk calculation logic:
 
-- **`fire.py`** - Fire/wind risk kernels, wind classification, elliptical spread models
+-   **`fire.py`** - Fire/wind risk kernels, wind classification, elliptical spread models
+
+### Input datasets (`input_datasets/`)
+
+Infrastructure for ingesting and processing input datasets:
+
+-   **`cli.py`** - CLI application for dataset ingestion (`ocr ingest-data` command)
+-   **`base.py`** - Abstract base classes for dataset processors
+-   **`storage.py`** - Storage utilities for managing dataset files
+-   **`tensor/`** - Tensor (raster) dataset ingestion modules
+-   **`vector/`** - Vector (GeoParquet) dataset ingestion modules
 
 ---
 
@@ -136,15 +155,13 @@ Organized storage for input datasets and ingestion scripts:
 
 ### Tensor data (`tensor/`)
 
-- **`conus404/`** - CONUS404 climate reanalysis data
-- **`USFS_fire_risk/`** - USFS fire risk rasters
+-   **`conus404/`** - CONUS404 climate reanalysis data (wind speed, direction, temperature, etc.)
+-   **`USFS-fire-risk/`** - USFS fire risk rasters (burn probability, flame length)
 
 ### Vector data (`vector/`)
 
-- **`aggregated_regions/`** - Regional boundaries for aggregation
-- **`alexandre-2016/`** - Historical fire perimeter data
-- **`calfire_stuctures_destroyed/`** - Structure damage records
-- **`overture_vector/`** - Building footprints from Overture Maps
+-   **`alexandre-2016/`** - Historical fire perimeter data
+-   **`calfire_stuctures_destroyed/`** - Structure damage records from CalFire
 
 !!! note
 
@@ -156,11 +173,15 @@ Organized storage for input datasets and ingestion scripts:
 
 Exploratory Jupyter notebooks for prototyping and analysis:
 
-- `conus404-winds.ipynb` - Wind data exploration
-- `elliptical_kernel.ipynb` - Fire spread kernel development
-- `fire-weather-wind-mode-reprojected.ipynb` - Wind mode analysis
-- `horizontal-scaling-via-spatial-chunking.ipynb` - Performance optimization experiments
-- `wind_spread.ipynb` - Wind-driven fire spread modeling
+-   `conus404-winds.ipynb` - Wind data exploration and CONUS404 analysis
+-   `elliptical_kernel.ipynb` - Fire spread kernel development
+-   `evaluating_wind_spreading.ipynb` - Wind spreading validation
+-   `fire-weather-wind-mode-reprojected.ipynb` - Wind mode analysis
+-   `wind_spread.ipynb` - Wind-driven fire spread modeling
+-   `wind-spreading-kernels.ipynb` - Wind spread kernel experiments
+-   `methods-figures.ipynb` - Generate figures for methodology documentation
+-   `verify-data.ipynb` - Data validation and verification
+-   `benchmarking.ipynb` - Performance benchmarking experiments
 
 !!! note
 
@@ -216,26 +237,26 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 
 ### Package and environment
 
-- **`pyproject.toml`** - Project metadata, dependencies (managed by Pixi), build config, tool settings (ruff, pytest, coverage)
-- **`pixi.lock`** - Locked dependency versions for reproducible environments
-- **`environment.yaml`** - Conda environment export (auto-generated from Pixi for Coiled deployments)
+-   **`pyproject.toml`** - Project metadata, dependencies (managed by Pixi), build config, tool settings (ruff, pytest, coverage)
+-   **`pixi.lock`** - Locked dependency versions for reproducible environments
+-   **`environment.yaml`** - Conda environment export (auto-generated from Pixi for Coiled deployments)
 
 ### Documentation
 
-- **`mkdocs.yml`** - MkDocs configuration: theme, plugins, navigation structure
+-   **`mkdocs.yml`** - MkDocs configuration: theme, plugins, navigation structure
 
 ### Environment templates
 
-- **`ocr-local.env`** - Template for local development (uses local filesystem)
-- **`ocr-coiled-s3.env`** - Template for cloud execution (S3 backend)
-- **`ocr-coiled-s3-staging.env`** - Staging environment configuration
-- **`ocr-coiled-s3-production.env`** - Production environment configuration
+-   **`ocr-local.env`** - Template for local development (uses local filesystem)
+-   **`ocr-coiled-s3.env`** - Template for cloud execution (S3 backend)
+-   **`ocr-coiled-s3-staging.env`** - Staging environment configuration
+-   **`ocr-coiled-s3-production.env`** - Production environment configuration
 
 ### Code quality
 
-- **`.pre-commit-config.yaml`** - Pre-commit hooks for linting and formatting
-- **`.prettierrc.json`** - Prettier configuration for Markdown/YAML formatting
-- **`codecov.yml`** - Code coverage reporting configuration
+-   **`.pre-commit-config.yaml`** - Pre-commit hooks for linting and formatting
+-   **`.prettierrc.json`** - Prettier configuration for Markdown/YAML formatting
+-   **`codecov.yml`** - Code coverage reporting configuration
 
 ---
 
@@ -243,7 +264,7 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 
 Helper scripts for cloud infrastructure setup:
 
-- **`create_s3_bucket.py`** - Script to create and configure S3 buckets with appropriate permissions and lifecycle policies
+-   **`create_s3_bucket.py`** - Script to create and configure S3 buckets with appropriate permissions and lifecycle policies
 
 ---
 
@@ -251,11 +272,11 @@ Helper scripts for cloud infrastructure setup:
 
 GitHub Actions workflows for automated testing, building, and deployment:
 
-- **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
-- **`scripts/`** - Helper scripts for environment export and Coiled software creation
-- **`copilot-instructions.md`** - Project-specific instructions for GitHub Copilot
-- **`dependabot.yaml`** - Automated dependency updates configuration
-- **`release-drafter.yml`** - Automated release notes generation
+-   **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
+-   **`scripts/`** - Helper scripts for environment export and Coiled software creation
+-   **`copilot-instructions.md`** - Project-specific instructions for GitHub Copilot
+-   **`dependabot.yaml`** - Automated dependency updates configuration
+-   **`release-drafter.yml`** - Automated release notes generation
 
 ---
 
