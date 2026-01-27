@@ -5,15 +5,66 @@ Open Climate Risk (OCR) produces two primary types of output data: **raster (ten
 ## Overview
 
 ```mermaid
-graph TD
-    A[OCR Pipeline] --> B[Raster Datasets]
-    A --> C[Vector Datasets]
-    B --> D[Wind-Adjusted Risk Layers]
-    B --> E[Wind Direction Distribution]
-    C --> F[Building-Level Risk Samples]
-    D --> G[Stored in Icechunk]
-    E --> G
-    F --> H[Stored as GeoParquet]
+%%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
+graph TB
+    %% Input Data Sources
+    subgraph Inputs["<b>Input Data Sources</b>"]
+        USFS[USFS Fire Risk<br/>Scott et al. 2024<br/>Riley et al. 2025]
+        CONUS[CONUS404 Climate<br/>Rasmussen et al. 2023]
+        Buildings[Overture Maps<br/>Building Footprints]
+    end
+
+    %% Processing Pipeline
+    subgraph Pipeline["<b>OCR Processing Pipeline</b>"]
+        ProcessRegion[Process Region<br/>Wind-Adjusted Risk Calculation]
+        WindCalc[Wind Direction<br/>Distribution]
+        Sample[Sample Risk Values<br/>at Building Locations]
+    end
+
+    %% Raster Outputs
+    subgraph RasterOutputs["<b>Raster Datasets (30m resolution)</b>"]
+        RiskLayers["<b>Fire Risk Variables</b><br/>• rps_2011, rps_2047<br/>• bp_2011, bp_2047<br/>• Reference: rps_scott, crps_scott<br/>• Reference: bp_2011_riley, bp_2047_riley"]
+        WindDist["<b>Wind Distribution</b><br/>• wind_direction_distribution<br/>• 8 cardinal/ordinal directions<br/>• Derived from CONUS404"]
+    end
+
+    %% Vector Outputs
+    subgraph VectorOutputs["<b>Vector Datasets (Point)</b>"]
+        BuildingRisk["<b>Building-Level Risk</b><br/>• Same variables as raster<br/>• Sampled at building centroids<br/>• CONUS-wide coverage<br/>"]
+    end
+
+    %% Storage Formats
+    subgraph Storage["<b>Storage Formats</b>"]
+        Icechunk[("<b>Icechunk</b><br/>Zarr-based<br/>S3-backed<br/>Versioned")]
+        GeoParquet[("<b>GeoParquet</b><br/>zstd compressed<br/>Consolidated<br/>Single file")]
+    end
+
+    %% Data Flow
+    USFS --> ProcessRegion
+    CONUS --> ProcessRegion
+    CONUS --> WindCalc
+    Buildings --> Sample
+
+    ProcessRegion --> RiskLayers
+    WindCalc --> WindDist
+    ProcessRegion --> Sample
+
+    RiskLayers --> Icechunk
+    WindDist --> Icechunk
+    Sample --> BuildingRisk
+    BuildingRisk --> GeoParquet
+
+    %% Styling
+    classDef input fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985
+    classDef process fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6
+    classDef raster fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    classDef vector fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534
+    classDef storage fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#9f1239
+
+    class USFS,CONUS,Buildings input
+    class ProcessRegion,WindCalc,Sample process
+    class RiskLayers,WindDist raster
+    class BuildingRisk vector
+    class Icechunk,GeoParquet storage
 ```
 
 ## Raster (Tensor) Datasets
@@ -79,17 +130,45 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 ### Data Processing Flow
 
 ```mermaid
+%%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
 flowchart LR
-    A[Riley et al., (2025) BP] --> B[Directional Convolution]
-    C[Wind Distribution] --> D[Weighted Composite]
-    B --> D
-    D --> E[Wind-Adjusted BP]
-    E --> F[Multiply by CRPS]
-    F --> G[RPS]
+    %% Input Data
+    subgraph Inputs["<b>Input Data</b>"]
+        BP_Riley["<b>Riley et al. (2025)</b><br/>Burn Probability<br/>• bp_2011_riley<br/>• bp_2047_riley"]
+        CRPS["<b>Scott et al. (2024)</b><br/>Conditional RPS<br/>• crps_scott"]
+        WindDist["<b>CONUS404</b><br/>Wind Distribution<br/>• 8 directions<br/>• Fire-weather hours"]
+    end
 
-    style A fill:#e1f5ff
-    style C fill:#e1f5ff
-    style G fill:#ffe1e1
+    %% Processing Steps
+    subgraph Processing["<b>Wind-Adjustment Processing</b>"]
+        Convolve["<b>Directional Convolution</b><br/>Apply elliptical kernel<br/>for each wind direction<br/>30m resolution"]
+        Weight["<b>Weighted Composite</b><br/>Combine 8 directions<br/>using wind frequency<br/>as weights"]
+    end
+
+    %% Intermediate Results
+    WindAdjBP["<b>Wind-Adjusted BP</b><br/>bp_2011, bp_2047<br/>Accounts for directional<br/>fire spread"]
+
+    %% Final Output
+    FinalRPS["<b>Risk to Potential Structures</b><br/>rps_2011, rps_2047<br/>Annual risk [%]<br/>Ready for sampling"]
+
+    %% Data Flow
+    BP_Riley --> Convolve
+    WindDist --> Weight
+    Convolve --> Weight
+    Weight --> WindAdjBP
+    WindAdjBP --> |"Multiply"| FinalRPS
+    CRPS --> |"Multiply"| FinalRPS
+
+    %% Styling
+    classDef input fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985
+    classDef process fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6
+    classDef intermediate fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    classDef output fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534
+
+    class BP_Riley,CRPS,WindDist input
+    class Convolve,Weight process
+    class WindAdjBP intermediate
+    class FinalRPS output
 ```
 
 ## Vector (Point) Datasets
@@ -199,4 +278,4 @@ All datasets include descriptive metadata attributes:
 ## Related Documentation
 
 -   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
--   [Deployment](deployment.md): Details on data storage infrastructure
+    -Deployment](deployment.md): Details on data storage infrastructure
