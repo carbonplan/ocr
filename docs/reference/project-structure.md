@@ -156,7 +156,6 @@ Organized storage for input datasets and ingestion scripts:
 ### Tensor data (`tensor/`)
 
 -   **`conus404/`** - CONUS404 climate reanalysis data (wind speed, direction, temperature, etc.)
--   **`USFS-fire-risk/`** - USFS fire risk rasters (burn probability, flame length)
 
 ### Vector data (`vector/`)
 
