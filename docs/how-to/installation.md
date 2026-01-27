@@ -53,6 +53,5 @@ pixi run tests
 
 ## Next steps
 
--   Run [integration tests with snapshots][snapshot-testing-with-xarrayzarr]: `pixi run tests -m integration`
--   See [Data Pipeline Tutorial][ocr-data-pipeline] to run the processing pipeline
--   Read [Project Structure][project-structure] to understand the codebase
+-   See [Data Pipeline Tutorial][tutorials/data-pipeline] to run the processing pipeline
+-   Read [Project Structure][reference/project-structure] to understand the codebase
