@@ -123,8 +123,7 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 
 **Properties:**
 
--   Values sum to 1.0 for pixels with fire-weather hours
--   Values are 0 for pixels with no fire-weather hours
+-   Values sum to 1.0 for all pixels (normalized probability distribution)
 -   Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
 
 ### Data Processing Flow
@@ -232,20 +231,17 @@ This single-file format enables:
 
 ### Expected Value Ranges
 
-| Variable                                        | Expected Range | Notes                                                                                                                                                                            |
-| ----------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS.                                                                                                         |
-| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn                                                                                                                  |
-| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                                                                                                         |
-| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (normalized across 8 directions); all values are 0 where no hours have Fosberg fire weather index (FFWI) at or above the pixel's 99th percentile threshold |
+| Variable                                        | Expected Range | Notes                                                                                            |
+| ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| Risk to potential structures (RPS)              | [0, 100]       | Annual risk of loss [%] to potential structures. Product of BP and cRPS.                         |
+| Conditional risk to potential structures (cRPS) | [0, 100]       | Risk of loss [%] to a hypothetical structure if it were to burn                                  |
+| Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                         |
+| Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (normalized probability distribution across 8 cardinal/ordinal directions) |
 
 ### Quality Checks
 
 1. **Spatial Consistency**: All raster layers share identical coordinate systems and extents
-2. **Missing Data**: NaN values appear only in:
-
-    - Unburnable areas (water, urban, etc.)
-    - Regions with no fire-weather hours (for wind distributions)
+2. **Missing Data**: NaN values appear only in unburnable areas (water, urban, etc.)
 
 3. **Normalization**: Wind direction distributions sum to 1.0 (within tolerance of 1e-5) where valid
 
