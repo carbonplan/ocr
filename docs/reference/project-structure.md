@@ -61,7 +61,6 @@ graph TB
             DOCSDIR --> HOWTO[how-to/ - Guides]
             DOCSDIR --> METHODS[methods/ - Science docs]
             DOCSDIR --> REFERENCE[reference/ - API & specs]
-            DOCSDIR --> TUTORIALS[tutorials/ - Workflows]
         end
 
         subgraph Testing["Testing & QA"]
@@ -183,7 +182,7 @@ Exploratory Jupyter notebooks for prototyping and analysis:
 
 !!! note
 
-    **Convention**: When a notebook reaches maturity and demonstrates stable workflows, consider converting it into a tutorial under `docs/tutorials/`.
+    **Convention**: When a notebook reaches maturity and demonstrates stable workflows, consider converting it into a how-to guide under `docs/how-to/`.
 
 ---
 
@@ -194,7 +193,6 @@ Follows the [Diátaxis framework](https://diataxis.fr/) for structured documenta
 ```text
 docs/
 ├── how-to/                    # Task-oriented guides
-├── tutorials/                 # Learning-oriented lessons
 ├── reference/                 # Information-oriented technical specs
 ├── methods/                   # Explanation-oriented background
 ├── assets/                    # Images, stylesheets, static files
@@ -300,7 +298,6 @@ GitHub Actions workflows for automated testing, building, and deployment:
 
 1. **Choose appropriate section** based on Diátaxis framework:
     - How-to guides: task-oriented, assume prior knowledge
-    - Tutorials: learning-oriented, step-by-step for beginners
     - Reference: information-oriented, technical specifications
     - Methods: explanation-oriented, scientific background
 2. **Update navigation** in `mkdocs.yml` if adding new pages

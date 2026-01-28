@@ -98,7 +98,7 @@ The dataset contains several key variables:
 
 -   **[Installation](installation.md)**: Set up project for local development
 -   **[Project Structure](../reference/project-structure.md)**: Understand the codebase
--   **[Data Pipeline Tutorial](../tutorials/data-pipeline.md)**: Run the processing pipeline
+-   **[Data Pipeline](data-pipeline.md)**: Run the processing pipeline
 -   **[Working With Input Datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support

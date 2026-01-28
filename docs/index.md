@@ -41,14 +41,6 @@ This documentation follows the [Diataxis framework](https://diataxis.fr/) to hel
 
 <div class="grid cards" markdown>
 
-- :material-school:{ .lg .middle } **Tutorials**
-
-    ***
-
-    Learning-oriented guides that walk you through complete workflows step-by-step.
-
-    [:octicons-arrow-right-24: Browse tutorials](tutorials/data-pipeline.md)
-
 - :material-hammer-wrench:{ .lg .middle } **How-to Guides**
 
     ***

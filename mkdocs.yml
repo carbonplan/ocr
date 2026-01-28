@@ -53,6 +53,7 @@ nav:
                 - Working with Data: how-to/work-with-data.ipynb
           - Developer Guides:
                 - Installation: how-to/installation.md
+                - Data Pipeline: how-to/data-pipeline.md
                 - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
                 - Working With Input Datasets: how-to/work-with-input-datasets.md
                 - Release Procedure: how-to/release-procedure.md
@@ -70,9 +71,6 @@ nav:
                 - Score Bins: methods/fire-risk/score-bins.ipynb
                 - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
                 - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
-
-    - Tutorials:
-          - Data Pipeline: tutorials/data-pipeline.md
 
     - Reference:
           - API: reference/api.md
