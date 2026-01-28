@@ -72,7 +72,6 @@ nav:
                 - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
 
     - Tutorials:
-          - Calculate Wind-Adjusted Fire Risk: tutorials/calculate-wind-adjusted-fire-risk-for-a-region.ipynb
           - Data Pipeline: tutorials/data-pipeline.md
 
     - Reference:
