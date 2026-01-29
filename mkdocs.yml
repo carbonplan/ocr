@@ -47,17 +47,7 @@ nav:
     - Home: index.md
     - Access Data: access-data.md
     - Terms of Data Access: terms-of-data-access.md
-    - How-to Guides:
-          - User Guides:
-                - Getting Started: how-to/getting-started.md
-                - Working with Data: how-to/work-with-data.ipynb
-          - Developer Guides:
-                - Installation: how-to/installation.md
-                - Data Pipeline: how-to/data-pipeline.md
-                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
-                - Working With Input Datasets: how-to/work-with-input-datasets.md
-                - Release Procedure: how-to/release-procedure.md
-                - Snapshot Testing: how-to/snapshot-testing.md
+
 
     - Methods:
           - Overview: methods/fire-risk/overview.md
@@ -78,6 +68,18 @@ nav:
           - Deployment: reference/deployment.md
           - Data Schema: reference/data-schema.md
           - Data Sources: reference/data-sources.md
+
+    - How-to Guides:
+          - User Guides:
+                - Getting Started: how-to/getting-started.md
+                - Working with Data: how-to/work-with-data.ipynb
+          - Developer Guides:
+                - Installation: how-to/installation.md
+                - Data Pipeline: how-to/data-pipeline.md
+                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
+                - Working With Input Datasets: how-to/work-with-input-datasets.md
+                - Release Procedure: how-to/release-procedure.md
+                - Snapshot Testing: how-to/snapshot-testing.md
 
 theme:
     language: en

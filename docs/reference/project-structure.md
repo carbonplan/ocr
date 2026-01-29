@@ -188,8 +188,6 @@ Exploratory Jupyter notebooks for prototyping and analysis:
 
 ## Documentation (`docs/`)
 
-Follows the [Diátaxis framework](https://diataxis.fr/) for structured documentation:
-
 ```text
 docs/
 ├── how-to/                    # Task-oriented guides
