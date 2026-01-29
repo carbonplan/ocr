@@ -128,7 +128,7 @@ aws s3 ls s3://carbonplan-ocr/output/fire-risk/tensor/production/vX.Y.Z/
 
 ### 7. Deploy to web tool
 
-1. Bump version in `lib/config.ts` of web tool repository
+1. Bump version in `lib/config.ts` of [web tool repository](https://github.com/carbonplan/ocr-web)
 2. Create PR to `production` branch
 3. Verify production data functionality in web tool via Vercel preview link on PR
 4. Merge to `production` branch. Vercel automatically deploys production version to  <https://carbonplan.org/research/climate-risk>
