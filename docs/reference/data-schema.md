@@ -1,6 +1,6 @@
 # Data Schema
 
-Open Climate Risk (OCR) produces two primary types of output data: **raster (tensor) datasets** and **vector (point) datasets**. This page documents the structure, variables, and schema of both output types.
+Open Climate Risk (OCR) produces two primary types of output data: **raster (tensor) datasets** and **vector (polygon) datasets**. This page documents the structure, variables, and schema of both output types.
 
 ## Overview
 
@@ -28,7 +28,7 @@ graph TB
     end
 
     %% Vector Outputs
-    subgraph VectorOutputs["<b>Vector Datasets (Point)</b>"]
+    subgraph VectorOutputs["<b>Vector Datasets (polygon)</b>"]
         BuildingRisk["<b>Building-Level Risk</b><br/>• Same variables as raster<br/>• Sampled at building centroids<br/>• CONUS-wide coverage<br/>"]
     end
 
@@ -170,7 +170,7 @@ flowchart LR
     class FinalRPS output
 ```
 
-## Vector (Point) Datasets
+## Vector (Polygon) Datasets
 
 Vector datasets contain building-level risk samples stored as a consolidated GeoParquet file covering all buildings across CONUS.
 
@@ -180,7 +180,7 @@ Vector datasets contain building-level risk samples stored as a consolidated Geo
 
 | Column     | Type        | Description                             |
 | ---------- | ----------- | --------------------------------------- |
-| `geometry` | WKB (POINT) | Building centroid location in EPSG:4326 |
+| `geometry` | WKB (Polygon) | Building polygon location in EPSG:4326 |
 
 #### Risk Attribute Columns
 

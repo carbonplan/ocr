@@ -84,7 +84,7 @@ Orchestration backends for local and Coiled execution.
 
 ### CLI application
 
-Command-line interface exposed as the `ocr` command. For detailed usage and options, see the tutorials section.
+Command-line interface exposed as the `ocr` command. For detailed usage and options, see the [Data Pipeline](../how-to/data-pipeline.md) guide.
 
 <!-- prettier-ignore-start -->
 ::: mkdocs-click
