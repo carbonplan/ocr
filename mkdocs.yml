@@ -48,15 +48,15 @@ nav:
     - Access Data: access-data.md
     - Terms of Data Access: terms-of-data-access.md
 
-
     - Methods:
           - Overview: methods/fire-risk/overview.md
           - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
           - Evaluation:
                 - Overview: methods/fire-risk/evaluation.md
-                - Benchmarking: methods/fire-risk/benchmarking.ipynb
-                - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
-                - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                - Benchmarking:
+                      - Burn Probability Benchmarking: methods/fire-risk/benchmarking.ipynb
+                      - Creating Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
+                      - Processing Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
                 - California Comparison: methods/fire-risk/california-comparison.ipynb
                 - Score Bins: methods/fire-risk/score-bins.ipynb
                 - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
