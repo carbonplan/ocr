@@ -35,7 +35,7 @@ graph TB
     %% Storage Formats
     subgraph Storage["<b>Storage Formats</b>"]
         Icechunk[("<b>Icechunk</b><br/>Zarr-based<br/>S3-backed<br/>Versioned")]
-        GeoParquet[("<b>GeoParquet</b><br/>zstd compressed<br/>Consolidated<br/>Single file")]
+        GeoParquet[("<b>GeoParquet</b><br/>Hive-partitioned")]
     end
 
     %% Data Flow
@@ -123,8 +123,8 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 
 **Properties:**
 
--   Values sum to 1.0 for all pixels (normalized probability distribution)
--   Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
+- Values sum to 1.0 for all pixels (normalized probability distribution)
+- Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
 
 ### Data Processing Flow
 
@@ -178,8 +178,8 @@ Vector datasets contain building-level risk samples stored as a consolidated Geo
 
 #### Geometry Column
 
-| Column     | Type        | Description                             |
-| ---------- | ----------- | --------------------------------------- |
+| Column     | Type          | Description                            |
+| ---------- | ------------- | -------------------------------------- |
 | `geometry` | WKB (Polygon) | Building polygon location in EPSG:4326 |
 
 #### Risk Attribute Columns
@@ -210,8 +210,8 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 
 ### Data Quality
 
--   Buildings with NaN values (outside CONUS) are excluded
--   Building locations sourced from Overture Maps dataset
+- Buildings with NaN values (outside CONUS) are excluded
+- Building locations sourced from Overture Maps dataset
 
 ### File Location
 
@@ -223,9 +223,9 @@ The consolidated building dataset is available at:
 
 This single-file format enables:
 
--   Efficient CONUS-wide spatial queries
--   Direct access for analysis tools and workflows
--   Simplified data distribution and versioning
+- Efficient CONUS-wide spatial queries
+- Direct access for analysis tools and workflows
+- Simplified data distribution and versioning
 
 ## Data Validation
 
@@ -249,28 +249,28 @@ This single-file format enables:
 
 All datasets include descriptive metadata attributes:
 
--   `description`: Human-readable description of the variable
--   `long_name`: Extended variable name
--   `units`: Physical units (if applicable)
--   `composition`: Method used for compositing (e.g., "weighted")
--   `direction_labels`: Cardinal/ordinal direction labels for wind data
--   `weights_source`: Source of weights used in calculations
+- `description`: Human-readable description of the variable
+- `long_name`: Extended variable name
+- `units`: Physical units (if applicable)
+- `composition`: Method used for compositing (e.g., "weighted")
+- `direction_labels`: Cardinal/ordinal direction labels for wind data
+- `weights_source`: Source of weights used in calculations
 
 ## Access Patterns
 
 ### Raster Data
 
--   **By Region**: Query specific regional chunks using latitude/longitude slices
--   **Full CONUS**: Access complete dataset via Icechunk storage
+- **By Region**: Query specific regional chunks using latitude/longitude slices
+- **Full CONUS**: Access complete dataset via Icechunk storage
 
 ### Vector Data
 
--   **Full Dataset**: Query the consolidated CONUS-wide building dataset
--   **Spatial Query**: Use bounding box attributes for efficient spatial filtering
--   **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
--   **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
+- **Full Dataset**: Query the consolidated CONUS-wide building dataset
+- **Spatial Query**: Use bounding box attributes for efficient spatial filtering
+- **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
+- **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
 
 ## Related Documentation
 
--   [Data Downloads](../access-data.md): Information on accessing and downloading datasets
--   [Deployment](deployment.md): Details on data storage infrastructure
+- [Data Downloads](../access-data.md): Information on accessing and downloading datasets
+- [Deployment](deployment.md): Details on data storage infrastructure
