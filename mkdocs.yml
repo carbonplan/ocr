@@ -56,8 +56,8 @@ nav:
                 - Overview: methods/fire-risk/evaluation.md
                 - Benchmarking:
                       - Burn Probability Benchmarking: methods/fire-risk/benchmarking.ipynb
-                      - Creating Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
                       - Processing Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                      - Creating Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
                 - California Comparison: methods/fire-risk/california-comparison.ipynb
                 - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
                 - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
