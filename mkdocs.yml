@@ -51,6 +51,7 @@ nav:
     - Methods:
           - Overview: methods/fire-risk/overview.md
           - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+          - Score Bins: methods/fire-risk/score-bins.ipynb
           - Evaluation:
                 - Overview: methods/fire-risk/evaluation.md
                 - Benchmarking:
@@ -58,7 +59,6 @@ nav:
                       - Creating Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
                       - Processing Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
                 - California Comparison: methods/fire-risk/california-comparison.ipynb
-                - Score Bins: methods/fire-risk/score-bins.ipynb
                 - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
                 - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
 
