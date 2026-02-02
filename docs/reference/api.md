@@ -1,4 +1,4 @@
-# API reference
+# API Reference
 
 This page provides a structured, auto-generated reference for the `ocr` Python package. Each section links to the corresponding module(s) and surfaces docstrings, type hints, and signatures.
 
