@@ -18,8 +18,8 @@
 If you want to **access and analyze fire risk data**:
 
 1. Visit [Access Data](access-data.md) for an overview of all available formats
-2. Read the [Working With Data](./how-to/work-with-data.ipynb) guide to learn how to load production datasets
-3. Explore the [Data Schema](data-schema) to understand available variables
+2. Read the [Working With Data](how-to/work-with-data.ipynb) guide to learn how to load production datasets
+3. Explore the [Data Schema](reference/data-schema.md) to understand available variables
 
 :::
 
@@ -27,9 +27,9 @@ If you want to **access and analyze fire risk data**:
 
 If you want to **understand how fire risk is calculated**:
 
-1. Read the [Fire Risk Overview](fire-risk-methods-overview) for conceptual background
-2. Learn about how we performed [Evaluation](evaluation) of our fire risk estimates
-3. Review our [Data Sources](data-sources)
+1. Read the [Fire Risk Overview](methods/fire-risk/overview.md) for conceptual background
+2. Learn about how we performed [Evaluation](methods/fire-risk/evaluation.md) of our fire risk estimates
+3. Review our [Data Sources](reference/data-sources.md)
 
 :::
 
@@ -37,9 +37,9 @@ If you want to **understand how fire risk is calculated**:
 
 If you want to **develop or contribute**:
 
-1. Follow the [Installation](install-ocr-for-development) guide to set up your development environment
-2. Read the [Project Structure](project-structure) to understand the codebase
-3. Review [Snapshot Testing](snapshot-testing-with-xarrayzarr) for testing practices
+1. Follow the [Installation](how-to/installation.md) guide to set up your development environment
+2. Read the [Project Structure](reference/project-structure.md) to understand the codebase
+3. Review [Snapshot Testing](how-to/snapshot-testing.md) for testing practices
 
 :::
 
@@ -53,3 +53,56 @@ If you want to **develop or contribute**:
 ## License
 
 Open Climate Risk code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [Access Data](access-data.md) for information about data licensing.
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: Getting Started
+
+access-data
+terms-of-data-access
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: Methods
+
+methods/fire-risk/overview
+methods/fire-risk/horizontal-scaling-via-spatial-chunking
+methods/fire-risk/score-bins
+methods/fire-risk/evaluation
+methods/fire-risk/benchmarking
+methods/fire-risk/benchmarking-process-inputs
+methods/fire-risk/benchmarking-make-inputs
+methods/fire-risk/california-comparison
+methods/fire-risk/compare-risk-rasters
+methods/fire-risk/compare-risk-buildings
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: Reference
+
+reference/api
+reference/project-structure
+reference/deployment
+reference/data-schema
+reference/data-sources
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: How-to Guides
+
+how-to/getting-started
+how-to/work-with-data
+how-to/installation
+how-to/data-pipeline
+how-to/input-dataset-ingestion
+how-to/work-with-input-datasets
+how-to/release-procedure
+how-to/snapshot-testing
+```

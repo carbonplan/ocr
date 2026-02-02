@@ -24,14 +24,16 @@ $$
 
 Where:
 
-- **BP (Burn Probability)**: Annual likelihood that a given pixel burns, derived from wildfire simulations in [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025)
-- **cRPS (Conditional Risk to Potential Structures)**: The conditional net value change for a hypothetical structure if it were to burn, from [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024)
+-   **BP (Burn Probability)**: Annual likelihood that a given pixel burns, derived from wildfire simulations in [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025)
+-   **cRPS (Conditional Risk to Potential Structures)**: The conditional net value change for a hypothetical structure if it were to burn, from [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024)
 
 RPS represents the **expected net value change** per year for a generic structure at each location. It combines both probability (how likely fire is) and consequence (how much damage would occur).
 
-!!! note "Key limitation"
+:::{note}
+**Key limitation**
 
-    This approach models risk to a hypothetical "potential structure" rather than actual buildings with specific characteristics. Building-level attributes (materials, retrofits, defensible space) are not included.
+This approach models risk to a hypothetical "potential structure" rather than actual buildings with specific characteristics. Building-level attributes (materials, retrofits, defensible space) are not included.
+:::
 
 ### Wind-Adjusted Fire Spread
 
@@ -48,44 +50,44 @@ This differs from the uniform circular blurring in [Scott et al. 2024](../../ref
 
 ### 1. Fire Weather Wind Analysis
 
-- Calculate Fosberg Fire Weather Index (FFWI) for every hour 1979-2022
-- For each 4km pixel, identify 99th percentile FFWI threshold
-- Extract wind directions for all hours exceeding that threshold ("fire-weather winds")
-- Bin fire-weather winds into 8 cardinal/ordinal directions
-- Create distribution of fire-weather wind directions for each pixel
+-   Calculate Fosberg Fire Weather Index (FFWI) for every hour 1979-2022
+-   For each 4km pixel, identify 99th percentile FFWI threshold
+-   Extract wind directions for all hours exceeding that threshold ("fire-weather winds")
+-   Bin fire-weather winds into 8 cardinal/ordinal directions
+-   Create distribution of fire-weather wind directions for each pixel
 
 ### 2. Upscale and Prepare BP
 
-- Convert 270m BP raster from [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025) to 30m resolution
-- Identify "non-burnable" pixels (where BP = 0 in Riley et al. data)
+-   Convert 270m BP raster from [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025) to 30m resolution
+-   Identify "non-burnable" pixels (where BP = 0 in Riley et al. data)
 
 ### 3. Wind-Informed BP Spreading
 
 For each 30m pixel:
 
-- Extract nearest-neighbor 4km fire-weather wind distribution
-- Create 8 oval-shaped blurring filters (elliptical wavelets) pointing in 8 directions
-    - Each filter represents wind coming FROM that direction (spreading BP downwind TO the pixel)
-    - Distance from pixel to far side of oval along major axis: 510m
-- For each direction, apply upwind filter to calculate zonal mean BP
-- Weight the 8 smeared BP values by fire-weather wind direction frequencies
-- **Repeat this process 3 times** → maximum spread of ~1.5 km into non-burnable areas
+-   Extract nearest-neighbor 4km fire-weather wind distribution
+-   Create 8 oval-shaped blurring filters (elliptical wavelets) pointing in 8 directions
+    -   Each filter represents wind coming FROM that direction (spreading BP downwind TO the pixel)
+    -   Distance from pixel to far side of oval along major axis: 510m
+-   For each direction, apply upwind filter to calculate zonal mean BP
+-   Weight the 8 smeared BP values by fire-weather wind direction frequencies
+-   **Repeat this process 3 times** → maximum spread of ~1.5 km into non-burnable areas
 
 ### 4. Calculate RPS
 
-- Multiply wind-adjusted BP by 30m cRPS raster
-- Result: 30m RPS (Risk to Potential Structures) for present and future
-- RPS = expected net value change per year for a hypothetical structure
+-   Multiply wind-adjusted BP by 30m cRPS raster
+-   Result: 30m RPS (Risk to Potential Structures) for present and future
+-   RPS = expected net value change per year for a hypothetical structure
 
 ### 5. Sample at Building Locations
 
-- Intersect 30m RPS raster with [Overture Maps building footprints](../../reference/data-sources.md#overture-maps-foundation-buildings-dataset)
-- Assign RPS to each structure based on value at building centroid
+-   Intersect 30m RPS raster with [Overture Maps building footprints](../../reference/data-sources.md#overture-maps-foundation-buildings-dataset)
+-   Assign RPS to each structure based on value at building centroid
 
 ### 6. Convert to Categorical Scores
 
-- Convert continuous RPS values to categorical risk scores (0-10 scale)
-- Scores are calculated using percentile-based RPS bins defined [here](./score-bins.ipynb)
+-   Convert continuous RPS values to categorical risk scores (0-10 scale)
+-   Scores are calculated using percentile-based RPS bins defined [here](./score-bins.ipynb)
 
 | Score | Criteria              |
 | ----- | --------------------- |
@@ -105,10 +107,10 @@ For each 30m pixel:
 
 The model uses a spatial chunking system for efficient parallel processing:
 
-- CONUS is divided into 595 processing regions (30m resolution chunks)
-- Each region is processed independently using distributed compute (Coiled/Dask)
-- Outputs are stored in Icechunk (for rasters) and GeoParquet (for vectors)
-- Failed regions can be reprocessed without affecting completed work
+-   CONUS is divided into 595 processing regions (30m resolution chunks)
+-   Each region is processed independently using distributed compute (Coiled/Dask)
+-   Outputs are stored in Icechunk (for rasters) and GeoParquet (for vectors)
+-   Failed regions can be reprocessed without affecting completed work
 
 See [Horizontal Scaling via Spatial Chunking](./horizontal-scaling-via-spatial-chunking.ipynb) for details on the parallelization strategy.
 
