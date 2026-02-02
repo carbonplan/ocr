@@ -116,7 +116,7 @@ html_theme_options = {
 }
 
 html_static_path = ['assets']
-html_css_files = ['custom.css']
+html_css_files = []
 
 # OpenGraph configuration
 ogp_site_url = 'https://open-climate-risk.readthedocs.io/'
