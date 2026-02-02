@@ -1,4 +1,4 @@
-# Data Downloads
+# Access Data
 
 There a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
 
