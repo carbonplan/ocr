@@ -4,18 +4,18 @@ This guide shows how to release a new version of the project to production.
 
 ## Prerequisites
 
--   Write access to the [carbonplan/ocr](https://github.com/carbonplan/ocr) repository
--   Understanding of [semantic versioning](https://semver.org/)
--   Changes merged to `main` branch
--   Successful staging deployment verified
+- Write access to the [carbonplan/ocr](https://github.com/carbonplan/ocr) repository
+- Understanding of [semantic versioning](https://semver.org/)
+- Changes merged to `main` branch
+- Successful staging deployment verified
 
 ## Overview
 
 OCR uses [release-drafter](https://github.com/release-drafter/release-drafter) to automatically create draft releases as PRs are merged to `main`. The draft release includes:
 
--   Auto-generated release notes from merged PRs
--   Categorized changes (features, bug fixes, etc.)
--   List of contributors
+- Auto-generated release notes from merged PRs
+- Categorized changes (features, bug fixes, etc.)
+- List of contributors
 
 **Your job**: Review the draft and publish it.
 
@@ -32,9 +32,9 @@ open https://ocr.staging.carbonplan.org
 
 Verify that:
 
--   Data loads correctly
--   No errors in processing logs
--   All expected regions are present
+- Data loads correctly
+- No errors in processing logs
+- All expected regions are present
 
 ### 2. Review the draft release
 
@@ -50,7 +50,6 @@ Verify that:
 Click **Edit draft** and update:
 
 1. **Tag version**: Set to next semantic version (e.g., `v1.2.3`)
-
     - **Patch** (`1.2.3` → `1.2.4`): Bug fixes, minor changes
     - **Minor** (`1.2.3` → `1.3.0`): New features, backward compatible
     - **Major** (`1.2.3` → `2.0.0`): Breaking changes
@@ -58,7 +57,6 @@ Click **Edit draft** and update:
 2. **Release title**: Use format `vX.Y.Z` or add description (e.g., `v1.2.3 - Fire Risk Updates`)
 
 3. **Release notes**: Edit the auto-generated notes if needed:
-
     - Add any important context or migration notes
     - Highlight breaking changes (if major version)
     - Note any known issues or limitations
@@ -80,7 +78,6 @@ Publishing the release triggers the production data processing workflow automati
 
 1. **Tag creation**: GitHub creates tag `vX.Y.Z` on `main` branch
 2. **Coiled environment creation** (~5-10 min)
-
     - Builds software environment named `ocr-vX.Y.Z`
 
 3. **Production data processing** (~2-4 hours)
@@ -111,10 +108,10 @@ After data processing completes (check Actions page for ✓):
 
 **Verify data outputs in S3:**
 
--   Check that data exists at `s3://carbonplan-ocr/output/fire-risk/tensor/production/vX.Y.Z/`
--   Verify regional Icechunk stores are complete
--   Confirm PMTiles were generated
--   Review regional statistics files
+- Check that data exists at `s3://carbonplan-ocr/output/fire-risk/tensor/production/vX.Y.Z/`
+- Verify regional Icechunk stores are complete
+- Confirm PMTiles were generated
+- Review regional statistics files
 
 **Example verification using AWS CLI:**
 
@@ -131,16 +128,16 @@ aws s3 ls s3://carbonplan-ocr/output/fire-risk/tensor/production/vX.Y.Z/
 1. Bump version in `lib/config.ts` of [web tool repository](https://github.com/carbonplan/ocr-web)
 2. Create PR to `production` branch
 3. Verify production data functionality in web tool via Vercel preview link on PR
-4. Merge to `production` branch. Vercel automatically deploys production version to  <https://carbonplan.org/research/climate-risk>
+4. Merge to `production` branch. Vercel automatically deploys production version to <https://carbonplan.org/research/climate-risk>
 
 ## What the automated workflow does
 
 **Release Drafter** (runs on every merge to `main`):
 
--   Automatically creates/updates a draft release
--   Generates release notes from PR titles and labels
--   Categorizes changes (features, fixes, documentation, etc.)
--   Lists all contributors
+- Automatically creates/updates a draft release
+- Generates release notes from PR titles and labels
+- Categorizes changes (features, fixes, documentation, etc.)
+- Lists all contributors
 
 **Production Deployment** (runs when you publish a release):
 
@@ -192,9 +189,9 @@ This redeploys the exact code from that existing release tag to production.
 
 **Solution**: This is expected for full CONUS processing. Check:
 
--   Coiled cluster is running
--   No AWS credential issues
--   S3 buckets are accessible
+- Coiled cluster is running
+- No AWS credential issues
+- S3 buckets are accessible
 
 ### Wrong version deployed
 
@@ -207,16 +204,16 @@ This redeploys the exact code from that existing release tag to production.
 
 ## Reference
 
--   **Production website**: <https://carbonplan.org/research/climate-risk>
--   **Production S3 path**: `s3://carbonplan-ocr/output/fire-risk/tensor/production/`
--   **Staging URL**: <https://ocr.staging.carbonplan.org>
--   **QA URL**: <https://ocr.qa.carbonplan.org>
--   **Workflow file**: `.github/workflows/deploy.yaml`
--   **Deployment details**: See [deployment reference](../reference/deployment.md)
+- **Production website**: <https://carbonplan.org/research/climate-risk>
+- **Production S3 path**: `s3://carbonplan-ocr/output/fire-risk/tensor/production/`
+- **Staging URL**: <https://ocr.staging.carbonplan.org>
+- **QA URL**: <https://ocr.qa.carbonplan.org>
+- **Workflow file**: `.github/workflows/deploy.yaml`
+- **Deployment details**: See [deployment reference](../reference/deployment.md)
 
 ## Next steps
 
 After releasing:
 
--   Monitor production for any issues
--   Update changelog or documentation if needed
+- Monitor production for any issues
+- Update changelog or documentation if needed

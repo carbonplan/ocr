@@ -35,8 +35,6 @@
     2. Read the [Project Structure][project-structure] to understand the codebase
     3. Review [Snapshot Testing][snapshot-testing-with-xarrayzarr] for testing practices
 
-
-
 ## Support
 
 - **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)

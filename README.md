@@ -53,13 +53,13 @@ pixi run lint
 
 We welcome contributions! Please see our [contributing guide](./contributing.md) for detailed instructions on:
 
--   Setting up your development environment
--   Running tests and quality checks
--   Submitting pull requests
+- Setting up your development environment
+- Running tests and quality checks
+- Submitting pull requests
 
--   **Documentation** - [Full documentation](https://docs.carbonplan.org/ocr)
--   **Issues** - Report bugs or request features via [GitHub Issues](https://github.com/carbonplan/ocr/issues)
--   **Discussions** - Join the conversation in [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
+- **Documentation** - [Full documentation](https://docs.carbonplan.org/ocr)
+- **Issues** - Report bugs or request features via [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+- **Discussions** - Join the conversation in [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
 
 ## Data Access
 
