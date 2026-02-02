@@ -64,7 +64,7 @@ We welcome contributions! Please see our [contributing guide](./contributing.md)
 ## Data Access
 
 Our processed input datasets and pipeline outputs can be accessed on [Source Coop](https://source.coop/carbonplan/carbonplan-ocr).
-Details on how to use the data can be found in our [technical documentation](https://carbonplan.github.io/ocr/how-to/work-with-data/).
+Details on how to use the data can be found in our [technical documentation](https://open-climate-risk.readthedocs.io/how-to/work-with-data/).
 
 ## License
 
