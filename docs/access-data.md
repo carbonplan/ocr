@@ -1,6 +1,6 @@
 # Access Data
 
-There a few different ways to access the data, in addition to exploration via the web tool. This page outlines the different versions and formats of data available for download.
+There a few different ways to access the data, in addition to exploration via the map tool. This page outlines the different versions and formats of data available for download.
 
 :::{warning}
 **License Agreement**
@@ -21,7 +21,7 @@ By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms
 | **Raster (tensor) data**          | Full gridded dataset spanning CONUS                                                     | Icechunk (Zarr-based) | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [K Riley et al. 2025](https://doi.org/10.2737/RDS-2025-0006), [J Scott et al. 2024](https://doi.org/10.2737/RDS-2020-0016-2), [R Rasmussen et al. 2023](https://doi.org/10.1175/BAMS-D-21-0326.1)                                                                                                                                                                                                            |
 | **Vector (polygon) data**         | Full buildings dataset spanning CONUS                                                   | GeoParquet            | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    | [Overture Maps Foundation buildings dataset](https://docs.overturemaps.org/guides/buildings/), [K Riley et al. 2025](https://doi.org/10.2737/RDS-2025-0006), [J Scott et al. 2024](https://doi.org/10.2737/RDS-2020-0016-2), [R Rasmussen et al. 2023](https://doi.org/10.1175/BAMS-D-21-0326.1)                                                                                                             |
 | **Regional statistics**           | Summary statistics for regions (state, county, census tract, census block) within CONUS | CSV, GeoJSON          | [Source Coop](https://source.coop/carbonplan/carbonplan-ocr) | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    | [Census TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), [Overture Maps Foundation buildings dataset](https://docs.overturemaps.org/guides/buildings/), [K Riley et al. 2025](https://doi.org/10.2737/RDS-2025-0006), [J Scott et al. 2024](https://doi.org/10.2737/RDS-2020-0016-2), [R Rasmussen et al. 2023](https://doi.org/10.1175/BAMS-D-21-0326.1) |
-| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block)     | CSV, GeoPackage       | Web tool (see below)                                         | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    | [Census TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), [Overture Maps Foundation buildings dataset](https://docs.overturemaps.org/guides/buildings/), [K Riley et al. 2025](https://doi.org/10.2737/RDS-2025-0006), [J Scott et al. 2024](https://doi.org/10.2737/RDS-2020-0016-2), [R Rasmussen et al. 2023](https://doi.org/10.1175/BAMS-D-21-0326.1) |
+| **Subsetted vector (point) data** | Building-level data subsetted to active region (county, census tract, census block)     | CSV, GeoPackage       | Map tool (see below)                                         | [ODbL](https://opendatacommons.org/licenses/odbl/1-0/)    | [Census TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), [Overture Maps Foundation buildings dataset](https://docs.overturemaps.org/guides/buildings/), [K Riley et al. 2025](https://doi.org/10.2737/RDS-2025-0006), [J Scott et al. 2024](https://doi.org/10.2737/RDS-2020-0016-2), [R Rasmussen et al. 2023](https://doi.org/10.1175/BAMS-D-21-0326.1) |
 
 ## Full dataset downloads
 
@@ -76,9 +76,9 @@ The schemas for each of the full datasets are described on the [data schema](./r
 | `risk_score_2011_hist` | float[] | Count of buildings with each risk score (~2011 climate conditions).                                                                                                                                                                |
 | `risk_score_2047_hist` | float[] | Count of buildings with each risk score (~2047 climate conditions).                                                                                                                                                                |
 
-## Downloading subsetted data in the web tool
+## Downloading subsetted data in the map tool
 
-The [web tool](https://carbonplan.org/research/climate-risk) can be used to access region-specific, subsetted downloads.
+The [map tool](https://carbonplan.org/research/climate-risk) can be used to access region-specific, subsetted downloads.
 
 ### Steps
 

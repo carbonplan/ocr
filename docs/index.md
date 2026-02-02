@@ -4,10 +4,10 @@
 
 ## Quick Links
 
-- [**Web Tool**](https://carbonplan.org/research/climate-risk)
-- [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
+-   [**Map Tool**](https://carbonplan.org/research/climate-risk)
+-   [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
+-   [**GitHub Repository**](https://github.com/carbonplan/ocr)
+-   [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
@@ -47,8 +47,8 @@ If you want to **develop or contribute**:
 
 ## Support
 
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
-- **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
+-   **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+-   **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
 ## License
 
