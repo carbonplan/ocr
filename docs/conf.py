@@ -1,12 +1,7 @@
 import datetime
 import sys
 
-from sphinx.util import logging
-
 import ocr
-
-LOGGER = logging.getLogger('conf')
-
 
 print('python exec:', sys.executable)
 print('sys.path:', sys.path)
@@ -30,15 +25,25 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
     'sphinx.ext.napoleon',
+    'sphinx.ext.mathjax',
     'myst_nb',
     'sphinxext.opengraph',
     'sphinx_copybutton',
     'sphinx_design',
+    'sphinxcontrib.mermaid',
 ]
 
 # MyST config
-myst_enable_extensions = ['amsmath', 'colon_fence', 'deflist', 'html_image', 'tasklist']
+myst_enable_extensions = [
+    'amsmath',
+    'dollarmath',
+    'colon_fence',
+    'deflist',
+    'html_image',
+    'tasklist',
+]
 myst_url_schemes = ['http', 'https', 'mailto']
+myst_fence_as_directive = ['mermaid']
 
 # sphinx-copybutton configurations
 copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
@@ -49,6 +54,35 @@ autosummary_generate = True
 nb_execution_mode = 'off'
 nb_execution_timeout = 600
 nb_execution_raise_on_error = False
+
+# Mermaid configuration
+mermaid_output_format = 'raw'
+mermaid_version = '11.4.0'
+mermaid_d3_zoom = True  # Enable zoom functionality
+d3_version = '7.9.0'  # D3 version for zoom
+# mermaid_init_js = """
+# mermaid.initialize({
+#     startOnLoad: true,
+#     theme: 'default',
+#     themeVariables: {
+#         primaryColor: '#e1f5ff',
+#         primaryTextColor: '#333',
+#         primaryBorderColor: '#90caf9',
+#         lineColor: '#424242',
+#         secondaryColor: '#fff4e1',
+#         tertiaryColor: '#f3e8ff',
+#         background: '#ffffff',
+#         mainBkg: '#e1f5ff',
+#         secondBkg: '#fff4e1',
+#         tertiaryBkg: '#f3e8ff'
+#     },
+#     flowchart: {
+#         useMaxWidth: true,
+#         htmlLabels: true,
+#         curve: 'basis'
+#     }
+# });
+# """
 
 # Intersphinx mapping
 intersphinx_mapping = {
@@ -89,9 +123,8 @@ html_theme_options = {
     },
 }
 
-html_static_path = ['assets', 'javascripts']
+html_static_path = ['assets']
 html_css_files = ['custom.css']
-html_js_files = ['katex.js']
 
 # OpenGraph configuration
 ogp_site_url = 'https://open-climate-risk.readthedocs.io/'
