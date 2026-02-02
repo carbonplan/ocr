@@ -4,10 +4,10 @@
 
 ## Quick Links
 
-- [**Web Tool**](https://carbonplan.org/research/climate-risk)
-- [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
+-   [**Web Tool**](https://carbonplan.org/research/climate-risk)
+-   [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
+-   [**GitHub Repository**](https://github.com/carbonplan/ocr)
+-   [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
@@ -47,8 +47,8 @@ If you want to **develop or contribute**:
 
 ## Support
 
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
-- **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
+-   **Issues & Bug Reports**: [GitHub Issues](https://github.com/carbonplan/ocr/issues)
+-   **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
 ## License
 
@@ -57,8 +57,6 @@ Open Climate Risk code is released under the MIT License. See [LICENSE](https://
 ```{toctree}
 :hidden:
 :maxdepth: 2
-:caption: Getting Started
-
 access-data
 terms-of-data-access
 ```
@@ -72,12 +70,6 @@ methods/fire-risk/overview
 methods/fire-risk/horizontal-scaling-via-spatial-chunking
 methods/fire-risk/score-bins
 methods/fire-risk/evaluation
-methods/fire-risk/benchmarking
-methods/fire-risk/benchmarking-process-inputs
-methods/fire-risk/benchmarking-make-inputs
-methods/fire-risk/california-comparison
-methods/fire-risk/compare-risk-rasters
-methods/fire-risk/compare-risk-buildings
 ```
 
 ```{toctree}
@@ -97,12 +89,6 @@ reference/data-sources
 :maxdepth: 2
 :caption: How-to Guides
 
-how-to/getting-started
-how-to/work-with-data
-how-to/installation
-how-to/data-pipeline
-how-to/input-dataset-ingestion
-how-to/work-with-input-datasets
-how-to/release-procedure
-how-to/snapshot-testing
+how-to/user-guide-index
+how-to/developer-guide-index
 ```
