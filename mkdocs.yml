@@ -3,7 +3,7 @@ repo_name: carbonplan/ocr
 repo_url: https://github.com/carbonplan/ocr
 site_description: CarbonPlan's Open Climate Risk platform
 site_author: CarbonPlan
-site_url: https://carbonplan.github.io/ocr/
+site_url: https://open-climate-risk.readthedocs.io/
 docs_dir: docs
 
 extra:
