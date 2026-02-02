@@ -119,7 +119,7 @@ The pipeline produces data outputs in several formats:
 | Option                   | Description                                                                             | Formats               |
 | ------------------------ | --------------------------------------------------------------------------------------- | --------------------- |
 | **Raster (tensor) data** | Full gridded dataset spanning CONUS                                                     | Icechunk (Zarr-based) |
-| **Vector (point) data**  | Full buildings dataset spanning CONUS                                                   | GeoParquet            |
+| **Vector (polygon) data**  | Full buildings dataset spanning CONUS                                                   | GeoParquet            |
 | **Regional statistics**  | Summary statistics for regions (state, county, census tract, census block) within CONUS | CSV, GeoJSON          |
 
 For more information about each data output type, see the [Access Data](../../access-data.md) page.

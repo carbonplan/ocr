@@ -47,33 +47,20 @@ nav:
     - Home: index.md
     - Access Data: access-data.md
     - Terms of Data Access: terms-of-data-access.md
-    - How-to Guides:
-          - User Guides:
-                - Getting Started: how-to/getting-started.md
-                - Working with Data: how-to/work-with-data.ipynb
-          - Developer Guides:
-                - Installation: how-to/installation.md
-                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
-                - Working With Input Datasets: how-to/work-with-input-datasets.md
-                - Release Procedure: how-to/release-procedure.md
-                - Snapshot Testing: how-to/snapshot-testing.md
 
     - Methods:
           - Overview: methods/fire-risk/overview.md
           - Horizontal Scaling via Spatial Chunking: methods/fire-risk/horizontal-scaling-via-spatial-chunking.ipynb
+          - Score Bins: methods/fire-risk/score-bins.ipynb
           - Evaluation:
                 - Overview: methods/fire-risk/evaluation.md
-                - Benchmarking: methods/fire-risk/benchmarking.ipynb
-                - Benchmarking Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
-                - Benchmarking Process Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                - Benchmarking:
+                      - Burn Probability Benchmarking: methods/fire-risk/benchmarking.ipynb
+                      - Processing Inputs: methods/fire-risk/benchmarking-process-inputs.ipynb
+                      - Creating Inputs: methods/fire-risk/benchmarking-make-inputs.ipynb
                 - California Comparison: methods/fire-risk/california-comparison.ipynb
-                - Score Bins: methods/fire-risk/score-bins.ipynb
                 - Comparing Risk Rasters: methods/fire-risk/compare-risk-rasters.ipynb
                 - Comparing Risk at Buildings: methods/fire-risk/compare-risk-buildings.ipynb
-
-    - Tutorials:
-          - Calculate Wind-Adjusted Fire Risk: tutorials/calculate-wind-adjusted-fire-risk-for-a-region.ipynb
-          - Data Pipeline: tutorials/data-pipeline.md
 
     - Reference:
           - API: reference/api.md
@@ -81,6 +68,18 @@ nav:
           - Deployment: reference/deployment.md
           - Data Schema: reference/data-schema.md
           - Data Sources: reference/data-sources.md
+
+    - How-to Guides:
+          - User Guides:
+                - Getting Started: how-to/getting-started.md
+                - Working with Data: how-to/work-with-data.ipynb
+          - Developer Guides:
+                - Installation: how-to/installation.md
+                - Data Pipeline: how-to/data-pipeline.md
+                - Input Dataset Ingestion: how-to/input-dataset-ingestion.md
+                - Working With Input Datasets: how-to/work-with-input-datasets.md
+                - Release Procedure: how-to/release-procedure.md
+                - Snapshot Testing: how-to/snapshot-testing.md
 
 theme:
     language: en
