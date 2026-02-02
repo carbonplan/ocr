@@ -31,6 +31,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinx_design',
     'sphinxcontrib.mermaid',
+    'sphinx_click',
 ]
 
 # MyST config
@@ -48,6 +49,18 @@ myst_fence_as_directive = ['mermaid']
 # sphinx-copybutton configurations
 copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
 copybutton_prompt_is_regexp = True
+
+# Autodoc configuration
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'undoc-members': True,
+    'exclude-members': '__weakref__',
+}
+autodoc_typehints = 'description'
+autodoc_typehints_description_target = 'documented'
+# Don't show private members (those starting with _)
+autodoc_default_flags = ['members', 'show-inheritance']
 
 autosummary_generate = True
 
