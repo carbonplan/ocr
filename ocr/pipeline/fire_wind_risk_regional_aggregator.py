@@ -75,6 +75,8 @@ def custom_histogram_query(
     summary_stats_path: UPath,
     hist_bins: list[int] | None = [0.01, 0.02, 0.035, 0.06, 0.1, 0.2, 0.5, 1, 3, 100],
 ):
+    join_clause = f'JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)'
+
     if geo_table_name == 'county':
         name_column = 'b.NAME as NAME,'
         name_group_by = ', NAME'
@@ -84,6 +86,9 @@ def custom_histogram_query(
     elif geo_table_name == 'nation':
         name_column = 'b.NAME as NAME,'
         name_group_by = ', NAME'
+        # ignore spatial join for conus/nation
+        join_clause = 'CROSS JOIN nation b'
+
     else:
         name_column = ''
         name_group_by = ''
@@ -106,7 +111,7 @@ def custom_histogram_query(
         count(CASE WHEN a.bp_2011_riley = 0 THEN 1 END) as zero_count_bp_2011_riley,
         count(CASE WHEN a.bp_2047_riley = 0 THEN 1 END) as zero_count_bp_2047_riley
     FROM buildings a
-    JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
+    {join_clause}
     GROUP BY GEOID{name_group_by}
     """
     con.execute(zero_counts_query)
