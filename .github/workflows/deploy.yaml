@@ -67,7 +67,7 @@ jobs:
                   ref: ${{ github.event.inputs.production_tag || github.event.release.tag_name || github.sha }}
 
             - name: Setup Pixi (deploy env)
-              uses: prefix-dev/setup-pixi@v0.9.3
+              uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
@@ -141,7 +141,7 @@ jobs:
                   role-session-name: ocr-etl-role-session
                   aws-region: us-west-2
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
@@ -190,7 +190,7 @@ jobs:
                   role-session-name: ocr-etl-role-session
                   aws-region: us-west-2
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
@@ -263,7 +263,7 @@ jobs:
                   role-session-name: ocr-etl-role-session
                   aws-region: us-west-2
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
@@ -359,7 +359,7 @@ jobs:
                   aws-region: us-west-2
                   role-duration-seconds: 12000
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
@@ -462,7 +462,7 @@ jobs:
                   aws-region: us-west-2
                   role-duration-seconds: 12000
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   cache: false
                   locked: false
