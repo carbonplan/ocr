@@ -114,37 +114,37 @@ Contains all production code organized into logical modules:
 
 Orchestration layer for local and cloud execution:
 
--   **`cli.py`** - Typer-based CLI application (`ocr` command) with commands for processing regions, aggregation, PMTiles generation, and analysis file creation
--   **`managers.py`** - Abstract batch manager interface with `CoiledBatchManager` (cloud) and `LocalBatchManager` (local) implementations
+- **`cli.py`** - Typer-based CLI application (`ocr` command) with commands for processing regions, aggregation, PMTiles generation, and analysis file creation
+- **`managers.py`** - Abstract batch manager interface with `CoiledBatchManager` (cloud) and `LocalBatchManager` (local) implementations
 
 ### Pipeline (`pipeline/`)
 
 Internal processing modules coordinated by the CLI. These implement the data processing workflow:
 
--   **`process_region.py`** - Sample risk values to building locations
--   **`partition.py`** - Partition GeoParquet by geographic regions
--   **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
--   **`create_pyramid.py`** - Generate ndpyramid multiscale Zarr for web visualization
--   **`create_building_pmtiles.py`** - Generate PMTiles for building footprint visualization
--   **`create_building_centroid_pmtiles.py`** - Generate PMTiles for building centroid visualization
--   **`create_regional_pmtiles.py`** - Generate PMTiles for regional aggregated statistics
--   **`write_aggregated_region_analysis_files.py`** - Write regional summary tables for all regions
+- **`process_region.py`** - Sample risk values to building locations
+- **`partition.py`** - Partition GeoParquet by geographic regions
+- **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
+- **`create_pyramid.py`** - Generate ndpyramid multiscale Zarr for web visualization
+- **`create_building_pmtiles.py`** - Generate PMTiles for building footprint visualization
+- **`create_building_centroid_pmtiles.py`** - Generate PMTiles for building centroid visualization
+- **`create_regional_pmtiles.py`** - Generate PMTiles for regional aggregated statistics
+- **`write_aggregated_region_analysis_files.py`** - Write regional summary tables for all regions
 
 ### Risk models (`risks/`)
 
 Domain-specific risk calculation logic:
 
--   **`fire.py`** - Fire/wind risk kernels, wind classification, elliptical spread models
+- **`fire.py`** - Fire/wind risk kernels, wind classification, elliptical spread models
 
 ### Input datasets (`input_datasets/`)
 
 Infrastructure for ingesting and processing input datasets:
 
--   **`cli.py`** - CLI application for dataset ingestion (`ocr ingest-data` command)
--   **`base.py`** - Abstract base classes for dataset processors
--   **`storage.py`** - Storage utilities for managing dataset files
--   **`tensor/`** - Tensor (raster) dataset ingestion modules
--   **`vector/`** - Vector (GeoParquet) dataset ingestion modules
+- **`cli.py`** - CLI application for dataset ingestion (`ocr ingest-data` command)
+- **`base.py`** - Abstract base classes for dataset processors
+- **`storage.py`** - Storage utilities for managing dataset files
+- **`tensor/`** - Tensor (raster) dataset ingestion modules
+- **`vector/`** - Vector (GeoParquet) dataset ingestion modules
 
 ---
 
@@ -154,12 +154,12 @@ Organized storage for input datasets and ingestion scripts:
 
 ### Tensor data (`tensor/`)
 
--   **`conus404/`** - CONUS404 climate reanalysis data (wind speed, direction, temperature, etc.)
+- **`conus404/`** - CONUS404 climate reanalysis data (wind speed, direction, temperature, etc.)
 
 ### Vector data (`vector/`)
 
--   **`alexandre-2016/`** - Historical fire perimeter data
--   **`calfire_stuctures_destroyed/`** - Structure damage records from CalFire
+- **`alexandre-2016/`** - Historical fire perimeter data
+- **`calfire_stuctures_destroyed/`** - Structure damage records from CalFire
 
 :::{note}
 Raw data files are typically not committed. This directory contains ingestion scripts and metadata. Large datasets are stored on S3.
@@ -171,14 +171,14 @@ Raw data files are typically not committed. This directory contains ingestion sc
 
 Exploratory Jupyter notebooks for prototyping and analysis:
 
--   `conus404-winds.ipynb` - Wind data exploration and CONUS404 analysis
--   `elliptical_kernel.ipynb` - Fire spread kernel development
--   `evaluating_wind_spreading.ipynb` - Wind spreading validation
--   `fire-weather-wind-mode-reprojected.ipynb` - Wind mode analysis
--   `wind_spread.ipynb` - Wind-driven fire spread modeling
--   `wind-spreading-kernels.ipynb` - Wind spread kernel experiments
--   `methods-figures.ipynb` - Generate figures for methodology documentation
--   `benchmarking.ipynb` - Performance benchmarking experiments
+- `conus404-winds.ipynb` - Wind data exploration and CONUS404 analysis
+- `elliptical_kernel.ipynb` - Fire spread kernel development
+- `evaluating_wind_spreading.ipynb` - Wind spreading validation
+- `fire-weather-wind-mode-reprojected.ipynb` - Wind mode analysis
+- `wind_spread.ipynb` - Wind-driven fire spread modeling
+- `wind-spreading-kernels.ipynb` - Wind spread kernel experiments
+- `methods-figures.ipynb` - Generate figures for methodology documentation
+- `benchmarking.ipynb` - Performance benchmarking experiments
 
 :::{note}
 **Convention**: When a notebook reaches maturity and demonstrates stable workflows, consider converting it into a how-to guide under `docs/how-to/`.
@@ -231,26 +231,26 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 
 ### Package and environment
 
--   **`pyproject.toml`** - Project metadata, dependencies (managed by Pixi), build config, tool settings (ruff, pytest, coverage)
--   **`pixi.lock`** - Locked dependency versions for reproducible environments
--   **`environment.yaml`** - Conda environment export (auto-generated from Pixi for Coiled deployments)
+- **`pyproject.toml`** - Project metadata, dependencies (managed by Pixi), build config, tool settings (ruff, pytest, coverage)
+- **`pixi.lock`** - Locked dependency versions for reproducible environments
+- **`environment.yaml`** - Conda environment export (auto-generated from Pixi for Coiled deployments)
 
 ### Documentation
 
--   **`mkdocs.yml`** - MkDocs configuration: theme, plugins, navigation structure
+- **`mkdocs.yml`** - MkDocs configuration: theme, plugins, navigation structure
 
 ### Environment templates
 
--   **`ocr-local.env`** - Template for local development (uses local filesystem)
--   **`ocr-coiled-s3.env`** - Template for cloud execution (S3 backend)
--   **`ocr-coiled-s3-staging.env`** - Staging environment configuration
--   **`ocr-coiled-s3-production.env`** - Production environment configuration
+- **`ocr-local.env`** - Template for local development (uses local filesystem)
+- **`ocr-coiled-s3.env`** - Template for cloud execution (S3 backend)
+- **`ocr-coiled-s3-staging.env`** - Staging environment configuration
+- **`ocr-coiled-s3-production.env`** - Production environment configuration
 
 ### Code quality
 
--   **`.pre-commit-config.yaml`** - Pre-commit hooks for linting and formatting
--   **`.prettierrc.json`** - Prettier configuration for Markdown/YAML formatting
--   **`codecov.yml`** - Code coverage reporting configuration
+- **`.pre-commit-config.yaml`** - Pre-commit hooks for linting and formatting
+- **`.prettierrc.json`** - Prettier configuration for Markdown/YAML formatting
+- **`codecov.yml`** - Code coverage reporting configuration
 
 ---
 
@@ -258,7 +258,7 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 
 Helper scripts for cloud infrastructure setup:
 
--   **`create_s3_bucket.py`** - Script to create and configure S3 buckets with appropriate permissions and lifecycle policies
+- **`create_s3_bucket.py`** - Script to create and configure S3 buckets with appropriate permissions and lifecycle policies
 
 ---
 
@@ -266,10 +266,10 @@ Helper scripts for cloud infrastructure setup:
 
 GitHub Actions workflows for automated testing, building, and deployment:
 
--   **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
--   **`scripts/`** - Helper scripts for environment export and Coiled software creation
--   **`dependabot.yaml`** - Automated dependency updates configuration
--   **`release-drafter.yml`** - Automated release notes generation
+- **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
+- **`scripts/`** - Helper scripts for environment export and Coiled software creation
+- **`dependabot.yaml`** - Automated dependency updates configuration
+- **`release-drafter.yml`** - Automated release notes generation
 
 ---
 
