@@ -130,8 +130,8 @@
     tests-integration = { cmd = "pytest -m 'integration'" }
 
 [tool.pixi.feature.docs.tasks]
-    docs-build = { cmd = "mkdocs build" }
-    docs-serve = { cmd = "mkdocs serve" }
+    docs-build = { cmd = "sphinx-build -T -b html docs _build/html" }
+    docs-serve = { cmd = "sphinx-autobuild docs _build/html" }
 
 [tool.pixi.feature.data-mgmt.tasks]
     jupyter = { cmd = "jupyter lab" }
@@ -155,23 +155,14 @@
 
 # Docs feature dependencies (conda-forge)
 [tool.pixi.feature.docs.dependencies]
-    cairosvg                    = ">=2.8.2,<3"
-    griffe-inherited-docstrings = ">=1.1.1,<2"
-    mike                        = ">=2.1.3,<3"
-    mkdocs                      = ">=1.6.1,<2"
-    mkdocs-click                = ">=0.9.0,<0.10"
-    mkdocs-jupyter              = ">=0.25.1,<0.26"
-    mkdocs-material             = ">=9.6.20,<10"
-    mkdocstrings                = ">=0.30.0,<0.31"
-    mkdocstrings-python         = ">=1.18.2,<2"
-    pillow                      = ">=11.3.0,<12"
-    ruff                        = ">=0.12.12,<0.14"
-    mkdocs-autorefs             = ">=1.4.3,<2"
+    myst-nb           = ">=1.3.0,<2"
+    ruff              = ">=0.12.12,<0.14"
+    sphinx-book-theme = ">=1.1.4,<2"
+sphinx-copybutton = ">=0.5.2,<0.6"
+sphinx-design = ">=0.7.0,<0.8"
+sphinxext-opengraph = ">=0.13.0,<0.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
-    markdown-exec             = ">=1.11.0, <2"
-    material-plausible-plugin = ">=0.3.0,<0.4"
-    mkdocs-panzoom-plugin     = ">=0.4.2,<0.5"
 
 [tool.pixi.feature.coiled-deploy.dependencies]
     coiled               = ">=1.120.0,<2"

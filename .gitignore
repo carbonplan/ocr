@@ -184,3 +184,4 @@ pixi.lock
 uv.lock
 environment.yaml
 .DS_Store
+_build/
