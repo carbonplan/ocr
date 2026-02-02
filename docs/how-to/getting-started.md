@@ -87,7 +87,7 @@ The dataset contains several key variables:
 
 -   **[Working With Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
 -   **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
--   **[Data Downloads](../access-data.md)**: Direct download links and bulk access options
+-   **[Access Data](../access-data.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 

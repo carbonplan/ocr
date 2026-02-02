@@ -44,4 +44,4 @@
 
 ## License
 
-Open Climate Risk code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [data downloads](access-data.md) for information about data licensing.
+Open Climate Risk code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [Access Data](access-data.md) for information about data licensing.
