@@ -87,7 +87,7 @@ The [web tool](https://carbonplan.org/research/climate-risk) can be used to acce
 3. Select your region of interest (continental US, state, county, census tract, or census block) and view trends inline.
 4. For subsetted, building-level data (schema below), click `CSV ↓` or `GeoPackage ↓` to download the applicable file for the selected region.
 
-    _If you are instead interested in summary statistics for the region (e.g., to reproduce the histogram), you may click `CSV ↓` or `GeoJSON ↓` to download those files (also [available above](#regional-statistics-downloads))._
+    _If you are instead interested in summary statistics for the region (e.g., to reproduce the histogram), you may click `CSV ↓` or `GeoJSON ↓` to download those files (also available in the Regional statistics downloads section above)._
 
 ![](./assets/web-data-downloads.png)
 
