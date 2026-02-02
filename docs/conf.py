@@ -121,8 +121,37 @@ html_css_files = ['custom.css']
 # OpenGraph configuration
 ogp_site_url = 'https://open-climate-risk.readthedocs.io/'
 ogp_site_name = 'Open Climate Risk'
-ogp_description = "CarbonPlan's Open Climate Risk platform"
+ogp_description = (
+    'Building-level climate risk assessments across the Continental United States. '
+    'Access fire and wind risk data, explore methodologies, and analyze climate impacts.'
+)
+ogp_type = 'website'
 ogp_image = 'https://open-climate-risk.readthedocs.io/en/latest/assets/monogram-light-cropped.png'
+ogp_image_alt = 'Open Climate Risk - CarbonPlan'
+ogp_image_width = '1200'  # Optimal for LinkedIn, Bluesky, Twitter
+ogp_image_height = '630'  # Standard social card dimensions (1.91:1 ratio)
+ogp_description_length = 200
+ogp_enable_meta_description = True
+ogp_use_first_image = True  # Use first image in page if available
+
+# Social cards configuration - generates cards automatically
 ogp_social_cards = {
     'enable': True,
+    'image': '_static/monogram-light-cropped.png',
 }
+
+# Custom meta tags for enhanced social media support
+# These work across Twitter/X, Bluesky, LinkedIn, and Facebook
+ogp_custom_meta_tags = [
+    # Twitter/X specific
+    '<meta name="twitter:card" content="summary_large_image" />',
+    '<meta name="twitter:site" content="@carbonplanorg" />',
+    '<meta name="twitter:creator" content="@carbonplanorg" />',
+    # LinkedIn uses standard OG tags but benefits from explicit image dimensions
+    '<meta property="og:image:width" content="1200" />',
+    '<meta property="og:image:height" content="630" />',
+    '<meta property="og:image:type" content="image/png" />',
+    # Additional metadata for better indexing
+    '<meta property="article:author" content="CarbonPlan" />',
+    '<meta name="author" content="CarbonPlan" />',
+]
