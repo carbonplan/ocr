@@ -74,29 +74,7 @@ mermaid_output_format = 'raw'
 mermaid_version = '11.4.0'
 mermaid_d3_zoom = True  # Enable zoom functionality
 d3_version = '7.9.0'  # D3 version for zoom
-# mermaid_init_js = """
-# mermaid.initialize({
-#     startOnLoad: true,
-#     theme: 'default',
-#     themeVariables: {
-#         primaryColor: '#e1f5ff',
-#         primaryTextColor: '#333',
-#         primaryBorderColor: '#90caf9',
-#         lineColor: '#424242',
-#         secondaryColor: '#fff4e1',
-#         tertiaryColor: '#f3e8ff',
-#         background: '#ffffff',
-#         mainBkg: '#e1f5ff',
-#         secondBkg: '#fff4e1',
-#         tertiaryBkg: '#f3e8ff'
-#     },
-#     flowchart: {
-#         useMaxWidth: true,
-#         htmlLabels: true,
-#         curve: 'basis'
-#     }
-# });
-# """
+
 
 # Intersphinx mapping
 intersphinx_mapping = {
