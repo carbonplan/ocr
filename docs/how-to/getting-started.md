@@ -118,4 +118,4 @@ Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for
 
 ---
 
-_Ready to dive deeper? Check out the [Working with Data](work-with-data.ipynb) notebook for hands-on examples._
+_Ready to dive deeper? Check out the [Working With Data](work-with-data.ipynb) notebook for hands-on examples._
