@@ -45,6 +45,7 @@ myst_enable_extensions = [
 ]
 myst_url_schemes = ['http', 'https', 'mailto']
 myst_fence_as_directive = ['mermaid']
+myst_heading_anchors = 2
 
 # sphinx-copybutton configurations
 copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
