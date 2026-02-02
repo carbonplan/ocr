@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
@@ -60,10 +61,20 @@ def partition_buildings_by_geography(config: OCRConfig):
 
     dataset = ds.dataset(str(output_path), format='parquet', partitioning='hive')
 
-    arrow_meta = {k.encode(): v.encode() for k, v in metadata_dict.items()}
-    existing_meta = dataset.schema.metadata or {}
+    # ignore the state / county names in metadata since they are just for the hive partition
+    schema_without_partitions = dataset.schema
+    partition_names = {'state_fips', 'county_fips'}
+    field_indices = [
+        i for i, field in enumerate(schema_without_partitions) if field.name not in partition_names
+    ]
+    schema_without_partitions = pa.schema(
+        [schema_without_partitions.field(i) for i in field_indices]
+    )
 
-    new_schema = dataset.schema.with_metadata({**existing_meta, **arrow_meta})
+    arrow_meta = {k.encode(): v.encode() for k, v in metadata_dict.items()}
+    existing_meta = schema_without_partitions.metadata or {}
+
+    new_schema = schema_without_partitions.with_metadata({**existing_meta, **arrow_meta})
 
     pq.write_metadata(new_schema, f'{output_path}/_common_metadata')
     connection.close()
