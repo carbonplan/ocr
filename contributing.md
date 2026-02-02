@@ -2,8 +2,8 @@
 
 Contributions to this project are welcome! If you're new to contributing to CarbonPlan projects, here are some resources to help you get started:
 
--   Familiarize yourself with our [GitHub organization](https://github.com/carbonplan)
--   Read our [Code of Conduct](https://github.com/carbonplan/.github/blob/main/CODE_OF_CONDUCT.md)
+- Familiarize yourself with our [GitHub organization](https://github.com/carbonplan)
+- Read our [Code of Conduct](https://github.com/carbonplan/.github/blob/main/CODE_OF_CONDUCT.md)
 
 ## Contributing code
 
@@ -86,5 +86,5 @@ Then navigate to <http://localhost:8000> to view the docs.
 
 Documentation is automatically deployed:
 
--   **PR previews**: Every pull request gets a preview deployment on ReadTheDocs
--   **Production**: Merges to `main` automatically deploy to <https://open-climate-risk.readthedocs.io/>
+- **PR previews**: Every pull request gets a preview deployment on ReadTheDocs
+- **Production**: Merges to `main` automatically deploy to <https://open-climate-risk.readthedocs.io/>

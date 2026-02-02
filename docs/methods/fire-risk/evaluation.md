@@ -19,9 +19,9 @@ Comprehensive comparison of our burn probability estimates against historical U.
 
 **Key analyses:**
 
--   Distribution of burn probability in historically burned vs. unburned areas
--   Performance assessment in areas we designated as burnable
--   Statistical comparison with 70+ year fire history
+- Distribution of burn probability in historically burned vs. unburned areas
+- Performance assessment in areas we designated as burnable
+- Statistical comparison with 70+ year fire history
 
 ### [California Comparison](california-comparison.ipynb)
 
@@ -29,15 +29,15 @@ Detailed comparison of our risk estimates with two authoritative California data
 
 **Key analyses:**
 
--   Census tract-level concordance analysis using Kendall's Tau
--   Spatial patterns of agreement and disagreement
--   Regional variation in performance metrics
+- Census tract-level concordance analysis using Kendall's Tau
+- Spatial patterns of agreement and disagreement
+- Regional variation in performance metrics
 
 **Key features:**
 
--   Monotonically descending bin prevalence with increasing risk scores
--   Distribution-based bin design using building-level data
--   Comparison with other scoring approaches
+- Monotonically descending bin prevalence with increasing risk scores
+- Distribution-based bin design using building-level data
+- Comparison with other scoring approaches
 
 ### [Comparing Risk Rasters](compare-risk-rasters.ipynb)
 
@@ -45,10 +45,10 @@ Visual comparison of our 30m resolution risk rasters with those from the Wildfir
 
 **Key analyses:**
 
--   Areas of low correlation between datasets
--   Regions with high and low bias
--   Historical fire locations (Eaton Fire, Marshall Fire, Camp Fire)
--   "Wind effect" vs. "development effect" attribution
+- Areas of low correlation between datasets
+- Regions with high and low bias
+- Historical fire locations (Eaton Fire, Marshall Fire, Camp Fire)
+- "Wind effect" vs. "development effect" attribution
 
 ### [Comparing Risk at Buildings](compare-risk-buildings.ipynb)
 
@@ -65,6 +65,6 @@ Our evaluation demonstrates that:
 
 ## References
 
--   Finney, M.A., et al. (2011). A simulation of probabilistic wildfire risk components for the continental United States. Stochastic Environmental Research and Risk Assessment.
--   Moran, C.J., et al. (2025). Benchmarking burn probability maps in California using historical fire perimeters. Scientific Reports.
--   Riley, K.L., et al. (2025). Wildfire Risk to Communities methodology and data products.
+- Finney, M.A., et al. (2011). A simulation of probabilistic wildfire risk components for the continental United States. Stochastic Environmental Research and Risk Assessment.
+- Moran, C.J., et al. (2025). Benchmarking burn probability maps in California using historical fire perimeters. Scientific Reports.
+- Riley, K.L., et al. (2025). Wildfire Risk to Communities methodology and data products.
