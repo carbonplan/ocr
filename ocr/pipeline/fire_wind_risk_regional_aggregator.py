@@ -75,7 +75,7 @@ def custom_histogram_query(
     summary_stats_path: UPath,
     hist_bins: list[int] | None = [0.01, 0.02, 0.035, 0.06, 0.1, 0.2, 0.5, 1, 3, 100],
 ):
-    join_clause = f'JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)'
+    join_clause = f'JOIN {geo_table_name} b ON ST_Intersects(b.geometry, ST_Centroid(a.geometry))'
 
     if geo_table_name == 'county':
         name_column = 'b.NAME as NAME,'
@@ -149,7 +149,7 @@ def custom_histogram_query(
 
         b.geometry as geometry
     FROM buildings a
-    JOIN {geo_table_name} b ON ST_Intersects(a.geometry, b.geometry)
+        {join_clause}
     GROUP BY GEOID, b.geometry{name_group_by}
     """
     con.execute(nonzero_hist_query)
