@@ -1,3 +1,5 @@
+# Terms of data access
+
 ## License Agreement
 
 Open Climate Risk data are made available under the licenses listed on the [Access Data](access-data.md) page. By accessing the data, you agree to adhere to the license terms.

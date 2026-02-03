@@ -1,4 +1,4 @@
-# Open Climate Risk Data Pipeline
+# Open Climate Risk data pipeline
 
 The Open Climate Risk (OCR) data pipeline processes climate risk data through a series of coordinated stages, from individual region processing to final tile generation for visualization.
 
@@ -129,12 +129,16 @@ ocr run --env-file .env --region-id y10_x2
 
 ## CLI Commands
 
-<!-- prettier-ignore -->
-::: mkdocs-click
-  :module: ocr.deploy.cli
-  :command: ocr
-  :prog_name: ocr
-  :list_subcommands: true
+For detailed CLI documentation, see the [API Reference](../reference/api.md#cli-application).
+
+```bash
+# View all available commands
+ocr --help
+
+# View help for a specific command
+ocr run --help
+ocr aggregate-regional-stats --help
+```
 
 ### Pipeline Orchestration
 

@@ -1,4 +1,4 @@
-# Working With Input Datasets (technical reference + how-to)
+# Working with input datasets (technical reference + how-to)
 
 This page documents the main input datasets used in Open Climate Risk and shows how to access them programmatically via the `ocr` dataset catalog. Treat this as a technical reference for dataset names, example usage, and ingestion notes. Information about data provenance is available on the [Data Sources](../reference/data-sources.md) page.
 
@@ -57,8 +57,8 @@ Vector data are building footprints, administrative boundaries, and other GIS ve
 conus_buildings = catalog.get_dataset('conus-overture-buildings')
 ```
 
-<!-- prettier-ignore-start -->
-!!! note "Accessing Private Data"
-    Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
+:::{admonition}**Accessing Private Data**
+:class: note
 
-<!-- prettier-ignore-end -->
+Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
+:::

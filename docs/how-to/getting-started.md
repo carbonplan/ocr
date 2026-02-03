@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 This guide helps you get started with accessing and using Open Climate Risk fire risk data for the continental United States.
 
@@ -77,9 +77,11 @@ The dataset contains several key variables:
 - **`crps`**: Conditional Risk to Potential Structures (damage if fire occurs)
 - Risk scores are for a "generic" or "potential" structure at each location
 
-!!! note "Important Limitation"
+:::{admonition} **Important Limitation**
+:class: note
 
-    Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management.
+Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management.
+:::
 
 ## Next Steps
 

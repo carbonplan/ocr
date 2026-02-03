@@ -1,4 +1,4 @@
-# Input Dataset Ingestion
+# Input dataset ingestion
 
 This guide covers how to ingest and process input datasets for the Open Climate Risk (OCR) project using the unified CLI infrastructure.
 

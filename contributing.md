@@ -70,17 +70,21 @@ Once you have pushed your changes to your forked repository, you can submit a pu
 
 ## Contributing documentation
 
-!Note: Directions for uv, we can update to pixi.
+Our documentation is built with Sphinx and deployed automatically to ReadTheDocs on every PR and merge to `main`.
 
-Our documentation is built with `mkdocs`.
+To build and serve the docs locally:
 
-To build the docs:
+```bash
+# Build the documentation
+pixi run docs-build
 
-1.
-
+# Serve the documentation locally
+pixi run docs-serve
 ```
-uv run --group docs mkdocs serve
-...
 
-2. Navigate to localhost:8000
-```
+Then navigate to <http://localhost:8000> to view the docs.
+
+Documentation is automatically deployed:
+
+- **PR previews**: Every pull request gets a preview deployment on ReadTheDocs
+- **Production**: Merges to `main` automatically deploy to <https://open-climate-risk.readthedocs.io/>

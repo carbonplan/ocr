@@ -73,7 +73,7 @@ graph TB
         subgraph Config["Configuration & Build"]
             PYPROJECT[pyproject.toml - Package config]
             PIXI[pixi.lock - Environment lock]
-            MKDOCS[mkdocs.yml - Docs config]
+            SPHINX[docs/conf.py - Docs config]
             ENV[ocr-*.env - Environment vars]
             GITHUB[.github/ - CI/CD workflows]
         end
@@ -161,9 +161,9 @@ Organized storage for input datasets and ingestion scripts:
 - **`alexandre-2016/`** - Historical fire perimeter data
 - **`calfire_stuctures_destroyed/`** - Structure damage records from CalFire
 
-!!! note
-
-    Raw data files are typically not committed. This directory contains ingestion scripts and metadata. Large datasets are stored on S3.
+:::{note}
+Raw data files are typically not committed. This directory contains ingestion scripts and metadata. Large datasets are stored on S3.
+:::
 
 ---
 
@@ -180,9 +180,9 @@ Exploratory Jupyter notebooks for prototyping and analysis:
 - `methods-figures.ipynb` - Generate figures for methodology documentation
 - `benchmarking.ipynb` - Performance benchmarking experiments
 
-!!! note
-
-    **Convention**: When a notebook reaches maturity and demonstrates stable workflows, consider converting it into a how-to guide under `docs/how-to/`.
+:::{note}
+**Convention**: When a notebook reaches maturity and demonstrates stable workflows, consider converting it into a how-to guide under `docs/how-to/`.
+:::
 
 ---
 
@@ -199,7 +199,7 @@ docs/
 └── index.md                   # Documentation home page
 ```
 
-Documentation is built with MkDocs Material and deployed automatically on merge to `main`.
+Documentation is built with Sphinx using the sphinx-book-theme and deployed automatically to [ReadTheDocs](https://open-climate-risk.readthedocs.io/) on every PR and merge to `main`.
 
 ---
 
@@ -237,7 +237,8 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 
 ### Documentation
 
-- **`mkdocs.yml`** - MkDocs configuration: theme, plugins, navigation structure
+- **`docs/conf.py`** - Sphinx configuration: theme, extensions, intersphinx mappings
+- **`.readthedocs.yaml`** - ReadTheDocs build configuration
 
 ### Environment templates
 
@@ -298,9 +299,9 @@ GitHub Actions workflows for automated testing, building, and deployment:
     - How-to guides: task-oriented, assume prior knowledge
     - Reference: information-oriented, technical specifications
     - Methods: explanation-oriented, scientific background
-2. **Update navigation** in `mkdocs.yml` if adding new pages
-3. **Test locally**: `pixi run docs-serve` to preview changes
-4. **Submit PR**: Documentation builds are tested in CI
+2. **Update navigation** in `docs/index.md` toctree if adding new top-level pages
+3. **Test locally**: `pixi run docs-build && pixi run docs-serve` to preview changes
+4. **Submit PR**: Documentation builds are tested in ReadTheDocs (PR preview link will be posted)
 
 ### Release workflow
 

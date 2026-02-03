@@ -1,4 +1,4 @@
-# Release to Production
+# Release to production
 
 This guide shows how to release a new version of the project to production.
 
@@ -86,11 +86,11 @@ Publishing the release triggers the production data processing workflow automati
     - Creates PMTiles for visualization
     - Writes output to `s3://carbonplan-ocr/output/fire-risk/tensor/production/vX.Y.Z/`
 
-<!-- prettier-ignore-start -->
-!!! important "Note"
-     This workflow only processes and stores the data. It does NOT automatically update the website. See step 7 for website deployment.
+:::{important}
+**Note**
 
-<!-- prettier-ignore-end -->
+This workflow only processes and stores the data. It does NOT automatically update the website. See step 7 for website deployment.
+:::
 
 **Monitor progress:**
 

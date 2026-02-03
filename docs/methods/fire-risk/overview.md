@@ -1,4 +1,4 @@
-# Fire Risk Methods Overview
+# Fire risk methods overview
 
 This page explains the high-level methodology used to compute building-level wildfire risk scores for CONUS. It provides a conceptual overview with references to more detailed documentation pages. For an full description of our methods, read the [methods document](https://carbonplan.org/research/climate-risk-fire-methods) that accompanied our [explainer article](https://carbonplan.org/research/climate-risk-explainer).
 
@@ -29,9 +29,11 @@ Where:
 
 RPS represents the **expected net value change** per year for a generic structure at each location. It combines both probability (how likely fire is) and consequence (how much damage would occur).
 
-!!! note "Key limitation"
+:::{admonition} **Key limitation**
+:class: note
 
-    This approach models risk to a hypothetical "potential structure" rather than actual buildings with specific characteristics. Building-level attributes (materials, retrofits, defensible space) are not included.
+This approach models risk to a hypothetical "potential structure" rather than actual buildings with specific characteristics. Building-level attributes (materials, retrofits, defensible space) are not included.
+:::
 
 ### Wind-Adjusted Fire Spread
 

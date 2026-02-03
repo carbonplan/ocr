@@ -4,36 +4,46 @@
 
 ## Quick Links
 
-- [**Web Tool**](https://carbonplan.org/research/climate-risk)
+- [**Map Tool**](https://carbonplan.org/research/climate-risk)
 - [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
 - [**GitHub Repository**](https://github.com/carbonplan/ocr)
 - [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
 
 ## Getting Started
 
-=== "Using Open Climate Risk Data"
+::::{tab-set}
 
-    If you want to **access and analyze fire risk data**:
+:::{tab-item} Using Open Climate Risk Data
 
-    1. Visit [Access Data](access-data.md) for an overview of all available formats
-    2. Read the [Working With Data](./how-to/work-with-data.ipynb) guide to learn how to load production datasets
-    3. Explore the [Data Schema][data-schema] to understand available variables
+If you want to **access and analyze fire risk data**:
 
-=== "Understanding Methods"
+1. Visit [Access Data](access-data.md) for an overview of all available formats
+2. Read the [Working With Data](how-to/work-with-data.ipynb) guide to learn how to load production datasets
+3. Explore the [Data Schema](reference/data-schema.md) to understand available variables
 
-    If you want to **understand how fire risk is calculated**:
+:::
 
-    1. Read the [Fire Risk Overview][fire-risk-methods-overview] for conceptual background
-    2. Learn about how we performed [Evaluation][evaluation] of our fire risk estimates
-    2. Review our [Data Sources][data-sources]
+:::{tab-item} Understanding Methods
 
-=== "Contributing to Open Climate Risk"
+If you want to **understand how fire risk is calculated**:
 
-    If you want to **develop or contribute**:
+1. Read the [Fire Risk Overview](methods/fire-risk/overview.md) for conceptual background
+2. Learn about how we performed [Evaluation](methods/fire-risk/evaluation.md) of our fire risk estimates
+3. Review our [Data Sources](reference/data-sources.md)
 
-    1. Follow the [Installation][install-ocr-for-development] guide to set up your development environment
-    2. Read the [Project Structure][project-structure] to understand the codebase
-    3. Review [Snapshot Testing][snapshot-testing-with-xarrayzarr] for testing practices
+:::
+
+:::{tab-item} Contributing to Open Climate Risk
+
+If you want to **develop or contribute**:
+
+1. Follow the [Installation](how-to/installation.md) guide to set up your development environment
+2. Read the [Project Structure](reference/project-structure.md) to understand the codebase
+3. Review [Snapshot Testing](how-to/snapshot-testing.md) for testing practices
+
+:::
+
+::::
 
 ## Support
 
@@ -43,3 +53,42 @@
 ## License
 
 Open Climate Risk code is released under the MIT License. See [LICENSE](https://github.com/carbonplan/ocr/blob/main/LICENSE) for details. See [Access Data](access-data.md) for information about data licensing.
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+access-data
+terms-of-data-access
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: Methods
+
+methods/fire-risk/overview
+methods/fire-risk/horizontal-scaling-via-spatial-chunking
+methods/fire-risk/score-bins
+methods/fire-risk/evaluation
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: Reference
+
+reference/api
+reference/project-structure
+reference/deployment
+reference/data-schema
+reference/data-sources
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+:caption: How-to guides
+
+how-to/user-guide-index
+how-to/developer-guide-index
+```

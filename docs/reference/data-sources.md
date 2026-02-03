@@ -1,4 +1,4 @@
-# Data Sources
+# Data sources
 
 We developed the Open Climate Risk (OCR) wildfire model to be reproducible, and reliant on only free, publicly available input data, enumerated below.
 

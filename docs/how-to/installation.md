@@ -1,4 +1,4 @@
-# Install `ocr` for Development
+# Install `ocr` for development
 
 This guide shows how to set up Open Climate Risk (`ocr`) for local development using pixi.
 
@@ -54,4 +54,4 @@ pixi run tests
 ## Next steps
 
 - See [Data Pipeline](data-pipeline.md) to run the processing pipeline
-- Read [Project Structure](reference/project-structure) to understand the codebase
+- Read [Project Structure](../reference/project-structure.md) to understand the codebase

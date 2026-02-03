@@ -18,4 +18,4 @@ build:
             - pixi install -e docs
         build:
             html:
-                - pixi run -e docs mkdocs build --site-dir $READTHEDOCS_OUTPUT/html
+                - pixi run -e docs sphinx-build -b html docs $READTHEDOCS_OUTPUT/html
