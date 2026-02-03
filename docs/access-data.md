@@ -2,14 +2,14 @@
 
 There a few different ways to access the data, in addition to exploration via the map tool. This page outlines the different versions and formats of data available for download.
 
-:::{warning}
-**License Agreement**
+:::{admonition} **License Agreement**
+:class: warning
 
 Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
 :::
 
-:::{warning}
-**Terms of Data Use**
+:::{admonition} **Terms of Data Use**
+:class: warning
 
 By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
 :::

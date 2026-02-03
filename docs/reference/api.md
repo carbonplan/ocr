@@ -104,8 +104,8 @@ Core fire/wind risk utilities used by the pipeline (kernels, wind classification
 
 ## Internal pipeline modules
 
-:::{note}
-**Internal API**
+:::{admonition} **Internal API**
+:class: note
 
 These modules are used internally by the pipeline and are not intended for direct public consumption. They are documented here for completeness and advanced use cases.
 :::
