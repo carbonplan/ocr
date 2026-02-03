@@ -1,4 +1,4 @@
-# Developer Guides
+# Developer guides
 
 These guides help you set up and contribute to the Open Climate Risk development environment.
 

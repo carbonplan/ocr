@@ -1,4 +1,4 @@
-# Terms of Data Access
+# Terms of data access
 
 ## License Agreement
 

@@ -1,4 +1,4 @@
-# Snapshot Testing with Xarray/Zarr
+# Snapshot testing with Xarray/Zarr
 
 OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with custom support for xarray DataArrays and Datasets stored in zarr format.
 
@@ -6,9 +6,9 @@ OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with cu
 
 The `XarraySnapshotExtension` and `GeoDataFrameSnapshotExtension` allow you to:
 
-- Create and compare snapshots of xarray DataArrays and Datasets and GeoPandas dataframes
-- Store snapshots in S3 (default) or locally
-- Handle large datasets efficiently using zarr format and geoparquet for geodataframes.
+-   Create and compare snapshots of xarray DataArrays and Datasets and GeoPandas dataframes
+-   Store snapshots in S3 (default) or locally
+-   Handle large datasets efficiently using zarr format and geoparquet for geodataframes.
 
 ## Basic Usage
 
@@ -81,8 +81,8 @@ SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pixi run pytest tests/test_snapshot.py
 
 The snapshot storage location is controlled by the `SNAPSHOT_STORAGE_PATH` environment variable:
 
-- **Default**: `s3://carbonplan-ocr/integration-tests/snapshots/` (set in `tests/conftest.py`)
-- **Override**: Set `SNAPSHOT_STORAGE_PATH` to any local path or S3 URI
+-   **Default**: `s3://carbonplan-ocr/integration-tests/snapshots/` (set in `tests/conftest.py`)
+-   **Override**: Set `SNAPSHOT_STORAGE_PATH` to any local path or S3 URI
 
 ### Examples
 
@@ -105,9 +105,9 @@ Snapshots are named based on the test file and function:
 
 Example:
 
-- Test file: `tests/test_fire_risk.py`
-- Test function: `test_wind_adjustment`
-- Snapshot name: `test_fire_risk_test_wind_adjustment.zarr`
+-   Test file: `tests/test_fire_risk.py`
+-   Test function: `test_wind_adjustment`
+-   Snapshot name: `test_fire_risk_test_wind_adjustment.zarr`
 
 ## Managing S3 Snapshots
 

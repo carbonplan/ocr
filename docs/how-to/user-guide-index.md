@@ -1,4 +1,4 @@
-# User Guides
+# User guides
 
 These guides help you work with Open Climate Risk data and outputs.
 

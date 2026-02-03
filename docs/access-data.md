@@ -1,4 +1,4 @@
-# Access Data
+# Access data
 
 There a few different ways to access the data, in addition to exploration via the map tool. This page outlines the different versions and formats of data available for download.
 
