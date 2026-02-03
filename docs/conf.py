@@ -9,7 +9,7 @@ print('sys.path:', sys.path)
 
 project = 'OCR'
 this_year = datetime.datetime.now().year
-copyright = f'{this_year}, carbonplan'
+copyright = f'{this_year}, CarbonPlan'
 author = 'CarbonPlan'
 
 release = ocr.__version__
@@ -116,7 +116,7 @@ html_theme_options = {
 }
 
 html_static_path = ['assets']
-html_css_files = []
+
 
 # OpenGraph configuration
 ogp_site_url = 'https://open-climate-risk.readthedocs.io/'
