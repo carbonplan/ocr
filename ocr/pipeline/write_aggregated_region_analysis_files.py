@@ -56,44 +56,61 @@ def write_stats_table(
         FROM read_parquet('{stats_parquet_path}')
     """)
 
-    # create geojson with metadata at top level
-    con.execute(f"""
-        COPY (
-            SELECT json_object(
-                'type', 'FeatureCollection',
-                'metadata', '{metadata_json}'::JSON,
-                'features', (
-                    SELECT json_group_array(
-                        json_object(
-                            'type', 'Feature',
-                            'properties', json_object(
-                                'GEOID', GEOID,
-                                {"'STUSPS', STUSPS, 'NAME', NAME," if stats_table_name == 'states' else "'NAME', NAME," if stats_table_name == 'counties' else ''}
-                                'building_count', building_count,
-                                'rps_2011_mean', rps_2011_mean,
-                                'rps_2047_mean', rps_2047_mean,
-                                'bp_2011_mean', bp_2011_mean,
-                                'bp_2047_mean', bp_2047_mean,
-                                'crps_scott_mean', crps_scott_mean,
-                                'bp_2011_riley_mean', bp_2011_riley_mean,
-                                'bp_2047_riley_mean', bp_2047_riley_mean,
-                                'rps_2011_median', rps_2011_median,
-                                'rps_2047_median', rps_2047_median,
-                                'bp_2011_median', bp_2011_median,
-                                'bp_2047_median', bp_2047_median,
-                                'crps_scott_median', crps_scott_median,
-                                'bp_2011_riley_median', bp_2011_riley_median,
-                                'bp_2047_riley_median', bp_2047_riley_median
-                            ),
-                            'geometry', json(ST_AsGeoJSON(geometry))
-                        )
-                    )
-                    FROM {stats_table_name}
-                )
-            )::VARCHAR as content
-        ) TO '{region_stats_path}/stats.geojson' (FORMAT csv, HEADER false, QUOTE '');
-    """)
+    # Stream features row-by-row via fetchone() to avoid json_group_array overflow
+    name_props = (
+        "'STUSPS', STUSPS, 'NAME', NAME,"
+        if stats_table_name == 'states'
+        else "'NAME', NAME,"
+        if stats_table_name == 'counties'
+        else ''
+    )
 
+    feature_query = f"""
+        SELECT json_object(
+            'type', 'Feature',
+            'properties', json_object(
+                'GEOID', GEOID,
+                {name_props}
+                'building_count', building_count,
+                'rps_2011_mean', rps_2011_mean,
+                'rps_2047_mean', rps_2047_mean,
+                'bp_2011_mean', bp_2011_mean,
+                'bp_2047_mean', bp_2047_mean,
+                'crps_scott_mean', crps_scott_mean,
+                'bp_2011_riley_mean', bp_2011_riley_mean,
+                'bp_2047_riley_mean', bp_2047_riley_mean,
+                'rps_2011_median', rps_2011_median,
+                'rps_2047_median', rps_2047_median,
+                'bp_2011_median', bp_2011_median,
+                'bp_2047_median', bp_2047_median,
+                'crps_scott_median', crps_scott_median,
+                'bp_2011_riley_median', bp_2011_riley_median,
+                'bp_2047_riley_median', bp_2047_riley_median,
+                'risk_score_2011_hist', risk_score_2011_hist,
+                'risk_score_2047_hist', risk_score_2047_hist
+            ),
+            'geometry', json(ST_AsGeoJSON(geometry))
+        )::VARCHAR as feature
+        FROM {stats_table_name}
+    """
+
+    geojson_path = region_stats_path / 'stats.geojson'
+    with geojson_path.open('w') as out:
+        out.write('{"type":"FeatureCollection",')
+        out.write(f'"metadata":{metadata_json},')
+        out.write('"features":[')
+
+        result = con.execute(feature_query)
+        first = True
+        while row := result.fetchone():
+            if not first:
+                out.write(',')
+            out.write(row[0])
+            first = False
+
+        out.write(']}')
+
+    # CSV output
     csv_path = region_stats_path / 'stats.csv'
 
     temp_csv_path = region_stats_path / 'stats_temp.csv'
