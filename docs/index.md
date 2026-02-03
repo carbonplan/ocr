@@ -1,4 +1,4 @@
-# Open climate risk
+# Open Climate Risk
 
 **Open Climate Risk** is CarbonPlan's platform for analyzing and visualizing climate-related risks at a building-level resolution across the Continental United States (CONUS).
 

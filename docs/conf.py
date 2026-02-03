@@ -122,7 +122,7 @@ html_static_path = ['assets']
 ogp_site_url = 'https://open-climate-risk.readthedocs.io/'
 ogp_site_name = 'Open Climate Risk'
 ogp_description = (
-    'Building-level climate risk assessments across the Continental United States. '
+    'Building-level climate risk assessments across the continental United States. '
     'Access fire and wind risk data, explore methodologies, and analyze climate impacts.'
 )
 ogp_type = 'website'

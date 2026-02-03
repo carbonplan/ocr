@@ -1,4 +1,4 @@
-# Open climate risk data pipeline
+# Open Climate Risk data pipeline
 
 The Open Climate Risk (OCR) data pipeline processes climate risk data through a series of coordinated stages, from individual region processing to final tile generation for visualization.
 
