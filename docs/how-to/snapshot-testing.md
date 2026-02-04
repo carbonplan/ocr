@@ -1,4 +1,4 @@
-# Snapshot testing with Xarray/Zarr
+# Snapshot testing
 
 OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with custom support for xarray DataArrays and Datasets stored in zarr format.
 
@@ -10,9 +10,9 @@ The `XarraySnapshotExtension` and `GeoDataFrameSnapshotExtension` allow you to:
 - Store snapshots in S3 (default) or locally
 - Handle large datasets efficiently using zarr format and geoparquet for geodataframes.
 
-## Basic Usage
+## Basic usage
 
-### S3 Snapshots (Default)
+### S3 snapshots (default)
 
 By default, snapshots are stored in S3 at `s3://carbonplan-ocr/integration-tests/snapshots/`. This is configured in `tests/conftest.py` and can be overridden if needed.
 
@@ -65,7 +65,7 @@ pixi run pytest tests/test_snapshot.py --snapshot-update
 pixi run pytest tests/test_snapshot.py
 ```
 
-### Local Storage (Override)
+### Local storage (override)
 
 If you prefer to store snapshots locally during development, you can override the default:
 
@@ -97,7 +97,7 @@ SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pixi run tests-integration
 SNAPSHOT_STORAGE_PATH=s3://my-bucket/snapshots pixi run tests-integration
 ```
 
-## Snapshot Organization
+## Snapshot organization
 
 Snapshots are named based on the test file and function:
 
@@ -109,7 +109,7 @@ Example:
 - Test function: `test_wind_adjustment`
 - Snapshot name: `test_fire_risk_test_wind_adjustment.zarr`
 
-## Managing S3 Snapshots
+## Managing S3 snapshots
 
 ### List snapshots
 
@@ -127,7 +127,7 @@ aws s3 rm s3://carbonplan-ocr/integration-tests/snapshots/test_snapshot_test_exa
 aws s3 rm s3://carbonplan-ocr/integration-tests/snapshots/ --recursive
 ```
 
-## Example: Complete Test Setup
+## Example: complete test setup
 
 ```python
 # tests/test_fire_risk.py
