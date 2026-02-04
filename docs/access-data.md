@@ -8,10 +8,10 @@ There a few different ways to access the data, in addition to exploration via th
 Open Climate Risk data are made available under the licenses listed below. By accessing the data, you agree to adhere to the license terms.
 :::
 
-:::{admonition} **Terms of Data Use**
+:::{admonition} **Terms**
 :class: warning
 
-By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms-of-data-access.md).
+By viewing Open Climate Risk data, you agree to the [TERMS OF DATA ACCESS](terms-of-data-access.md).
 :::
 
 ## Download options
