@@ -127,11 +127,11 @@ def generate_weights(
         # lay out the coordinates of the filter using the approximate distance for this dataset
         # at this latitude.
         x = (
-            np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+            np.linspace(-kernel_size // 2, kernel_size // 2, int(kernel_size))
             * lon_pixel_size_meters
         )
         y = (
-            np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+            np.linspace(-kernel_size // 2, kernel_size // 2, int(kernel_size))
             * lat_pixel_size_meters
         )
         xx, yy = np.meshgrid(x, y)
@@ -188,8 +188,13 @@ def generate_weights(
         # possible pixels)
         # at 24 degrees north this filter will have ~230 pixels in the mask
         # so the assert statment should confirm it's within range
-        assert (weights > 0).sum() < 400
-        assert (weights > 0).sum() > 225
+        weights_nonzero_count = (weights > 0).sum()
+        assert weights_nonzero_count < 400, (
+            f'Too many non-zero pixels in the kernel: {weights_nonzero_count}'
+        )
+        assert weights_nonzero_count > 225, (
+            f'Too few non-zero pixels in the kernel: {weights_nonzero_count}'
+        )
 
     else:
         raise ValueError(f'Unknown method: {method}')
