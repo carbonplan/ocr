@@ -1,6 +1,6 @@
 # Evaluation
 
-This section contains comprehensive evaluation and benchmarking analyses of our fire risk estimates. These notebooks compare our results against historical fire data, other datasets, and provide detailed statistical assessments.
+This section contains comprehensive evaluation and benchmarking analyses of our fire risk estimates. These notebooks compare our results against historical fire data and other datasets, and provide detailed statistical assessments.
 
 ## Overview
 
@@ -15,7 +15,7 @@ Our evaluation approach includes multiple independent analyses to validate the q
 
 ### [Benchmarking](benchmarking.ipynb)
 
-Comprehensive comparison of our burn probability estimates against historical U.S. fire perimeter data. This analysis adapts methods from [Moran et al. 2025](https://www.nature.com/articles/s41598-025-07968-6) to benchmark our model-derived burn probabilities, examining both all pixels and specifically "non-burnable" areas where we extended estimates beyond the original Riley et al. (2025) coverage.
+Comprehensive comparison of our burn probability estimates against historical U.S. fire perimeter data. This analysis adapts methods from [Moran et al. 2025](https://www.nature.com/articles/s41598-025-07968-6) to benchmark our model-derived burn probabilities, examining all pixels, and specifically "non-burnable" areas where we extended estimates beyond the original Riley et al. (2025) coverage.
 
 **Key analyses:**
 
@@ -65,9 +65,9 @@ Our evaluation demonstrates that:
 
 ## References
 
-- Finney, M.A., et al. (2011). A simulation of probabilistic wildfire risk components for the continental United States. Stochastic Environmental Research and Risk Assessment.
-- Moran, C.J., et al. (2025). Benchmarking burn probability maps in California using historical fire perimeters. Scientific Reports.
-- Riley, K.L., et al. (2025). Wildfire Risk to Communities methodology and data products.
+- Finney et al. (2011). A simulation of probabilistic wildfire risk components for the continental United States. Stochastic Environmental Research and Risk Assessment.
+- Moran et al. (2025). Benchmarking burn probability maps in California using historical fire perimeters. Scientific Reports.
+- Riley et al. (2025). Wildfire Risk to Communities methodology and data products.
 
 ```{toctree}
 :hidden:

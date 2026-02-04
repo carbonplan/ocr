@@ -1,6 +1,6 @@
 # Fire risk methods overview
 
-This page explains the high-level methodology used to compute building-level wildfire risk scores for CONUS. It provides a conceptual overview with references to more detailed documentation pages. For an full description of our methods, read the [methods document](https://carbonplan.org/research/climate-risk-fire-methods) that accompanied our [explainer article](https://carbonplan.org/research/climate-risk-explainer).
+This page explains the high-level methodology used to compute building-level wildfire risk scores for CONUS. It provides a conceptual overview with references to more detailed documentation pages. For a full description of our methods, read the [methods document](https://carbonplan.org/research/climate-risk-fire-methods) that accompanied our [explainer article](https://carbonplan.org/research/climate-risk-explainer).
 
 ## Summary
 
