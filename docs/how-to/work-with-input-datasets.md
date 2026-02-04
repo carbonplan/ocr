@@ -60,5 +60,5 @@ conus_buildings = catalog.get_dataset('conus-overture-buildings')
 :::{admonition} **Accessing private data**
 :class: note
 
-Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
+The `catalog` relies on privately hosted data. Operationalizing our codebase without access to these data will currently require an update to the catalog. See [Issue #367](https://github.com/carbonplan/ocr/issues/367) for more detail.
 :::
