@@ -1,4 +1,4 @@
-# Release to production
+# Release procedure
 
 This guide shows how to release a new version of the project to production.
 
@@ -209,7 +209,7 @@ This redeploys the exact code from that existing release tag to production.
 - **Staging URL**: <https://ocr.staging.carbonplan.org>
 - **QA URL**: <https://ocr.qa.carbonplan.org>
 - **Workflow file**: `.github/workflows/deploy.yaml`
-- **Deployment details**: See [deployment reference](../reference/deployment.md)
+- **Deployment details**: See [Deployment](../reference/deployment.md)
 
 ## Next steps
 
