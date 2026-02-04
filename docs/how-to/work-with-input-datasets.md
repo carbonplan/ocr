@@ -57,7 +57,7 @@ Vector data are building footprints, administrative boundaries, and other GIS ve
 conus_buildings = catalog.get_dataset('conus-overture-buildings')
 ```
 
-:::{admonition}**Accessing Private Data**
+:::{admonition} **Accessing private data**
 :class: note
 
 Contact the maintainers if you need access to private data buckets or credentials to download certain datasets.
