@@ -105,8 +105,6 @@ def generate_weights(
             * distance_moving_north
         )
         xx, yy = np.meshgrid(x, y)
-        print(f'moving east {distance_moving_east}')
-        print(f'moving north {distance_moving_north}')
 
         # each cardinal/ordinal direction will have an assigned center and rotation_scaler
         # for cardinal directions we use a simple ellipse
@@ -152,6 +150,12 @@ def generate_weights(
         weights = ellipse
         # add assert statement that the number of non-zero pixels here is within bounds of
         # the furthest north and furthest south filter
+        # at 49 degrees north (the farthest north in CONUS) this filter will have ~375 pixels in the mask (out of 6561
+        # possible pixels)
+        # at 24 degrees north this filter will have ~230 pixels in the mask
+        # so the assert statment should confirm it's within range
+        assert (weights > 0).sum() < 400
+        assert (weights > 0).sum() > 225
 
     else:
         raise ValueError(f'Unknown method: {method}')
