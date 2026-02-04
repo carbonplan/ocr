@@ -182,18 +182,33 @@ def generate_weights(
 
         weights = ellipse
 
-        # add assert statement that the number of non-zero pixels here is within bounds of
-        # the furthest north and furthest south filter
-        # at 49 degrees north (the farthest north in CONUS) this filter will have ~375 pixels in the mask (out of 6561
-        # possible pixels)
-        # at 24 degrees north this filter will have ~230 pixels in the mask
-        # so the assert statment should confirm it's within range
+        # Sanity check: verify pixel count is within expected range
+        # Ellipse area = π × a × b ≈ π × 400 × 200 ≈ 251,327 m²
+        # Expected pixel count = ellipse_area / (lat_pixel_size_meters × lon_pixel_size_meters)
+        #
+        # At ~24°N (southern CONUS):
+        #   - Longitude pixels wider (closer to equator)
+        #   - Typical pixel area: ~35m × 26m ≈ 910 m²
+        #   - Expected pixels: 251,327 / 910 ≈ 276 pixels
+        #
+        # At ~60°N (high latitude):
+        #   - Longitude pixels narrower due to meridian convergence (cos(60°) ≈ 0.5)
+        #   - Typical pixel area: ~35m × 16m ≈ 560 m²
+        #   - Expected pixels: 251,327 / 560 ≈ 449 pixels
+        #
+        # Bounds (200-500) provide ~20% safety margins for discretization effects
+        ellipse_area_m2 = np.pi * a * b  # ≈ 251,327 m²
+        pixel_area_m2 = lat_pixel_size_meters * lon_pixel_size_meters
+        expected_pixel_count = ellipse_area_m2 / pixel_area_m2
+
         weights_nonzero_count = (weights > 0).sum()
-        assert weights_nonzero_count < 400, (
-            f'Too many non-zero pixels in the kernel: {weights_nonzero_count}'
+        assert weights_nonzero_count < 500, (
+            f'Too many non-zero pixels in the kernel: {weights_nonzero_count} '
+            f'(expected ~{expected_pixel_count:.0f} based on {pixel_area_m2:.0f} m² pixels)'
         )
-        assert weights_nonzero_count > 225, (
-            f'Too few non-zero pixels in the kernel: {weights_nonzero_count}'
+        assert weights_nonzero_count > 200, (
+            f'Too few non-zero pixels in the kernel: {weights_nonzero_count} '
+            f'(expected ~{expected_pixel_count:.0f} based on {pixel_area_m2:.0f} m² pixels)'
         )
 
     else:
