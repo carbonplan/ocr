@@ -1,4 +1,4 @@
-# Open Climate Risk deployment reference
+# Deployment
 
 This document provides a comprehensive reference for the Open Climate Risk (OCR) deployment workflow, detailing the complete pipeline from data processing through deployment automation.
 
@@ -6,17 +6,17 @@ This document provides a comprehensive reference for the Open Climate Risk (OCR)
 
 The OCR project uses a multi-stage pipeline that processes regional data, aggregates results, and generates visualization tiles. The entire workflow is orchestrated through GitHub Actions with automatic deployments to multiple environments (QA, staging, and production).
 
-## Processing Pipeline Architecture
+## Processing pipeline architecture
 
 The OCR processing pipeline consists of three main phases, each with specific computational requirements and error handling mechanisms. The pipeline leverages Coiled for distributed computing and includes automatic retry logic for resilient processing.
 
-### Pipeline Phases
+### Pipeline phases
 
-1. **Region Processing (Phase 01)**: Distributed processing of geographic regions with automatic retry capabilities
-2. **Aggregation (Phase 02)**: Data consolidation and statistical summary generation
-3. **Tile Generation (Phase 03)**: Creation of PMTiles for efficient map visualization
+- **Phase 01: Region processing**: Distributed processing of geographic regions with automatic retry capabilities
+- **Phase 02: Aggregation**: Data consolidation and statistical summary generation
+- **Phase 03: Tile generation**: Creation of PMTiles for efficient map visualization
 
-### Pipeline Visualization
+### Pipeline visualization
 
 ```mermaid
 %%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
@@ -143,18 +143,18 @@ graph TB
     class WaitForTiles tiles
 ```
 
-### Key Pipeline Features
+### Key pipeline features
 
-- **Automatic Retry Logic**: Failed region processing attempts are automatically retried with exponential backoff (5 seconds × attempt number)
-- **Distributed Processing**: Leverages Coiled for parallel processing across multiple regions
-- **Resource Optimization**: Each job is configured with specific VM types and disk requirements optimized for its workload
-- **Conditional Branching**: Optional region file writing based on deployment configuration
+- **Automatic retry logic**: Failed region processing attempts are automatically retried with exponential backoff (5 seconds × attempt number)
+- **Distributed processing**: Leverages Coiled for parallel processing across multiple regions
+- **Resource optimization**: Each job is configured with specific VM types and disk requirements optimized for its workload
+- **Conditional branching**: Optional region file writing based on deployment configuration
 
-## Deployment Automation via GitHub Actions
+## Deployment automation via GitHub Actions
 
 The deployment workflow automates the entire release process from development through production, with built-in safeguards and environment-specific configurations.
 
-### Deployment Environments
+### Deployment environments
 
 | Environment    | Trigger                         | Purpose                     | URL                                    |
 | -------------- | ------------------------------- | --------------------------- | -------------------------------------- |
@@ -162,7 +162,7 @@ The deployment workflow automates the entire release process from development th
 | **Staging**    | Push to `main` branch           | Pre-production verification | `ocr.staging.carbonplan.org`           |
 | **Production** | Release publication             | Live system                 | `carbonplan.org/research/climate-risk` |
 
-### Deployment Workflow Visualization
+### Deployment workflow visualization
 
 ```mermaid
 %%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
@@ -234,31 +234,31 @@ graph TB
     class QA_PR_Details,Staging_Main_Details,Manual_Deploy_Details,Production_Details,Production_Rerun_Details deploy
 ```
 
-### Workflow Features
+### Workflow features
 
-#### Automatic Deployments
+#### Automatic deployments
 
 - **QA**: Triggered automatically when PRs to main include `e2e` or `QA/QC` labels
 - **Staging**: Deployed automatically on every push to the main branch
 - **Production**: Released automatically when a new version is published
 
-#### Manual Controls
+#### Manual controls
 
-- **Environment Selection**: Choose between QA and staging for manual deployments
-- **Region Selection**: Deploy specific regions or all regions
-- **Data Management**: Option to wipe existing data before deployment
-- **Production Redeployment**: Redeploy specific versions to production using semantic version tags
+- **Environment selection**: Choose between QA and staging for manual deployments
+- **Region selection**: Deploy specific regions or all regions
+- **Data management**: Option to wipe existing data before deployment
+- **Production redeployment**: Redeploy specific versions to production using semantic version tags
 
 #### Safety Features
 
-- **Environment Isolation**: Each environment uses separate configuration files
-- **Version Tracking**: Production deployments are tagged with semantic versions
-- **Concurrency Control**: Prevents simultaneous deployments to the same environment
-- **Rollback Capability**: Production can be redeployed to any previous version
+- **Environment isolation**: Each environment uses separate configuration files
+- **Version tracking**: Production deployments are tagged with semantic versions
+- **Concurrency control**: Prevents simultaneous deployments to the same environment
+- **Rollback capability**: Production can be redeployed to any previous version
 
-## Configuration Management
+## Configuration management
 
-### Environment Variables
+### Environment variables
 
 Each environment maintains its own configuration file:
 
@@ -266,7 +266,7 @@ Each environment maintains its own configuration file:
 - **Staging**: `ocr-coiled-s3-staging.env`
 - **Production**: `ocr-coiled-s3-production.env`
 
-### Key Configuration Parameters
+### Key configuration parameters
 
 | Parameter                  | Description                        | Example                       |
 | -------------------------- | ---------------------------------- | ----------------------------- |
@@ -274,7 +274,7 @@ Each environment maintains its own configuration file:
 | `OCR_VERSION`              | Semantic version (production only) | `1.2.3`                       |
 | `COILED_SOFTWARE_ENV_NAME` | Coiled environment identifier      | `ocr-main`, `ocr-v1-2-3`      |
 
-## Best Practices
+## Best practices
 
 1. **Testing**: Always test changes in QA before merging to main
 2. **Labeling**: Use appropriate labels (`e2e`, `QA/QC`) for automatic QA deployments
@@ -284,14 +284,14 @@ Each environment maintains its own configuration file:
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
-- **Region Processing Failures**: Check retry logs; system automatically retries up to the configured limit
-- **Environment Variable Missing**: Ensure `COILED_SOFTWARE_ENV_NAME` is set in GitHub Actions
-- **Deployment Conflicts**: Wait for current deployment to complete; concurrency controls prevent overlaps
-- **Version Mismatch**: Verify semantic version format when redeploying to production
+- **Region processing failures**: Check retry logs; system automatically retries up to the configured limit
+- **Environment variable missing**: Ensure `COILED_SOFTWARE_ENV_NAME` is set in GitHub Actions
+- **Deployment conflicts**: Wait for current deployment to complete; concurrency controls prevent overlaps
+- **Version mismatch**: Verify semantic version format when redeploying to production
 
-### Support Resources
+### Support resources
 
 - Check deployment status at the environment URLs listed above
 - Review GitHub Actions logs for detailed error messages

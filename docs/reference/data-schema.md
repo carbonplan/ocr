@@ -67,11 +67,11 @@ graph TB
     class Icechunk,GeoParquet storage
 ```
 
-## Raster (Tensor) Datasets
+## Raster (tensor) datasets
 
 Raster datasets are gridded geospatial layers stored at 30m resolution in EPSG:4326 (WGS84) projection. These datasets are organized by region and stored in the Icechunk format.
 
-### Spatial Characteristics
+### Spatial characteristics
 
 | Property           | Value                  |
 | ------------------ | ---------------------- |
@@ -81,11 +81,11 @@ Raster datasets are gridded geospatial layers stored at 30m resolution in EPSG:4
 | **Chunking**       | Regional chunks        |
 | **Storage Format** | Icechunk (Zarr-based)  |
 
-### Fire Risk Variables
+### Fire risk variables
 
 The primary output dataset contains the following variables. To support transparency we also include previously published datasests we used as inputs or for comparison. For clarity, we append a `variable_{name}` modifier to any variable name describing previously-published data. We are the authors of any data without a `_{name}` modifier.
 
-#### Core Risk Variables
+#### Core risk variables
 
 | Variable   | Type    | Units         | Description                                                                                                           |
 | ---------- | ------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -94,7 +94,7 @@ The primary output dataset contains the following variables. To support transpar
 | `bp_2011`  | float32 | dimensionless | Annual burn probability for ~2011 climate conditions                                                                  |
 | `bp_2047`  | float32 | dimensionless | Annual burn probability for ~2047 climate conditions                                                                  |
 
-#### Reference Variables (Data from USFS and Wildfire Risk to Communities project)
+#### Reference variables (data from USFS and Wildfire Risk to Communities project)
 
 | Variable        | Type    | Units         | Description                                                               |
 | --------------- | ------- | ------------- | ------------------------------------------------------------------------- |
@@ -103,14 +103,14 @@ The primary output dataset contains the following variables. To support transpar
 | `bp_2011_riley` | float32 | dimensionless | Burn probability for ~2011 from Riley et al. (2025) (RDS-2025-0006)       |
 | `bp_2047_riley` | float32 | dimensionless | Burn probability for ~2047 from Riley et al. (2025)                       |
 
-#### Coordinate Variables
+#### Coordinate variables
 
 | Variable    | Type    | Description                          |
 | ----------- | ------- | ------------------------------------ |
 | `latitude`  | float64 | Latitude in decimal degrees (WGS84)  |
 | `longitude` | float64 | Longitude in decimal degrees (WGS84) |
 
-### Wind Direction Distribution Dataset
+### Wind direction distribution dataset
 
 A separate dataset provides the statistical distribution of wind directions during fire-weather conditions:
 
@@ -118,7 +118,7 @@ A separate dataset provides the statistical distribution of wind directions duri
 | ----------------------------- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `wind_direction_distribution` | float32 | (latitude, longitude, wind_direction) | Fraction of fire-weather hours coming from each of 8 cardinal/ordinal directions derived from Rasmussen et al., (2023) |
 
-**Wind Direction Dimension:**
+**Wind direction dimension:**
 The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']`
 
 **Properties:**
@@ -126,7 +126,7 @@ The `wind_direction` coordinate contains 8 direction labels: `['N', 'NE', 'E', '
 - Values sum to 1.0 for all pixels (normalized probability distribution)
 - Derived from CONUS404 data (Rasmussen et al, 2023) using 99th percentile Fosberg Fire Weather Index (FFWI) as threshold
 
-### Data Processing Flow
+### Data processing flow
 
 ```mermaid
 %%{init: {'theme':'neutral', 'themeVariables': {'primaryColor':'#2563eb','primaryTextColor':'#1f2937','primaryBorderColor':'#3b82f6','lineColor':'#6b7280','secondaryColor':'#7c3aed','tertiaryColor':'#10b981','background':'#ffffff','mainBkg':'#f3f4f6','secondBkg':'#e5e7eb','tertiaryBkg':'#d1d5db','primaryTextColor':'#111827','lineColor':'#6b7280','textColor':'#374151','mainContrastColor':'#1f2937','darkMode':false}}}%%
@@ -170,19 +170,19 @@ flowchart LR
     class FinalRPS output
 ```
 
-## Vector (Polygon) Datasets
+## Vector (polygon) datasets
 
 Vector datasets contain building-level risk samples stored as a consolidated GeoParquet file covering all buildings across CONUS.
 
 ### Schema
 
-#### Geometry Column
+#### Geometry column
 
 | Column     | Type          | Description                            |
 | ---------- | ------------- | -------------------------------------- |
 | `geometry` | WKB (Polygon) | Building polygon location in EPSG:4326 |
 
-#### Risk Attribute Columns
+#### Risk attribute columns
 
 Vector datasets contain the same risk variables as raster datasets, sampled at each building location:
 
@@ -197,7 +197,7 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 | `bp_2011_riley` | float32 | Annual burn probability ~2011 (Riley et al, 2025) at building location             |
 | `bp_2047_riley` | float32 | Annual burn probability ~2047 (Riley et al, 2025) at building location             |
 
-### Storage Characteristics
+### Storage characteristics
 
 | Property              | Value                                            |
 | --------------------- | ------------------------------------------------ |
@@ -208,12 +208,12 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 | **Coverage**          | CONUS-wide, single consolidated file             |
 | **Aggregation**       | Consolidated from regional processing via DuckDB |
 
-### Data Quality
+### Data quality
 
 - Buildings with NaN values (outside CONUS) are excluded
 - Building locations sourced from Overture Maps dataset
 
-### File Location
+### File location
 
 The consolidated building dataset is available at:
 
@@ -227,9 +227,9 @@ This single-file format enables:
 - Direct access for analysis tools and workflows
 - Simplified data distribution and versioning
 
-## Data Validation
+## Data validation
 
-### Expected Value Ranges
+### Expected value ranges
 
 | Variable                                        | Expected Range | Notes                                                                                            |
 | ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
@@ -238,14 +238,14 @@ This single-file format enables:
 | Burn probability (BP)                           | [0, 1]         | Annual likelihood [-] of a pixel burning                                                         |
 | Wind Distribution                               | [0, 1]         | Sums to 1.0 per pixel (normalized probability distribution across 8 cardinal/ordinal directions) |
 
-### Quality Checks
+### Quality checks
 
-1. **Spatial Consistency**: All raster layers share identical coordinate systems and extents
-2. **Missing Data**: NaN values appear only in unburnable areas (water, urban, etc.)
+1. **Spatial consistency**: All raster layers share identical coordinate systems and extents
+2. **Missing data**: NaN values appear only in unburnable areas (water, urban, etc.)
 
 3. **Normalization**: Wind direction distributions sum to 1.0 (within tolerance of 1e-5) where valid
 
-## Metadata Attributes
+## Metadata attributes
 
 All datasets include descriptive metadata attributes:
 
@@ -256,21 +256,21 @@ All datasets include descriptive metadata attributes:
 - `direction_labels`: Cardinal/ordinal direction labels for wind data
 - `weights_source`: Source of weights used in calculations
 
-## Access Patterns
+## Access patterns
 
-### Raster Data
+### Raster data
 
-- **By Region**: Query specific regional chunks using latitude/longitude slices
+- **By region**: Query specific regional chunks using latitude/longitude slices
 - **Full CONUS**: Access complete dataset via Icechunk storage
 
-### Vector Data
+### Vector data
 
-- **Full Dataset**: Query the consolidated CONUS-wide building dataset
-- **Spatial Query**: Use bounding box attributes for efficient spatial filtering
-- **Attribute Query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
-- **Regional Subset**: Extract specific areas using spatial predicates on latitude/longitude
+- **Full dataset**: Query the consolidated CONUS-wide building dataset
+- **Spatial query**: Use bounding box attributes for efficient spatial filtering
+- **Attribute query**: Filter by risk threshold using Parquet predicate pushdown with DuckDB or similar tools
+- **Regional subset**: Extract specific areas using spatial predicates on latitude/longitude
 
-## Related Documentation
+## Related documentation
 
-- [Access Data](../access-data.md): Information on accessing and downloading datasets
+- [Access data](../access-data.md): Information on accessing and downloading datasets
 - [Deployment](deployment.md): Details on data storage infrastructure

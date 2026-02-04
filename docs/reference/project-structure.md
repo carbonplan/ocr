@@ -305,4 +305,4 @@ GitHub Actions workflows for automated testing, building, and deployment:
 
 ### Release workflow
 
-See `docs/how-to/release-procedure.md` for detailed release instructions.
+See [Release procedure](../how-to/release-procedure.md) for detailed release instructions.

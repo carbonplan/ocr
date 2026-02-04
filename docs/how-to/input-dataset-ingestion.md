@@ -6,7 +6,7 @@ This guide covers how to ingest and process input datasets for the Open Climate 
 
 The input dataset infrastructure provides a consistent interface for ingesting both tensor (raster/Icechunk) and vector (GeoParquet) datasets:
 
-## Quick Start
+## Quick start
 
 ### Discovery
 
@@ -31,7 +31,7 @@ pixi run ocr ingest-data run-all scott-et-al-2024
 pixi run ocr ingest-data run-all scott-et-al-2024 --use-coiled
 ```
 
-### Dataset-Specific Options
+### Dataset-specific options
 
 Different datasets support different processing options:
 
@@ -45,11 +45,11 @@ pixi run ocr ingest-data process census-tiger \
   --census-subset-states California --census-subset-states Oregon
 ```
 
-## Available Datasets
+## Available datasets
 
 Our processed input dataset have been transfered to a public AWS bucket in `us-west-2` hosted by the [Source Cooperative](https://radiant.earth/blog/2023/10/what-is-source-cooperative/) project.
 
-### Tensor Datasets (Raster/Icechunk)
+### Tensor datasets (raster/Icechunk)
 
 #### scott-et-al-2024
 
@@ -90,7 +90,7 @@ pixi run ocr ingest-data process scott-et-al-2024 --use-coiled
 
 #### riley-et-al-2025
 
-**USFS Probabilistic Wildfire Risk - 2011 & 2047 Climate Runs**
+**USFS Probabilistic Wildfire Risk - 2011 & 2047 climate runs**
 
 - **RDS ID**: RDS-2025-0006
 - **Version**: 2025
@@ -148,17 +148,17 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 
 ---
 
-### Vector Datasets (GeoParquet)
+### Vector datasets (GeoParquet)
 
 #### overture-maps
 
-**Overture Maps Building and Address Data for CONUS**
+**Overture Maps building and address data for CONUS**
 
 - **Release**: 2025-09-24.0
 - **Source**: [Overture Maps Foundation](https://overturemaps.org)
 - **Format**: GeoParquet (WKB geometry, zstd compression)
 - **Coverage**: CONUS (spatially filtered from global dataset)
-- **Data Types**: Buildings (bbox + geometry), Addresses (full attributes), Region-Tagged Buildings (buildings + census identifiers)
+- **Data types**: Buildings (bbox + geometry), Addresses (full attributes), Region-Tagged Buildings (buildings + census identifiers)
 
 **Pipeline**:
 
@@ -167,7 +167,7 @@ pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
 3. Write subsetted data to carbonplan-ocr S3 bucket
 4. (If buildings processed) Perform spatial join with US Census blocks to add geographic identifiers
 
-**Region-Tagged Buildings Processing**:
+**Region-tagged buildings processing**:
 
 When buildings are processed, an additional dataset is automatically created that tags each building with census geographic identifiers:
 
@@ -206,13 +206,13 @@ pixi run ocr ingest-data run-all overture-maps --use-coiled
 
 #### census-tiger
 
-**US Census TIGER/Line Geographic Boundaries**
+**US Census TIGER/Line geographic boundaries**
 
 - **Vintage**: 2024 (tracts/counties), 2025 (blocks)
 - **Source**: [US Census Bureau TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)
 - **Format**: GeoParquet (WKB geometry, zstd compression, schema v1.1.0)
 - **Coverage**: CONUS + DC (49 states/territories, excludes Alaska & Hawaii)
-- **Geography Types**: Blocks, Tracts, Counties
+- **Geography types**: Blocks, Tracts, Counties
 
 **Pipeline**:
 
@@ -244,7 +244,7 @@ pixi run ocr ingest-data run-all census-tiger --dry-run
 - Tracts (aggregated): `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/tracts/tracts.parquet`
 - Counties: `s3://us-west-2.opendata.source.coop/carbonplan/carbonplan-ocr/input/fire-risk/vector/aggregated_regions/counties/counties.parquet`
 
-## CLI Reference
+## CLI reference
 
 ### Commands
 
@@ -253,16 +253,16 @@ pixi run ocr ingest-data run-all census-tiger --dry-run
 - **`process <dataset>`**: Process and upload to S3/Icechunk
 - **`run-all <dataset>`**: Complete pipeline (download + process + cleanup)
 
-### Global Options
+### Global options
 
 - **`--dry-run`**: Preview operations without executing (recommended before any real run)
 - **`--debug`**: Enable debug logging for troubleshooting
 
-### Tensor Dataset Options
+### Tensor dataset options
 
 - **`--use-coiled`**: Use Coiled for distributed processing (USFS datasets)
 
-### Vector Dataset Options
+### Vector dataset options
 
 #### Overture Maps
 
@@ -284,7 +284,7 @@ pixi run ocr ingest-data run-all census-tiger --dry-run
 
 ## Configuration
 
-### Environment Variables
+### Environment variables
 
 All settings can be overridden via environment variables:
 
@@ -302,7 +302,7 @@ export OCR_INPUT_DATASET_DEBUG=true
 export OCR_INPUT_DATASET_TEMP_DIR=/path/to/temp
 ```
 
-### Configuration Class
+### Configuration class
 
 The `InputDatasetConfig` class (Pydantic model) provides:
 
@@ -313,7 +313,7 @@ The `InputDatasetConfig` class (Pydantic model) provides:
 
 ## Troubleshooting
 
-### Dry Run First
+### Dry run first
 
 Always test with `--dry-run` before executing:
 

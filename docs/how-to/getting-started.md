@@ -11,9 +11,9 @@ This guide helps you get started with accessing and using Open Climate Risk fire
 - **Multiple output formats**: Interactive web maps, downloadable datasets, and cloud-native data access
 - **Present and future scenarios**: Current conditions (circa 2011) and future projections (circa 2047)
 
-## Quick Access Options
+## Quick access options
 
-### Option 1: Explore the Web Tool
+### Option 1: explore the web tool
 
 The fastest way to explore Open Climate Risk data is through our [interactive web map](https://carbonplan.org/research/climate-risk). The web tool allows you to:
 
@@ -21,11 +21,11 @@ The fastest way to explore Open Climate Risk data is through our [interactive we
 - View building-level risk scores on a 0-10 scale
 - Explore state, county, census tract, and census block aggregations
 
-### Option 2: Access Production Data
+### Option 2: access production data
 
 If you want to analyze Open Climate Risk data programmatically, you can access our production datasets directly from cloud storage using Python.
 
-## Accessing Production Data
+## Accessing production data
 
 Open Climate Risk output data is stored in [Icechunk](https://icechunk.io/), a versioned, cloud-native data format that works seamlessly with `Xarray` and `Zarr`.
 
@@ -37,7 +37,7 @@ You'll need Python with a few packages installed:
 python -m pip install xarray icechunk
 ```
 
-### Load the Dataset
+### Load the dataset
 
 Here's a minimal example to load Open Climate Risk wind-adjusted fire risk data:
 
@@ -68,7 +68,7 @@ This gives you access to:
 - **Spatial coverage**: Full CONUS extent
 - **Multiple variables**: Burn probability, conditional risk, wind-adjusted metrics
 
-### Understanding the Data
+### Understanding the data
 
 The dataset contains several key variables:
 
@@ -77,31 +77,31 @@ The dataset contains several key variables:
 - **`crps`**: Conditional Risk to Potential Structures (damage if fire occurs)
 - Risk scores are for a "generic" or "potential" structure at each location
 
-:::{admonition} **Important Limitation**
+:::{admonition} **Important limitation**
 :class: note
 
 Risk scores represent a hypothetical structure and do NOT account for building-specific factors like construction materials, retrofits, or defensible space management.
 :::
 
-## Next Steps
+## Next steps
 
-### For Data Users
+### For data users
 
-- **[Working With Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
-- **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
-- **[Access Data](../access-data.md)**: Direct download links and bulk access options
+- **[Working with data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
+- **[Data schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
+- **[Access data](../access-data.md)**: Direct download links and bulk access options
 
-### For Researchers & Analysts
+### For researchers & analysts
 
-- **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
-- **[Data Sources](../reference/data-sources.md)**: Learn about data sources
+- **[Fire risk methods overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
+- **[Data sources](../reference/data-sources.md)**: Learn about data sources
 
-### For Developers
+### For developers
 
 - **[Installation](installation.md)**: Set up project for local development
-- **[Project Structure](../reference/project-structure.md)**: Understand the codebase
-- **[Data Pipeline](data-pipeline.md)**: Run the processing pipeline
-- **[Working With Input Datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
+- **[Project structure](../reference/project-structure.md)**: Understand the codebase
+- **[Data pipeline](data-pipeline.md)**: Run the processing pipeline
+- **[Working with input datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support
 
@@ -109,9 +109,9 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 - **Questions & Discussions**: [GitHub Discussions](https://github.com/carbonplan/ocr/discussions)
 - **General Inquiries**: [hello@carbonplan.org](mailto:hello@carbonplan.org)
 
-## Available Data Versions
+## Available data versions
 
-Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for:
+Check our [GitHub releases](https://github.com/carbonplan/ocr/releases) page for:
 
 - Latest data version numbers
 - Release notes and changelogs
@@ -120,4 +120,4 @@ Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for
 
 ---
 
-_Ready to dive deeper? Check out the [Working With Data](work-with-data.ipynb) notebook for hands-on examples._
+_Ready to dive deeper? Check out the [Working with data](work-with-data.ipynb) notebook for hands-on examples._
