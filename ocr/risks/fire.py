@@ -37,8 +37,9 @@ def calc_latlon_values(da):
     center_longitude_index = len(da.longitude.values) // 2
 
     latitude = da.latitude.values[center_latitude_index]
-    longitude = da.latitude.values[center_longitude_index]
+    longitude = da.longitude.values[center_longitude_index]
     latitude_increment = da.latitude.values[1] - da.latitude.values[0]
+    # assert that lat and lon increments are positive
     longitude_increment = da.longitude.values[1] - da.longitude.values[0]
     return latitude, longitude, latitude_increment, longitude_increment
 
@@ -48,8 +49,8 @@ def generate_weights(
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
     direction: str = 'W',
-    latitude_distance: float = 34,
-    longitude_distance: float = 25,
+    distance_moving_north: float = 34,
+    distance_moving_east: float = 25,
 ) -> np.ndarray:
     """Generate a 2D array of weights for a kernel.
 
@@ -80,7 +81,6 @@ def generate_weights(
         weights = inside / inside.sum()
 
     elif method == 'skewed':
-        print('herenew5!')
         # elliptical kernel oriented with the major axis horizontal and shifted
         # to the left. this captures pixels to the left, which, in our approach
         # corresponds to a wind from the west
@@ -98,20 +98,17 @@ def generate_weights(
         # at this latitude.
         x = (
             np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
-            * longitude_distance
+            * distance_moving_east
         )
         y = (
             np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
-            * latitude_distance
+            * distance_moving_north
         )
         xx, yy = np.meshgrid(x, y)
+        print(f'moving east {distance_moving_east}')
+        print(f'moving north {distance_moving_north}')
 
         # each cardinal/ordinal direction will have an assigned center and rotation_scaler
-        # ellipse_specs = {'W': {'center_x': shift, 'center_y': 0, 'rotation_scaler': 2}}
-        # # new
-        # direction='W'
-        # ellipse = ((((xx - ellipse_specs[direction]['center_x']) ** 2) / (2 * a ** 2)) + (((yy-ellipse_specs[direction]['center_y']) ** 2 / (2 * b ** 2)))) <= 1
-        # weights = ellipse
         # for cardinal directions we use a simple ellipse
         shift = 110
         diagonal_shift = shift / np.sqrt(2)
@@ -153,15 +150,8 @@ def generate_weights(
             ) / (2 * (minor_axis**2)) <= 1
 
         weights = ellipse
-
-        # this worked when shift was positive
-        # ellipse = ((((xx + shift) ** 2) / (rotation_scaler * (a ** 2))) + (yy / (rotation_scaler * ( b ** 2)))) <= 1
-
-        # Normalize to sum to 1.0 if there are any non-zero entries
-        # weights = weights.astype(np.float32)
-        # s = float(weights.sum())
-        # if s > 0:
-        #     weights = weights / s
+        # add assert statement that the number of non-zero pixels here is within bounds of
+        # the furthest north and furthest south filter
 
     else:
         raise ValueError(f'Unknown method: {method}')
@@ -195,12 +185,14 @@ def generate_wind_directional_kernels(
     np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'NW', 'N', 'NE', 'E', 'SE', 'S', 'SW']
     # distance (meters) along latitude across longitudes
-    latitude_distance = haversine(longitude, latitude, longitude + longitude_increment, latitude)
+    # aka how far do you walk if you stay at the same latitude and walk one longitude increment east
+    distance_moving_east = haversine(longitude, latitude, longitude + longitude_increment, latitude)
     # distance (meters) along longitude across longitudes
-    longitude_distance = haversine(longitude, latitude, longitude, latitude + latitude_increment)
+    # aka how far do you walk if you stay at the same longitude and walk one latitude increment north
+    distance_moving_north = haversine(longitude, latitude, longitude, latitude + latitude_increment)
     # latitude distance in meters
-    print(latitude_distance)  #
-    print(longitude_distance)
+    print(distance_moving_east)  #
+    print(distance_moving_north)
 
     for direction in wind_direction_labels:
         # our base kernel is oriented to the west
@@ -208,8 +200,8 @@ def generate_wind_directional_kernels(
             method='skewed',
             kernel_size=kernel_size,
             circle_diameter=circle_diameter,
-            latitude_distance=latitude_distance,
-            longitude_distance=longitude_distance,
+            distance_moving_east=distance_moving_east,
+            distance_moving_north=distance_moving_north,
             direction=direction,
         ).astype(np.float32)
 
