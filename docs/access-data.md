@@ -38,10 +38,10 @@ The schemas for each of the full datasets are described on the [data schema](./r
 
 ## Regional statistics downloads
 
-:::{note}  
- In rare cases, buildings with centroids situated exactly on regional boundaries may be counted in both
-region's statistics.  
- :::
+:::{note}
+In rare cases, buildings with centroids situated exactly on regional boundaries may be counted in both
+region's statistics.
+:::
 
 ### Links
 
