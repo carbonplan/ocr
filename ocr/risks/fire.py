@@ -30,6 +30,19 @@ def haversine(lon1, lat1, lon2, lat2):
     return c * r
 
 
+def calc_latlon_values(da):
+    # grab the central latitude for the region in question. this will inform the scaling of
+    # the size of the filter
+    center_latitude_index = len(da.latitude.values) // 2
+    center_longitude_index = len(da.longitude.values) // 2
+
+    latitude = da.latitude.values[center_latitude_index]
+    longitude = da.latitude.values[center_longitude_index]
+    latitude_increment = da.latitude.values[1] - da.latitude.values[0]
+    longitude_increment = da.longitude.values[1] - da.longitude.values[0]
+    return latitude, longitude, latitude_increment, longitude_increment
+
+
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
     kernel_size: float = 81.0,
@@ -215,6 +228,10 @@ def apply_wind_directional_convolution(
     iterations: int = 3,
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
+    latitude: float = 34.0,
+    longitude: float = 100.0,
+    latitude_increment: float = 0.0003,
+    longitude_increment: float = 0.0003,
 ) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
@@ -236,15 +253,6 @@ def apply_wind_directional_convolution(
     """
     import cv2 as cv
 
-    # grab the central latitude for the region in question. this will inform the scaling of
-    # the size of the filter
-    center_latitude_index = len(da.latitude.values) // 2
-    center_longitude_index = len(da.longitude.values) // 2
-
-    latitude = da.latitude.values[center_latitude_index]
-    longitude = da.latitude.values[center_longitude_index]
-    latitude_increment = da.latitude.values[1] - da.latitude.values[0]
-    longitude_increment = da.longitude.values[1] - da.longitude.values[0]
     weights_dict = generate_wind_directional_kernels(
         kernel_size=kernel_size,
         circle_diameter=circle_diameter,
@@ -587,8 +595,20 @@ def create_wind_informed_burn_probability(
                 'longitude': wind_direction_distribution_30m_4326.longitude,
             }
         )
-
-        blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
+        latitude, longitude, latitude_increment, longitude_increment = calc_latlon_values(
+            riley_30m_4326['BP']
+        )
+        print(
+            f'at latitude {latitude} the latitude increment is {latitude_increment} and the longitude_increment is {longitude_increment}'
+        )
+        blurred_bp_30m_4326 = apply_wind_directional_convolution(
+            riley_30m_4326['BP'],
+            iterations=3,
+            latitude=latitude,
+            longitude=longitude,
+            latitude_increment=latitude_increment,
+            longitude_increment=longitude_increment,
+        )
         wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
             blurred_bp_30m_4326, wind_direction_distribution_30m_4326
         )
@@ -609,7 +629,12 @@ def create_wind_informed_burn_probability(
             riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
         )
 
-    # smooth using a 25x25 Gaussian filter
+    # smooth using a Gaussian filter ~300m radius
+    filter_radius = 300 // latitude_increment
+    filter_size = (
+        2 * filter_radius + 1
+    )  # for computational reasons we need our filter to be an array with a odd (not even) dimensions
+    print(f'gaussian filter is of size :{filter_size}')
     smoothed_bp = xr.apply_ufunc(
         cv.GaussianBlur,
         wind_informed_bp_combined.chunk(latitude=-1, longitude=-1),
