@@ -1,10 +1,10 @@
 import typing
 import warnings
+from math import asin, cos, radians, sin, sqrt
 
 import numpy as np
 import xarray as xr
 from odc.geo.xr import assign_crs, xr_reproject
-from scipy.ndimage import rotate
 
 from ocr import catalog
 from ocr.utils import geo_sel
@@ -12,10 +12,31 @@ from ocr.utils import geo_sel
 CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance in kilometers between two points
+    on the earth (specified in decimal degrees)
+    Used from https://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371 * 10**3  # Radius of earth in meters
+    return c * r
+
+
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
+    direction: str = 'W',
+    latitude_distance: float = 34,
+    longitude_distance: float = 25,
 ) -> np.ndarray:
     """Generate a 2D array of weights for a kernel.
 
@@ -35,6 +56,7 @@ def generate_weights(
     weights : np.ndarray
         A 2D array of weights for the circular kernel.
     """
+
     if method == 'circular_focal_mean':
         x, y = np.meshgrid(
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
@@ -45,24 +67,88 @@ def generate_weights(
         weights = inside / inside.sum()
 
     elif method == 'skewed':
+        print('herenew5!')
         # elliptical kernel oriented with the major axis horizontal and shifted
         # to the left. this captures pixels to the left, which, in our approach
         # corresponds to a wind from the west
-        a = 4  # semi-major axis
-        b = 2  # semi-minor axis
-        x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
-        y = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+        # this filter is operating on arrays in geographic space (aka each pixel
+        # is a length of a set unit of latitude and longitude). this means that
+        # as latitude increases, longitude
+        # the combined distance of the semi major axis and the shift should scale
+        # with latitude
+        a = 400  # semi-major axis in meters
+        b = 200  # semi-minor axis in meters
+
+        # distance (meters) of one unit of longitude coordinate at this latitude in this dataset
+        # distance (meters) of one unit of latitude in this dataset
+        # lay out the coordinates of the filter using the approximate distance for this dataset
+        # at this latitude.
+        x = (
+            np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+            * longitude_distance
+        )
+        y = (
+            np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+            * latitude_distance
+        )
         xx, yy = np.meshgrid(x, y)
 
-        # Ellipse equation
-        ellipse = ((xx / a) ** 2 + (yy / b) ** 2) <= 10
+        # each cardinal/ordinal direction will have an assigned center and rotation_scaler
+        # ellipse_specs = {'W': {'center_x': shift, 'center_y': 0, 'rotation_scaler': 2}}
+        # # new
+        # direction='W'
+        # ellipse = ((((xx - ellipse_specs[direction]['center_x']) ** 2) / (2 * a ** 2)) + (((yy-ellipse_specs[direction]['center_y']) ** 2 / (2 * b ** 2)))) <= 1
+        # weights = ellipse
+        # for cardinal directions we use a simple ellipse
+        shift = 110
+        diagonal_shift = shift / np.sqrt(2)
+        centers = {
+            'W': (-shift, 0),
+            'E': (shift, 0),
+            'N': (0, shift),
+            'S': (0, -shift),
+            'NE': (diagonal_shift, diagonal_shift),
+            'NW': (-diagonal_shift, diagonal_shift),
+            'SE': (diagonal_shift, -diagonal_shift),
+            'SW': (-diagonal_shift, -diagonal_shift),
+        }
+        axes = {
+            'W': (a, b),
+            'E': (a, b),
+            'N': (b, a),
+            'S': (b, a),
+            'NE': (a, b),
+            'NW': (b, a),
+            'SE': (b, a),
+            'SW': (a, b),
+        }
+        xcenter = centers[direction][0]
+        ycenter = centers[direction][1]
+        major_axis = axes[direction][0]
+        minor_axis = axes[direction][1]
+        if direction in ['N', 'S', 'E', 'W']:
+            # shift such that the total distance from pixel in question is 510 m
+            ellipse = (
+                (((xx - xcenter) ** 2) / (major_axis**2))
+                + (((yy - ycenter) ** 2) / (minor_axis**2))
+            ) <= 1
+        # if an ordinal direction then we use a rotated
+        # equation for ellipse rotated and shifted:
+        elif direction in ['NE', 'NW', 'SW', 'SE']:
+            ellipse = (((xx - xcenter) + (yy - ycenter)) ** 2) / (2 * (major_axis**2)) + (
+                ((yy - ycenter) - (xx - xcenter)) ** 2
+            ) / (2 * (minor_axis**2)) <= 1
 
-        weights = np.roll(ellipse, -5)
+        weights = ellipse
+
+        # this worked when shift was positive
+        # ellipse = ((((xx + shift) ** 2) / (rotation_scaler * (a ** 2))) + (yy / (rotation_scaler * ( b ** 2)))) <= 1
+
         # Normalize to sum to 1.0 if there are any non-zero entries
-        weights = weights.astype(np.float32)
-        s = float(weights.sum())
-        if s > 0:
-            weights = weights / s
+        # weights = weights.astype(np.float32)
+        # s = float(weights.sum())
+        # if s > 0:
+        #     weights = weights / s
 
     else:
         raise ValueError(f'Unknown method: {method}')
@@ -71,7 +157,12 @@ def generate_weights(
 
 
 def generate_wind_directional_kernels(
-    kernel_size: float = 81.0, circle_diameter: float = 35.0
+    kernel_size: float = 81.0,
+    circle_diameter: float = 35.0,
+    latitude: float = 38.0,
+    longitude: float = -100,
+    longitude_increment: float = 0.0003,
+    latitude_increment: float = 0.0003,
 ) -> dict[str, np.ndarray]:
     """Generate a dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
 
@@ -88,31 +179,28 @@ def generate_wind_directional_kernels(
         A dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
     """
     weights_dict = {}
-    rotating_angles = np.arange(0, 360, 45)
+    np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'NW', 'N', 'NE', 'E', 'SE', 'S', 'SW']
-    for angle, direction in zip(rotating_angles, wind_direction_labels):
+    # distance (meters) along latitude across longitudes
+    latitude_distance = haversine(longitude, latitude, longitude + longitude_increment, latitude)
+    # distance (meters) along longitude across longitudes
+    longitude_distance = haversine(longitude, latitude, longitude, latitude + latitude_increment)
+    # latitude distance in meters
+    print(latitude_distance)  #
+    print(longitude_distance)
+
+    for direction in wind_direction_labels:
         # our base kernel is oriented to the west
         base = generate_weights(
-            method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
+            method='skewed',
+            kernel_size=kernel_size,
+            circle_diameter=circle_diameter,
+            latitude_distance=latitude_distance,
+            longitude_distance=longitude_distance,
+            direction=direction,
         ).astype(np.float32)
-        # rotating we rotate the kernel and pair it with each direction
-        # when you plot these kernels with imshow (aka with y coordinates inverted),
-        # north is at the bottom and south is at the top. thus, we want the elliptical
-        # kernel to be toward the bottom of a figure when you plot the
-        # weights in imshow.
-        # Note: rotate will introduce some non 0/1 values for the ellipses in the ordinal directions
-        # but they are normalized so the total weight is consistent.
-        rotated = rotate(
-            base,
-            angle=angle,
-            reshape=False,  # keep original shape
-            order=1,  # bilinear to reduce ringing
-            mode='nearest',
-            prefilter=False,
-        )
-        # Remove tiny negative interpolation artifacts, renormalize
-        rotated = np.clip(rotated, 0.0, None)
-        weights_dict[direction] = rotated
+
+        weights_dict[direction] = base
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
@@ -148,12 +236,22 @@ def apply_wind_directional_convolution(
     """
     import cv2 as cv
 
-    # TODO: must scale the size of the kernel according to the latitude. Can either
-    # be done before entering this function to calculate the kernel_size
-    # argument or inside this function and pass latitude into the convolution
-    # instead and calculate the kernel size here.
+    # grab the central latitude for the region in question. this will inform the scaling of
+    # the size of the filter
+    center_latitude_index = len(da.latitude.values) // 2
+    center_longitude_index = len(da.longitude.values) // 2
+
+    latitude = da.latitude.values[center_latitude_index]
+    longitude = da.latitude.values[center_longitude_index]
+    latitude_increment = da.latitude.values[1] - da.latitude.values[0]
+    longitude_increment = da.longitude.values[1] - da.longitude.values[0]
     weights_dict = generate_wind_directional_kernels(
-        kernel_size=kernel_size, circle_diameter=circle_diameter
+        kernel_size=kernel_size,
+        circle_diameter=circle_diameter,
+        latitude=latitude,
+        longitude=longitude,
+        latitude_increment=latitude_increment,
+        longitude_increment=longitude_increment,
     )
     # do the spreading in each of the 8 directions with the correct weights
     # TODO: @orianac, do we want to support dask arrays here?
