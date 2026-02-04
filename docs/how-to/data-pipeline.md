@@ -6,12 +6,12 @@ The Open Climate Risk (OCR) data pipeline processes climate risk data through a 
 
 The pipeline transforms raw climate data into risk assessments through four main stages:
 
-1. **Region Processing** - Calculate risk metrics for individual geographic regions
-2. **Data Aggregation** - Combine regional results into consolidated datasets
-3. **Statistical Summaries** - Generate county and tract-level statistics (optional)
-4. **Tile Generation** - Create PMTiles for web visualization
+1. **Region processing** - Calculate risk metrics for individual geographic regions
+2. **Data aggregation** - Combine regional results into consolidated datasets
+3. **Statistical summaries** - Generate county and tract-level statistics (optional)
+4. **Tile generation** - Create PMTiles for web visualization
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
@@ -58,7 +58,7 @@ ocr run --region-id y10_x2 --region-id y11_x3 --platform coiled --env-file .env
 
 1. Monitor the job on Coiled's web UI and check outputs in your `OCR_STORAGE_ROOT` bucket.
 
-### Basic Usage
+### Basic usage
 
 Process a single region locally:
 
@@ -78,9 +78,9 @@ Process all available regions:
 ocr run --all-region-ids --platform coiled
 ```
 
-## Execution Platforms
+## Execution platforms
 
-### Local Platform
+### Local platform
 
 **Best for:** Development, testing, debugging, small datasets
 
@@ -90,7 +90,7 @@ ocr run --all-region-ids --platform coiled
 - Limited by local computational resources
 - Sequential processing only
 
-### Coiled Platform
+### Coiled platform
 
 **Best for:** Production workloads, large-scale processing, parallel execution
 
@@ -102,7 +102,7 @@ ocr run --all-region-ids --platform coiled
 
 ## Configuration
 
-### Environment Setup
+### Environment setup
 
 Create a `.env` file for your configuration:
 
@@ -120,14 +120,14 @@ Use your configuration file:
 ocr run --env-file .env --region-id y10_x2
 ```
 
-### Key Configuration Components
+### Key configuration components
 
-- **Icechunk Store** - Version-controlled data storage backend
-- **Vector Output** - Location for processed geoparquet and PMTiles files
+- **Icechunk store** - Version-controlled data storage backend
+- **Vector output** - Location for processed geoparquet and PMTiles files
 - **Environment** - Data version/environment (prod, QA, etc.)
 - **Chunking** - Defines valid region boundaries and IDs
 
-## CLI Commands
+## CLI commands
 
 For detailed CLI documentation, see the [API reference](../reference/api.md#cli-application).
 
@@ -140,13 +140,13 @@ ocr run --help
 ocr aggregate-regional-stats --help
 ```
 
-### Pipeline Orchestration
+### Pipeline orchestration
 
-#### `ocr run` - Full Pipeline
+#### `ocr run` - full pipeline
 
 The main command that orchestrates the complete processing pipeline.
 
-**Key Options:**
+**Key options:**
 
 - `--region-id` - Process specific regions (can specify multiple)
 - `--all-region-ids` - Process all available regions
@@ -168,9 +168,9 @@ ocr run --region-id y10_x2 --region-id y11_x3 --risk-type wind --platform coiled
 
 ```
 
-### Individual Stage Commands
+### Individual stage commands
 
-#### `ocr process-region` - Single Region Processing
+#### `ocr process-region` - single region processing
 
 Process risk calculations for one specific region.
 
@@ -182,7 +182,7 @@ ocr process-region y10_x2 --risk-type fire
 ocr process-region y15_x7 --env-file production.env --risk-type wind
 ```
 
-#### `ocr partition-buildings` - Data Consolidation
+#### `ocr partition-buildings` - data consolidation
 
 Partition processed geoparquet files by state and county FIPS codes.
 
@@ -190,7 +190,7 @@ Partition processed geoparquet files by state and county FIPS codes.
 ocr partition-buildings --env-file .env
 ```
 
-#### `ocr aggregate-region-risk-summary-stats` - Statistical Summaries
+#### `ocr aggregate-region-risk-summary-stats` - statistical summaries
 
 Generate county and tract-level risk statistics.
 
@@ -198,7 +198,7 @@ Generate county and tract-level risk statistics.
 ocr aggregate-region-risk-summary-stats --env-file .env
 ```
 
-#### `ocr create-regional-pmtiles` - Regional Tiles
+#### `ocr create-regional-pmtiles` - regional tiles
 
 Create PMTiles for county and tract-level visualizations.
 
@@ -214,7 +214,7 @@ Generate PMTiles from the consolidated building dataset.
 ocr create-building-pmtiles --env-file .env
 ```
 
-#### `ocr write-aggregated-region-analysis-files` - Write Analysis Files
+#### `ocr write-aggregated-region-analysis-files` - write analysis files
 
 Write aggregated region analysis files (csv, geoparquet and geojson).
 You can add the flag `--write-region-files` to `ocr run` to add this optional step in the pipeline.
@@ -225,7 +225,7 @@ ocr write-aggregated-region-analysis-files --env-file .env
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 ### Environment configuration issues
 
@@ -241,13 +241,13 @@ Error: Missing required environment variables
 
 ### Resource and access issues
 
-#### Local Platform
+#### Local platform
 
 - **Disk space:** Check available space in temp directory
 - **Memory:** Reduce dataset size or increase system RAM
 - **Permissions:** Verify file/directory access rights
 
-#### Coiled Platform
+#### Coiled platform
 
 - **Job failures:** Check Coiled credentials and account quotas
 - **AWS access:** Verify IAM permissions and credentials

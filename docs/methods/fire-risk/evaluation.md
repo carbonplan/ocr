@@ -11,7 +11,7 @@ Our evaluation approach includes multiple independent analyses to validate the q
 3. **Regional deep-dives** - Detailed analysis of specific geographic areas and historical events
 4. **Methodological validation** - Statistical assessment of our scoring and classification approaches
 
-## Evaluation Notebooks
+## Evaluation notebooks
 
 ### [Benchmarking](benchmarking.ipynb)
 
@@ -54,7 +54,7 @@ Visual comparison of our 30m resolution risk rasters with those from the Wildfir
 
 Building-level comparison of risk estimates, examining how our approach differs from other datasets when evaluated at the scale of individual structures.
 
-## Key Findings
+## Key findings
 
 Our evaluation demonstrates that:
 

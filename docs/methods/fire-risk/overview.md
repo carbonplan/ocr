@@ -10,13 +10,13 @@ The Open Climate Risk fire risk model computes building-level wildfire risk scor
 2. Multiplying the wind-adjusted burn probability by [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024) conditional risk values (cRPS)
 3. Sampling the resulting risk surface at building locations from the [Overture Maps Foundation buildings dataset](../../reference/data-sources.md#overture-maps-foundation-buildings-dataset)
 
-The model produces risk scores (RPS: Risk to Potential Structures) representing the expected net value change for a hypothetical structure at each location. The scores account for directional fire spread patterns driven by prevailing winds.
+The model produces risk scores (RPS: risk to potential structures) representing the expected net value change for a hypothetical structure at each location. The scores account for directional fire spread patterns driven by prevailing winds.
 
-## Conceptual Framework
+## Conceptual framework
 
-### Risk to Potential Structures (RPS)
+### Risk to potential structures (RPS)
 
-The model calculates **Risk to Potential Structures (RPS)**, defined as:
+The model calculates **risk to potential structures (RPS)**, defined as:
 
 $$
 \text{RPS} = \text{BP} \times \text{cRPS}
@@ -24,8 +24,8 @@ $$
 
 Where:
 
-- **BP (Burn Probability)**: Annual likelihood that a given pixel burns, derived from wildfire simulations in [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025)
-- **cRPS (Conditional Risk to Potential Structures)**: The conditional net value change for a hypothetical structure if it were to burn, from [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024)
+- **BP (burn probability)**: Annual likelihood that a given pixel burns, derived from wildfire simulations in [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025)
+- **cRPS (Conditional risk to potential structures)**: The conditional net value change for a hypothetical structure if it were to burn, from [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024)
 
 RPS represents the **expected net value change** per year for a generic structure at each location. It combines both probability (how likely fire is) and consequence (how much damage would occur).
 
@@ -35,7 +35,7 @@ RPS represents the **expected net value change** per year for a generic structur
 This approach models risk to a hypothetical "potential structure" rather than actual buildings with specific characteristics. Building-level attributes (materials, retrofits, defensible space) are not included.
 :::
 
-### Wind-Adjusted Fire Spread
+### Wind-adjusted fire spread
 
 A key innovation is incorporating **wind-driven fire spread patterns** into the burn probability:
 
@@ -46,9 +46,9 @@ A key innovation is incorporating **wind-driven fire spread patterns** into the 
 
 This differs from the uniform circular blurring in [Scott et al. 2024](../../reference/data-sources.md#scott-et-al-2024). The wind-informed approach better represents how embers transport fire downwind from wildland into developed areas.
 
-## Processing Workflow
+## Processing workflow
 
-### 1. Fire Weather Wind Analysis
+### 1. Fire weather wind analysis
 
 - Calculate Fosberg Fire Weather Index (FFWI) for every hour 1979-2022
 - For each 4km pixel, identify 99th percentile FFWI threshold
@@ -56,12 +56,12 @@ This differs from the uniform circular blurring in [Scott et al. 2024](../../ref
 - Bin fire-weather winds into 8 cardinal/ordinal directions
 - Create distribution of fire-weather wind directions for each pixel
 
-### 2. Upscale and Prepare BP
+### 2. Upscale and prepare BP
 
 - Convert 270m BP raster from [Riley et al. 2025](../../reference/data-sources.md#riley-et-al-2025) to 30m resolution
 - Identify "non-burnable" pixels (where BP = 0 in Riley et al. data)
 
-### 3. Wind-Informed BP Spreading
+### 3. Wind-informed BP spreading
 
 For each 30m pixel:
 
@@ -76,15 +76,15 @@ For each 30m pixel:
 ### 4. Calculate RPS
 
 - Multiply wind-adjusted BP by 30m cRPS raster
-- Result: 30m RPS (Risk to Potential Structures) for present and future
+- Result: 30m RPS (risk to potential structures) for present and future
 - RPS = expected net value change per year for a hypothetical structure
 
-### 5. Sample at Building Locations
+### 5. Sample at building locations
 
 - Intersect 30m RPS raster with [Overture Maps building footprints](../../reference/data-sources.md#overture-maps-foundation-buildings-dataset)
 - Assign RPS to each structure based on value at building centroid
 
-### 6. Convert to Categorical Scores
+### 6. Convert to categorical scores
 
 - Convert continuous RPS values to categorical risk scores (0-10 scale)
 - Scores are calculated using percentile-based RPS bins defined [here](./score-bins.ipynb)
@@ -103,7 +103,7 @@ For each 30m pixel:
 | 9     | `1 <= RPS < 3`        |
 | 10    | `3 <= RPS <= 100`     |
 
-## Spatial Processing Architecture
+## Spatial processing architecture
 
 The model uses a spatial chunking system for efficient parallel processing:
 
