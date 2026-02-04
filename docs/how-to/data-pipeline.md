@@ -1,4 +1,4 @@
-# Open Climate Risk data pipeline
+# Data pipeline
 
 The Open Climate Risk (OCR) data pipeline processes climate risk data through a series of coordinated stages, from individual region processing to final tile generation for visualization.
 
@@ -15,7 +15,7 @@ The pipeline transforms raw climate data into risk assessments through four main
 
 ### Prerequisites
 
-- Python environment with OCR package installed (see [installation guide](../how-to/installation.md))
+- Python environment with OCR package installed (see [Installation guide](../how-to/installation.md))
 - AWS credentials (for data access)
 - Coiled account (for cloud execution, optional)
 
@@ -23,7 +23,7 @@ The pipeline transforms raw climate data into risk assessments through four main
 
 This tutorial walks you through a short, practical run that processes one region locally and inspects the output.
 
-1. Ensure your environment is configured and the package is installed (see [installation guide](../how-to/installation.md)).
+1. Ensure your environment is configured and the package is installed (see [Installation guide](../how-to/installation.md)).
 1. Copy an example env and set a local storage path for quick testing:
 
 ```bash
@@ -129,7 +129,7 @@ ocr run --env-file .env --region-id y10_x2
 
 ## CLI Commands
 
-For detailed CLI documentation, see the [API Reference](../reference/api.md#cli-application).
+For detailed CLI documentation, see the [API reference](../reference/api.md#cli-application).
 
 ```bash
 # View all available commands

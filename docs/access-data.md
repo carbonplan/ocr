@@ -34,7 +34,7 @@ By viewing Open Climate Risk data, you agree to the [Terms of Data Access](terms
 
 ### Schema
 
-The schemas for each of the full datasets are described on the [data schema](./reference/data-schema.md) page.
+The schemas for each of the full datasets are described on the [Data schema](./reference/data-schema.md) page.
 
 ## Regional statistics downloads
 

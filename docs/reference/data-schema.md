@@ -272,5 +272,5 @@ All datasets include descriptive metadata attributes:
 
 ## Related Documentation
 
-- [Access Data](../access-data.md): Information on accessing and downloading datasets
+- [Access data](../access-data.md): Information on accessing and downloading datasets
 - [Deployment](deployment.md): Details on data storage infrastructure

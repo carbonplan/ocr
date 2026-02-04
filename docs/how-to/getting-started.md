@@ -87,21 +87,21 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 
 ### For Data Users
 
-- **[Working With Data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
-- **[Data Schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
-- **[Access Data](../access-data.md)**: Direct download links and bulk access options
+- **[Working with data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
+- **[Data schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
+- **[Access data](../access-data.md)**: Direct download links and bulk access options
 
 ### For Researchers & Analysts
 
-- **[Fire Risk Methods Overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
-- **[Data Sources](../reference/data-sources.md)**: Learn about data sources
+- **[Fire risk methods overview](../methods/fire-risk/overview.md)**: Understand how risk scores are calculated
+- **[Data sources](../reference/data-sources.md)**: Learn about data sources
 
 ### For Developers
 
 - **[Installation](installation.md)**: Set up project for local development
-- **[Project Structure](../reference/project-structure.md)**: Understand the codebase
-- **[Data Pipeline](data-pipeline.md)**: Run the processing pipeline
-- **[Working With Input Datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
+- **[Project structure](../reference/project-structure.md)**: Understand the codebase
+- **[Data pipeline](data-pipeline.md)**: Run the processing pipeline
+- **[Working with input datasets](work-with-input-datasets.md)**: View technical reference for working with input datasets
 
 ## Support
 
@@ -111,7 +111,7 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 
 ## Available Data Versions
 
-Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for:
+Check our [GitHub releases](https://github.com/carbonplan/ocr/releases) page for:
 
 - Latest data version numbers
 - Release notes and changelogs
@@ -120,4 +120,4 @@ Check our [GitHub Releases](https://github.com/carbonplan/ocr/releases) page for
 
 ---
 
-_Ready to dive deeper? Check out the [Working With Data](work-with-data.ipynb) notebook for hands-on examples._
+_Ready to dive deeper? Check out the [Working with data](work-with-data.ipynb) notebook for hands-on examples._

@@ -2,18 +2,18 @@
 
 **Open Climate Risk** is CarbonPlan's platform for analyzing and visualizing climate-related risks at a building-level resolution across the continental United States (CONUS).
 
-## Quick Links
+## Quick links
 
-- [**Map Tool**](https://carbonplan.org/research/climate-risk)
-- [**Explainer Article**](https://carbonplan.org/research/climate-risk-explainer)
-- [**GitHub Repository**](https://github.com/carbonplan/ocr)
-- [**Dataset Releases**](https://github.com/carbonplan/ocr/releases)
+- [**Map tool**](https://carbonplan.org/research/climate-risk)
+- [**Explainer article**](https://carbonplan.org/research/climate-risk-explainer)
+- [**GitHub repository**](https://github.com/carbonplan/ocr)
+- [**Dataset releases**](https://github.com/carbonplan/ocr/releases)
 
-## Getting Started
+## Getting started
 
 ::::{tab-set}
 
-:::{tab-item} Using Open Climate Risk Data
+:::{tab-item} Using Open Climate Risk data
 
 If you want to **access and analyze fire risk data**:
 
@@ -23,7 +23,7 @@ If you want to **access and analyze fire risk data**:
 
 :::
 
-:::{tab-item} Understanding Methods
+:::{tab-item} Understanding methods
 
 If you want to **understand how fire risk is calculated**:
 

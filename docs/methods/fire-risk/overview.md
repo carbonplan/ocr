@@ -112,7 +112,7 @@ The model uses a spatial chunking system for efficient parallel processing:
 - Outputs are stored in Icechunk (for rasters) and GeoParquet (for vectors)
 - Failed regions can be reprocessed without affecting completed work
 
-See [Horizontal Scaling via Spatial Chunking](./horizontal-scaling-via-spatial-chunking.ipynb) for details on the parallelization strategy.
+See [Horizontal scaling via spatial chunking](./horizontal-scaling-via-spatial-chunking.ipynb) for details on the parallelization strategy.
 
 ## Outputs
 
@@ -124,4 +124,4 @@ The pipeline produces data outputs in several formats:
 | **Vector (polygon) data** | Full buildings dataset spanning CONUS                                                   | GeoParquet            |
 | **Regional statistics**   | Summary statistics for regions (state, county, census tract, census block) within CONUS | CSV, GeoJSON          |
 
-For more information about each data output type, see the [Access Data](../../access-data.md) page.
+For more information about each data output type, see the [Access data](../../access-data.md) page.

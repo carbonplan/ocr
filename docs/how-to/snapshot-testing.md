@@ -1,4 +1,4 @@
-# Snapshot testing with Xarray/Zarr
+# Snapshot testing
 
 OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with custom support for xarray DataArrays and Datasets stored in zarr format.
 

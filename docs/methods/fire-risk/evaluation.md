@@ -23,7 +23,7 @@ Comprehensive comparison of our burn probability estimates against historical U.
 - Performance assessment in areas we designated as burnable
 - Statistical comparison with 70+ year fire history
 
-### [California Comparison](california-comparison.ipynb)
+### [California comparison](california-comparison.ipynb)
 
 Detailed comparison of our risk estimates with two authoritative California datasets: the Wildfire Risk to Communities (WRC) project and [California Fire Hazard Severity Zones](https://osfm.fire.ca.gov/what-we-do/community-wildfire-preparedness-and-mitigation/fire-hazard-severity-zones) from CAL FIRE.
 
@@ -39,7 +39,7 @@ Detailed comparison of our risk estimates with two authoritative California data
 - Distribution-based bin design using building-level data
 - Comparison with other scoring approaches
 
-### [Comparing Risk Rasters](compare-risk-rasters.ipynb)
+### [Comparing risk rasters](compare-risk-rasters.ipynb)
 
 Visual comparison of our 30m resolution risk rasters with those from the Wildfire Risk to Communities project. This notebook showcases regions where the datasets differ and explains the underlying causes, including effects of wind modeling and development patterns.
 
@@ -50,7 +50,7 @@ Visual comparison of our 30m resolution risk rasters with those from the Wildfir
 - Historical fire locations (Eaton Fire, Marshall Fire, Camp Fire)
 - "Wind effect" vs. "development effect" attribution
 
-### [Comparing Risk at Buildings](compare-risk-buildings.ipynb)
+### [Comparing risk at buildings](compare-risk-buildings.ipynb)
 
 Building-level comparison of risk estimates, examining how our approach differs from other datasets when evaluated at the scale of individual structures.
 

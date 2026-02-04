@@ -1,4 +1,4 @@
-# Open Climate Risk deployment reference
+# Deployment
 
 This document provides a comprehensive reference for the Open Climate Risk (OCR) deployment workflow, detailing the complete pipeline from data processing through deployment automation.
 
