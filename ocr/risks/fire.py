@@ -1,10 +1,10 @@
 import typing
 import warnings
+from math import asin, cos, radians, sin, sqrt
 
 import numpy as np
 import xarray as xr
 from odc.geo.xr import assign_crs, xr_reproject
-from scipy.ndimage import rotate
 
 from ocr import catalog
 from ocr.utils import geo_sel
@@ -12,10 +12,69 @@ from ocr.utils import geo_sel
 CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance in meters between two points
+    on the earth (specified in decimal degrees).
+
+    Uses the haversine formula from:
+    https://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371 * 10**3  # Radius of earth in meters
+    return c * r
+
+
+def get_grid_spacing_info(da):
+    """
+    Extract grid spacing information from a DataArray.
+
+    Returns the center coordinates and the spacing (in degrees) between pixels
+    for latitude and longitude dimensions.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        DataArray with latitude and longitude coordinates.
+
+    Returns
+    -------
+    latitude : float
+        Latitude at the center of the grid.
+    longitude : float
+        Longitude at the center of the grid.
+    latitude_increment : float
+        Spacing between latitude pixels in degrees.
+    longitude_increment : float
+        Spacing between longitude pixels in degrees.
+    """
+    center_latitude_index = len(da.latitude.values) // 2
+    center_longitude_index = len(da.longitude.values) // 2
+
+    latitude = da.latitude.values[center_latitude_index]
+    longitude = da.longitude.values[center_longitude_index]
+    # assert that lat and lon increments are positive
+    assert da.latitude.values[1] > da.latitude.values[0], 'Latitude values are not increasing'
+    assert da.longitude.values[1] > da.longitude.values[0], 'Longitude values are not increasing'
+    latitude_increment = da.latitude.values[1] - da.latitude.values[0]
+    longitude_increment = da.longitude.values[1] - da.longitude.values[0]
+    return latitude, longitude, latitude_increment, longitude_increment
+
+
 def generate_weights(
     method: typing.Literal['skewed', 'circular_focal_mean'] = 'skewed',
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
+    direction: str = 'W',
+    lat_pixel_size_meters: float = 34,
+    lon_pixel_size_meters: float = 25,
 ) -> np.ndarray:
     """Generate a 2D array of weights for a kernel.
 
@@ -29,12 +88,19 @@ def generate_weights(
         The size of the kernel, by default 81.0
     circle_diameter : float, optional
         The diameter of the circle, by default 35.0
+    direction : str, optional
+        Wind direction ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'), by default 'W'
+    lat_pixel_size_meters : float, optional
+        Physical size of one pixel in the latitude direction in meters, by default 34
+    lon_pixel_size_meters : float, optional
+        Physical size of one pixel in the longitude direction in meters, by default 25
 
     Returns
     -------
     weights : np.ndarray
         A 2D array of weights for the circular kernel.
     """
+
     if method == 'circular_focal_mean':
         x, y = np.meshgrid(
             np.arange(-kernel_size // 2 + 1, kernel_size // 2 + 1),
@@ -48,21 +114,102 @@ def generate_weights(
         # elliptical kernel oriented with the major axis horizontal and shifted
         # to the left. this captures pixels to the left, which, in our approach
         # corresponds to a wind from the west
-        a = 4  # semi-major axis
-        b = 2  # semi-minor axis
-        x = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
-        y = np.linspace(-kernel_size // 2, kernel_size // 2 + 1, int(kernel_size))
+        # this filter is operating on arrays in geographic space (aka each pixel
+        # is a length of a set unit of latitude and longitude). this means that
+        # as latitude increases, longitude
+        # the combined distance of the semi major axis and the shift should scale
+        # with latitude
+        a = 400  # semi-major axis in meters
+        b = 200  # semi-minor axis in meters
+
+        # distance (meters) of one unit of longitude coordinate at this latitude in this dataset
+        # distance (meters) of one unit of latitude in this dataset
+        # lay out the coordinates of the filter using the approximate distance for this dataset
+        # at this latitude.
+        x = (
+            np.linspace(-kernel_size // 2, kernel_size // 2, int(kernel_size))
+            * lon_pixel_size_meters
+        )
+        y = (
+            np.linspace(-kernel_size // 2, kernel_size // 2, int(kernel_size))
+            * lat_pixel_size_meters
+        )
         xx, yy = np.meshgrid(x, y)
 
-        # Ellipse equation
-        ellipse = ((xx / a) ** 2 + (yy / b) ** 2) <= 10
+        # each cardinal/ordinal direction will have an assigned center and rotation_scaler
+        # for cardinal directions we use a simple ellipse
+        shift = 110
+        diagonal_shift = shift / np.sqrt(2)
+        centers = {
+            'W': (-shift, 0),
+            'E': (shift, 0),
+            'N': (0, shift),
+            'S': (0, -shift),
+            'NE': (diagonal_shift, diagonal_shift),
+            'NW': (-diagonal_shift, diagonal_shift),
+            'SE': (diagonal_shift, -diagonal_shift),
+            'SW': (-diagonal_shift, -diagonal_shift),
+        }
+        axes = {
+            'W': (a, b),
+            'E': (a, b),
+            'N': (b, a),
+            'S': (b, a),
+            'NE': (a, b),
+            'NW': (b, a),
+            'SE': (b, a),
+            'SW': (a, b),
+        }
+        xcenter = centers[direction][0]
+        ycenter = centers[direction][1]
+        major_axis = axes[direction][0]
+        minor_axis = axes[direction][1]
+        if direction in ['N', 'S', 'E', 'W']:
+            # shift such that the total distance from pixel in question is 510 m
+            ellipse = (
+                (((xx - xcenter) ** 2) / (major_axis**2))
+                + (((yy - ycenter) ** 2) / (minor_axis**2))
+            ) <= 1
+        # if an ordinal direction then we use a rotated
+        # equation for ellipse rotated and shifted:
+        elif direction in ['NE', 'NW', 'SW', 'SE']:
+            ellipse = (((xx - xcenter) + (yy - ycenter)) ** 2) / (2 * (major_axis**2)) + (
+                ((yy - ycenter) - (xx - xcenter)) ** 2
+            ) / (2 * (minor_axis**2)) <= 1
 
-        weights = np.roll(ellipse, -5)
-        # Normalize to sum to 1.0 if there are any non-zero entries
-        weights = weights.astype(np.float32)
-        s = float(weights.sum())
-        if s > 0:
-            weights = weights / s
+        else:
+            raise ValueError(f'Unknown direction: {direction}')
+
+        weights = ellipse
+
+        # Sanity check: verify pixel count is within expected range
+        # Ellipse area = π × a × b ≈ π × 400 × 200 ≈ 251,327 m²
+        # Expected pixel count = ellipse_area / (lat_pixel_size_meters × lon_pixel_size_meters)
+        #
+        # At ~24°N (southern CONUS):
+        #   - Longitude pixels wider (closer to equator)
+        #   - Typical pixel area: ~35m × 26m ≈ 910 m²
+        #   - Expected pixels: 251,327 / 910 ≈ 276 pixels
+        #
+        # At ~60°N (high latitude):
+        #   - Longitude pixels narrower due to meridian convergence (cos(60°) ≈ 0.5)
+        #   - Typical pixel area: ~35m × 16m ≈ 560 m²
+        #   - Expected pixels: 251,327 / 560 ≈ 449 pixels
+        #
+        # Bounds (200-500) provide ~20% safety margins for discretization effects
+        ellipse_area_m2 = np.pi * a * b  # ≈ 251,327 m²
+        pixel_area_m2 = lat_pixel_size_meters * lon_pixel_size_meters
+        expected_pixel_count = ellipse_area_m2 / pixel_area_m2
+
+        weights_nonzero_count = (weights > 0).sum()
+        assert weights_nonzero_count < 500, (
+            f'Too many non-zero pixels in the kernel: {weights_nonzero_count} '
+            f'(expected ~{expected_pixel_count:.0f} based on {pixel_area_m2:.0f} m² pixels)'
+        )
+        assert weights_nonzero_count > 200, (
+            f'Too few non-zero pixels in the kernel: {weights_nonzero_count} '
+            f'(expected ~{expected_pixel_count:.0f} based on {pixel_area_m2:.0f} m² pixels)'
+        )
 
     else:
         raise ValueError(f'Unknown method: {method}')
@@ -71,7 +218,12 @@ def generate_weights(
 
 
 def generate_wind_directional_kernels(
-    kernel_size: float = 81.0, circle_diameter: float = 35.0
+    kernel_size: float = 81.0,
+    circle_diameter: float = 35.0,
+    latitude: float = 38.0,
+    longitude: float = -100,
+    longitude_increment: float = 0.0003,
+    latitude_increment: float = 0.0003,
 ) -> dict[str, np.ndarray]:
     """Generate a dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
 
@@ -88,31 +240,28 @@ def generate_wind_directional_kernels(
         A dictionary of 2D arrays of weights for elliptical kernels oriented in different directions.
     """
     weights_dict = {}
-    rotating_angles = np.arange(0, 360, 45)
     wind_direction_labels = ['W', 'NW', 'N', 'NE', 'E', 'SE', 'S', 'SW']
-    for angle, direction in zip(rotating_angles, wind_direction_labels):
+    # Physical size of one pixel in meters for longitude direction (east-west)
+    # This varies with latitude: smaller at higher latitudes due to meridian convergence
+    lon_pixel_size_meters = haversine(
+        longitude, latitude, longitude + longitude_increment, latitude
+    )
+    # Physical size of one pixel in meters for latitude direction (north-south)
+    # This is approximately constant (~111 km per degree latitude)
+    lat_pixel_size_meters = haversine(longitude, latitude, longitude, latitude + latitude_increment)
+
+    for direction in wind_direction_labels:
         # our base kernel is oriented to the west
         base = generate_weights(
-            method='skewed', kernel_size=kernel_size, circle_diameter=circle_diameter
+            method='skewed',
+            kernel_size=kernel_size,
+            circle_diameter=circle_diameter,
+            lon_pixel_size_meters=lon_pixel_size_meters,
+            lat_pixel_size_meters=lat_pixel_size_meters,
+            direction=direction,
         ).astype(np.float32)
-        # rotating we rotate the kernel and pair it with each direction
-        # when you plot these kernels with imshow (aka with y coordinates inverted),
-        # north is at the bottom and south is at the top. thus, we want the elliptical
-        # kernel to be toward the bottom of a figure when you plot the
-        # weights in imshow.
-        # Note: rotate will introduce some non 0/1 values for the ellipses in the ordinal directions
-        # but they are normalized so the total weight is consistent.
-        rotated = rotate(
-            base,
-            angle=angle,
-            reshape=False,  # keep original shape
-            order=1,  # bilinear to reduce ringing
-            mode='nearest',
-            prefilter=False,
-        )
-        # Remove tiny negative interpolation artifacts, renormalize
-        rotated = np.clip(rotated, 0.0, None)
-        weights_dict[direction] = rotated
+
+        weights_dict[direction] = base
 
     # re-normalize all weights to ensure sum equals 1.0
     for direction in weights_dict:
@@ -127,6 +276,10 @@ def apply_wind_directional_convolution(
     iterations: int = 3,
     kernel_size: float = 81.0,
     circle_diameter: float = 35.0,
+    latitude: float = 34.0,
+    longitude: float = 100.0,
+    latitude_increment: float = 0.0003,
+    longitude_increment: float = 0.0003,
 ) -> xr.Dataset:
     """Apply a directional convolution to a DataArray.
 
@@ -148,12 +301,13 @@ def apply_wind_directional_convolution(
     """
     import cv2 as cv
 
-    # TODO: must scale the size of the kernel according to the latitude. Can either
-    # be done before entering this function to calculate the kernel_size
-    # argument or inside this function and pass latitude into the convolution
-    # instead and calculate the kernel size here.
     weights_dict = generate_wind_directional_kernels(
-        kernel_size=kernel_size, circle_diameter=circle_diameter
+        kernel_size=kernel_size,
+        circle_diameter=circle_diameter,
+        latitude=latitude,
+        longitude=longitude,
+        latitude_increment=latitude_increment,
+        longitude_increment=longitude_increment,
     )
     # do the spreading in each of the 8 directions with the correct weights
     # TODO: @orianac, do we want to support dask arrays here?
@@ -489,8 +643,17 @@ def create_wind_informed_burn_probability(
                 'longitude': wind_direction_distribution_30m_4326.longitude,
             }
         )
-
-        blurred_bp_30m_4326 = apply_wind_directional_convolution(riley_30m_4326['BP'], iterations=3)
+        latitude, longitude, latitude_increment, longitude_increment = get_grid_spacing_info(
+            riley_30m_4326['BP']
+        )
+        blurred_bp_30m_4326 = apply_wind_directional_convolution(
+            riley_30m_4326['BP'],
+            iterations=3,
+            latitude=latitude,
+            longitude=longitude,
+            latitude_increment=latitude_increment,
+            longitude_increment=longitude_increment,
+        )
         wind_informed_bp_30m_4326 = create_weighted_composite_bp_map(
             blurred_bp_30m_4326, wind_direction_distribution_30m_4326
         )
@@ -511,7 +674,14 @@ def create_wind_informed_burn_probability(
             riley_30m_4326['BP'] == 0, wind_informed_bp_30m_4326, riley_30m_4326['BP']
         )
 
-    # smooth using a 25x25 Gaussian filter
+    # smooth using a Gaussian filter with ~300m radius
+    # Convert latitude increment (degrees) to meters
+    meters_per_degree_lat = abs(latitude_increment) * 111000  # ~111km per degree latitude
+    filter_radius_pixels = int(300 / meters_per_degree_lat)
+    # Ensure odd size for symmetric kernel
+    filter_size = 2 * filter_radius_pixels + 1
+    filter_size = max(3, filter_size if filter_size % 2 == 1 else filter_size + 1)
+
     smoothed_bp = xr.apply_ufunc(
         cv.GaussianBlur,
         wind_informed_bp_combined.chunk(latitude=-1, longitude=-1),
@@ -520,7 +690,7 @@ def create_wind_informed_burn_probability(
         vectorize=True,
         dask='parallelized',
         output_dtypes=[np.float32],
-        kwargs={'ksize': (25, 25), 'sigmaX': 0},
+        kwargs={'ksize': (filter_size, filter_size), 'sigmaX': 0},
     )
     smoothed_bp.name = 'BP'
 

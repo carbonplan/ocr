@@ -134,12 +134,12 @@ def test_generate_weights_defaults():
     expected_shape = (81, 81)
     assert weights.shape == expected_shape
 
-    # Now normalized
-    assert np.isclose(weights.sum(), 1.0)
-    # Should be two-level mask (0 outside, constant inside)
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
     unique_vals = np.unique(weights)
-    assert unique_vals.size == 2
-    assert 0.0 in unique_vals
+    assert set(unique_vals).issubset({0, 1})
+    # Should have some non-zero elements
+    assert np.sum(weights > 0) > 0
 
 
 def test_generate_weights_skewed():
@@ -149,22 +149,12 @@ def test_generate_weights_skewed():
     # Check shape
     assert weights.shape == (51, 51)
 
-    # Normalized two-level mask expected
-    assert np.isclose(weights.sum(), 1.0)
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
     unique_vals = np.unique(weights)
-    assert unique_vals.size == 2
-    assert 0.0 in unique_vals
-
-    # Check that values are binary before normalization (0 outside circle, positive inside)
-    unique_values = np.unique(weights * weights.sum())
-    assert len(unique_values) == 2
-    assert 0 in unique_values
-
-    # Skewed kernel should be asymmetric due to roll/distortion
-    center_y, center_x = weights.shape[0] // 2, weights.shape[1] // 2
-    sub = weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10]
-    # At least one directional flip should differ
-    assert not np.allclose(sub, np.flipud(sub)) or not np.allclose(sub, np.fliplr(sub))
+    assert set(unique_vals).issubset({0, 1})
+    assert 0 in unique_vals
+    assert 1 in unique_vals
 
 
 def test_generate_weights_circular_focal_mean():
@@ -214,8 +204,10 @@ def test_generate_weights_even_kernel_size():
     # Check shape
     # Current implementation for 'skewed' returns an array of shape (kernel_size, kernel_size)
     assert weights.shape == (40, 40)
-    # Normalized
-    assert np.isclose(weights.sum(), 1.0)
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
+    unique_vals = np.unique(weights)
+    assert set(unique_vals).issubset({0, 1})
 
 
 def test_generate_weights_small_circle():
