@@ -46,7 +46,7 @@ import icechunk
 import xarray as xr
 
 # Connect to production Icechunk repository
-version = 'v1.0.0'  # Check GitHub releases for latest version
+version = 'v1.1.0'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
     bucket='us-west-2.opendata.source.coop',
     prefix=f'carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/{version}/ocr.icechunk',
