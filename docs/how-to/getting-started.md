@@ -34,7 +34,7 @@ Open Climate Risk output data is stored in [Icechunk](https://icechunk.io/), a v
 You'll need Python with a few packages installed:
 
 ```bash
-python -m pip install xarray icechunk
+python -m pip install xarray icechunk dask
 ```
 
 ### Load the dataset
@@ -50,6 +50,7 @@ version = 'v1.1.0'  # Check GitHub releases for latest version
 storage = icechunk.s3_storage(
     bucket='us-west-2.opendata.source.coop',
     prefix=f'carbonplan/carbonplan-ocr/output/fire-risk/tensor/production/{version}/ocr.icechunk',
+    region='us-west-2',
     anonymous=True,
 )
 
