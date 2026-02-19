@@ -1,6 +1,6 @@
 # Access data
 
-There a few different ways to access the data, in addition to exploration via the map tool. This page outlines the different versions and formats of data available for download.
+There are a few different ways to access Open Climate Risk data, in addition to exploration via the map tool. This page outlines the different versions and formats of data available for download.
 
 :::{admonition} **License Agreement**
 :class: warning
