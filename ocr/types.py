@@ -1,19 +1,19 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 
-class Environment(str, Enum):
+class Environment(StrEnum):
     QA = 'qa'
     STAGING = 'staging'
     PRODUCTION = 'production'
 
 
-class Platform(str, Enum):
+class Platform(StrEnum):
     COILED = 'coiled'
     LOCAL = 'local'
 
 
-class RiskType(str, Enum):
+class RiskType(StrEnum):
     """Available risk types for calculation."""
 
     FIRE = 'fire'
