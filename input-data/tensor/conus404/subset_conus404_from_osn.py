@@ -6,7 +6,7 @@
 
 
 import time
-from enum import Enum
+from enum import StrEnum
 
 import coiled
 import icechunk
@@ -154,7 +154,7 @@ def process_dataset(ds: xr.Dataset, repo: icechunk.Repository):
         raise
 
 
-class Variable(str, Enum):
+class Variable(StrEnum):
     Q2 = 'Q2'
     TD2 = 'TD2'
     PSFC = 'PSFC'
