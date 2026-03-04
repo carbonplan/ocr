@@ -51,8 +51,7 @@ jobs:
             - name: Upload code coverage to Codecov
               uses: codecov/codecov-action@v5.5.2
               with:
-                  # For public repos the token is not required; uncomment if private:
-                  # token: ${{ secrets.CODECOV_TOKEN }}
+                  token: ${{ secrets.CODECOV_TOKEN }}
                   files: ./coverage.xml
                   flags: unit
                   env_vars: OS,PYTHON
