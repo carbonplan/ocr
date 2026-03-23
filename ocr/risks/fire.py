@@ -1042,3 +1042,62 @@ def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
         }
     )
     return mode.to_dataset()
+
+
+# Bin edges that define the 11-category fire risk scoring system (scores 0–10).
+# Score 0 captures zero-risk buildings; score 1 captures the smallest non-zero risks;
+# scores 2–10 correspond to increasing RPS thresholds whose percentile breakpoints
+# grow increasingly close together toward the 100th percentile.
+# See docs/methods/fire-risk/score-bins.ipynb for the full derivation.
+FIRE_RISK_SCORE_BINS: list[float] = [
+    0.0,
+    1e-64,
+    0.01,
+    0.02,
+    0.035,
+    0.06,
+    0.1,
+    0.2,
+    0.5,
+    1.0,
+    3.0,
+    100.0,
+]
+
+
+def rps_to_score(rps: float | np.ndarray) -> int | np.ndarray:
+    """Convert RPS (Risk Percent to Structures) value(s) to a categorical fire risk score.
+
+    The scoring system uses 11 categories (0–10) with bin boundaries designed so
+    that higher scores are increasingly rare: each higher score encompasses a
+    progressively smaller share of the building population.
+
+    Parameters
+    ----------
+    rps : float or array-like
+        RPS value(s) in percent. Must be in the range [0, 100].
+
+    Returns
+    -------
+    int or numpy.ndarray
+        Risk score(s) in the range [0, 10].
+
+    Examples
+    --------
+    >>> rps_to_score(0.0)
+    0
+    >>> rps_to_score(0.005)
+    1
+    >>> rps_to_score(100.0)
+    10
+    >>> import numpy as np
+    >>> rps_to_score(np.array([0.0, 0.015, 3.5]))
+    array([ 0,  2, 10])
+    """
+    scalar = np.ndim(rps) == 0
+    arr = np.asarray(rps, dtype=float)
+    bins = np.asarray(FIRE_RISK_SCORE_BINS)
+    # np.digitize(x, bins, right=False) returns i where bins[i-1] <= x < bins[i].
+    # Subtract 1 to get 0-based scores; clip to [0, 10] to handle x == 100.
+    scores = np.clip(np.digitize(arr, bins, right=False) - 1, 0, len(bins) - 2)
+    return int(scores) if scalar else scores

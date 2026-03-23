@@ -4,12 +4,82 @@ import pytest
 import xarray as xr
 
 from ocr.risks.fire import (
+    FIRE_RISK_SCORE_BINS,
     apply_wind_directional_convolution,
     classify_wind_directions,
     create_weighted_composite_bp_map,
     generate_weights,
     generate_wind_directional_kernels,
+    rps_to_score,
 )
+
+#######################################
+# Tests for fire risk score bins     ##
+#######################################
+
+
+class TestRpsToScore:
+    def test_bins_has_twelve_edges(self):
+        assert len(FIRE_RISK_SCORE_BINS) == 12
+
+    def test_zero_rps_is_score_zero(self):
+        assert rps_to_score(0.0) == 0
+
+    def test_tiny_nonzero_rps_is_score_one(self):
+        # anything in (0, 0.01) that is above the near-zero threshold → score 1
+        assert rps_to_score(1e-10) == 1
+
+    def test_max_rps_is_score_ten(self):
+        assert rps_to_score(100.0) == 10
+
+    @pytest.mark.parametrize(
+        'rps,expected_score',
+        [
+            (0.0, 0),
+            (1e-65, 0),  # below the near-zero threshold → score 0
+            (1e-64, 1),  # at the near-zero threshold boundary → score 1
+            (1e-10, 1),  # within (1e-64, 0.01) → score 1
+            (0.01, 2),  # at the 0.01 boundary → score 2
+            (0.015, 2),
+            (0.02, 3),
+            (0.035, 4),
+            (0.06, 5),
+            (0.1, 6),
+            (0.2, 7),
+            (0.5, 8),
+            (1.0, 9),
+            (3.0, 10),
+            (50.0, 10),
+            (100.0, 10),
+        ],
+    )
+    def test_scalar_boundary_values(self, rps, expected_score):
+        assert rps_to_score(rps) == expected_score
+
+    def test_array_input(self):
+        rps = np.array([0.0, 0.015, 3.5])
+        result = rps_to_score(rps)
+        np.testing.assert_array_equal(result, [0, 2, 10])
+
+    def test_returns_scalar_int_for_scalar_input(self):
+        result = rps_to_score(0.5)
+        assert isinstance(result, int)
+
+    def test_returns_ndarray_for_array_input(self):
+        result = rps_to_score(np.array([0.0, 1.0]))
+        assert isinstance(result, np.ndarray)
+
+    def test_scores_are_monotonically_nondecreasing(self):
+        rps_values = np.linspace(0, 100, 500)
+        scores = rps_to_score(rps_values)
+        assert np.all(np.diff(scores) >= 0)
+
+    def test_all_scores_in_valid_range(self):
+        rps_values = np.linspace(0, 100, 500)
+        scores = rps_to_score(rps_values)
+        assert scores.min() >= 0
+        assert scores.max() <= 10
+
 
 ############################################
 # Tests for wind direction classification ##
