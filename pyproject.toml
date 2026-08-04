@@ -8,7 +8,7 @@
     requires-python = ">= 3.13"
     # All runtime dependencies are managed by Pixi via conda-forge.
     # for conda/pixi users this section is intentionally empty.
-    dependencies = ["topozarr>=0.0.4"]
+    dependencies = ["topozarr>=0.1.2"]
 [project.scripts]
     ocr        = "ocr.deploy.cli:app"
     ocr-deploy = "ocr.deploy.cli:app"
@@ -211,7 +211,7 @@
     universal-pathlib     = ">=0.2.6,<0.3"
     xarray                = ">=2025.9.0,<2026"
     xclim                 = ">=0.58.1,<0.59"
-    zarr                  = ">=3.1.2,<4"
+    zarr                  = ">=3.2.1,<4"
 
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }

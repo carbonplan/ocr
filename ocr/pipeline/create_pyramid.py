@@ -41,13 +41,13 @@ def create_pyramid(config: OCRConfig):
     ds = ds.proj.assign_crs({'EPSG': 4326})
 
     pyramid = create_pyramid(
-        ds, levels=level, x_dim='longitude', y_dim='latitude', target_shard_bytes=None
+        ds, levels=level, x_dim='longitude', y_dim='latitude', chunks_per_shard=None
     )
-    # shards = None while this PR is open: github.com/manzt/zarrita.js/pull/326
+    # chunks_per_shard = None while this PR is open: github.com/manzt/zarrita.js/pull/326
 
     store = from_url(url=f's3://{PYRAMID_BUCKET}/{PYRAMID_PREFIX}', region='us-west-2')
     zstore = ObjectStore(store)
-    pyramid.dt.to_zarr(
+    pyramid.as_datatree().to_zarr(
         zstore, mode='w', encoding=pyramid.encoding, zarr_format=3, align_chunks=False
     )
     zarr.consolidate_metadata(zstore)
