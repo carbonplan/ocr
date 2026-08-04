@@ -183,6 +183,7 @@
     fsspec                = ">=2025.9.0,<2026"
     gdal                  = ">=3.10.3,<4"
     geopandas             = ">=1.1.1,<2"
+    h5py                  = ">=3.16.0,<4"
     icechunk              = ">=1.1.5,<2"
     libgdal-arrow-parquet = ">=3.10.3,<4"
     lonboard              = ">=0.11.1,<0.14"
