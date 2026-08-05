@@ -9,13 +9,14 @@ Exploratory processing for a tropical-cyclone hazard layer. These scripts are
 not wired into the OCR pipeline — they are run by hand and write to the
 `ocr-explore` prefix, where the exploration viewer reads them.
 
-The three scripts run in order:
+The scripts run in order:
 
 1. `fetch_chaz.py` — stream the raw Dryad files into S3.
 2. `chaz_matrix.py` — build the GCM-stacked wind-hazard pyramid matrix.
 3. `chaz_damage.py` — apply a TC impact function to get CONUS damage fractions.
+4. `chaz_buildings.py` — sample the damage stores onto building footprints.
 
-`chaz_damage.py` imports `chaz_matrix.py`, so run both from this directory (or
+The later scripts import the earlier ones, so run them from this directory (or
 by path, as below — the script's own directory is on `sys.path`). Set up the
 environment with `pixi` (see the contribution guide).
 
@@ -213,6 +214,42 @@ Each manifest record carries the calibration provenance (`v_half`,
   not to be averaged; over-ocean values are too sparse to use. The source's
   return levels are empirical event rankings with constant extrapolation
   beyond the event set — no distribution fit.
+
+## 4. Buildings parquet (CONUS)
+
+`chaz_buildings.py` writes one GeoParquet of Overture building footprints
+(from the fire pipeline's region-tagged buildings source) carrying the
+`ead`/`ead_lower`/`ead_upper` bands of four stores: ERA5 plus the multi-model
+medians of one scenario/variant across base/fut1/fut2. Columns are suffixed
+by period (`ead_era5`, `ead_base`, … `ead_upper_fut2`); scenario, variant and
+calibration travel in the file name and parquet KV metadata, so the schema is
+the same whichever subset is built.
+
+Each building takes the value of the 300 arcsec cell nearest its bbox
+centroid, so buildings sharing a cell share a value — these are cell
+expectations, not building-level estimates. The ~50M CONUS buildings are
+prefiltered to the stores' valid-cell bounding box and joined on integer cell
+indices in DuckDB. By default only buildings where some store's `ead_upper`
+is positive are kept (roughly the eastern half of CONUS plus stretches of the
+Pacific coast the GCMs reach); in kept rows NULL means outside a store's
+coverage, 0.0 means no TC wind damage. `--keep-zeros` keeps all sampled
+buildings instead.
+
+The build streams the ~14 GB buildings parquet, so run it in us-west-2 next to
+the bucket (e.g. `coiled run --region us-west-2 -- ...`); a laptop works but
+pulls the whole file down. Rows are sorted into grid row-major order so
+bbox-filtered reads prune row groups; the sort spills, so give the VM tens of
+GB of disk headroom. `verify` checks value ranges, envelope ordering, the KV
+metadata and the clustering, and re-samples a random subset of rows through
+xarray as an independent check of the cell arithmetic.
+
+```bash
+pixi run python input-data/tensor/chaz/chaz_buildings.py build --scenario ssp370 --variant CRH
+pixi run python input-data/tensor/chaz/chaz_buildings.py verify --scenario ssp370 --variant CRH
+```
+
+Output lands at `s3://carbonplan-ocr/ocr-explore/CHAZ/buildings/<id>.parquet`,
+with a record merged into a `manifest.json` alongside.
 
 ## Accessing the processed stores
 
