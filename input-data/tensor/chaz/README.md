@@ -14,7 +14,8 @@ The scripts run in order:
 1. `fetch_chaz.py` — stream the raw Dryad files into S3.
 2. `chaz_matrix.py` — build the GCM-stacked wind-hazard pyramid matrix.
 3. `chaz_damage.py` — apply a TC impact function to get CONUS damage fractions.
-4. `chaz_buildings.py` — sample the damage stores onto building footprints.
+4. `chaz_v2.py` — join wind, damage, EAD and recurrence into one store per origin.
+5. `chaz_buildings.py` — sample the damage stores onto building footprints.
 
 The later scripts import the earlier ones, so run them from this directory (or
 by path, as below — the script's own directory is on `sys.path`). Set up the
@@ -215,7 +216,55 @@ Each manifest record carries the calibration provenance (`v_half`,
   return levels are empirical event rankings with constant extrapolation
   beyond the event set — no distribution fit.
 
-## 4. Buildings parquet (CONUS)
+## 4. v2 combined stores (CONUS)
+
+`chaz_v2.py` joins the products of steps 2 and 3 into one pyramid per origin,
+so a single point query returns everything a viewer's detail panel needs. The
+six `rp_*` sibling variables become a real `return_period` dimension:
+
+```
+damage_fraction  (return_period, lat, lon)   Eberenz NA2 impact function, 0..1
+wind_speed       (return_period, lat, lon)   1-min sustained 10-m wind, m/s
+ead / ead_lower / ead_upper      (lat, lon)  as in chaz_damage.py, yr⁻¹
+rp_exceed_33 / rp_exceed_50      (lat, lon)  years between ≥33 / ≥50 m/s winds
+```
+
+topozarr chunks non-spatial dims to 1, so each return-period slice is its own
+chunk: rendering one band costs the same bytes as a v1 2D variable, and a
+point query pulls the full damage curve with one array-valued selector.
+
+Only the app-facing origins are built — ERA5 plus the multi-model median per
+combination (18 median + 1 ERA5 per calibration); the v1 per-GCM stores remain
+for member-level exploration. Medians transform every member first and then
+take the NaN-aware median per variable, so v2 `ead` and `damage_fraction`
+match the v1 median stores value-for-value. That also means median
+`wind_speed` and median `damage_fraction` are each medians in their own right
+but are not related through the impact function (an even member count's median
+averages the two middle members, so it does not commute with f). The
+recurrence bands are gridded independently from the same point set, so they
+are snapped onto the wind grid (nearest node within half a cell) before
+masking.
+
+```bash
+pixi run python input-data/tensor/chaz/chaz_v2.py build --scenario ssp370 --variant CRH
+pixi run python input-data/tensor/chaz/chaz_v2.py build --all
+pixi run python input-data/tensor/chaz/chaz_v2.py verify chaz_conus_v2_ERA5_points
+```
+
+Stores land at:
+
+```
+chaz_conus_v2_{scenario}_{period}_{variant}_median_points
+chaz_conus_v2_ERA5_points
+```
+
+`verify` extends the damage checks to the joined bands: damage in [0, 1] and
+non-decreasing with return period, wind non-negative and non-decreasing, NaN
+masks shared across the damage, wind, and `ead` bands, `ead` inside its
+envelope, and the recurrence bands positive and confined to the wind mask
+(they may be NaN inside it where no threshold crossing was published).
+
+## 5. Buildings parquet (CONUS)
 
 `chaz_buildings.py` writes one GeoParquet of Overture building footprints
 (from the fire pipeline's region-tagged buildings source) carrying the
