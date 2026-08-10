@@ -43,6 +43,34 @@ overrides); the zip is left behind once the tif is extracted.
 The sync deletes keys under the store prefix that the build did not write, so a
 change in shape or chunking leaves no orphaned chunks behind.
 
+## Building footprints
+
+`fdp_buildings.py` samples the store onto the ~156M Overture CONUS footprints
+from the fire pipeline's region-tagged buildings source, writing one GeoParquet
+with an `fdp` column.
+
+```bash
+pixi run -e fdp coiled run --region us-west-2 --vm-type m8g.4xlarge --disk-size 200 -- python input-data/tensor/fdp/fdp_buildings.py build
+
+pixi run -e fdp python input-data/tensor/fdp/fdp_buildings.py verify
+```
+
+Each building takes the value of the cell nearest its bbox centroid. At 100 m
+that is close to footprint scale, so these read as per-building values rather
+than the cell expectations a coarse grid gives; buildings larger than a cell
+still get one value, and neighbours inside the same cell share one.
+
+Footprints are in lon/lat and the grid is in Albers metres, so centroids are
+reprojected before the cell arithmetic. The full grid is 1.5e9 cells, too many
+to join against, so a first pass collects the cells that actually contain a
+building and only those become the join table. That pass reads just the `bbox`
+column, which parquet column pruning makes much cheaper than the full scan.
+Buildings outside the store's valid data are dropped by the join, so every
+written row has a value.
+
+Rows are sorted into grid row-major order so bbox-filtered reads prune row
+groups. The sort spills, hence the disk headroom above.
+
 ## Outputs
 
 | level | resolution | shape       |
@@ -54,6 +82,8 @@ change in shape or chunking leaves no orphaned chunks behind.
 ocr-explore/FDP/raw/CONUS_FDP_100m.tif
 ocr-explore/FDP/processed/flood_damage_probability/{0..7}/
 ocr-explore/FDP/processed/manifest.json
+ocr-explore/FDP/buildings/fdp_buildings_conus.parquet
+ocr-explore/FDP/buildings/manifest.json
 ```
 
 Level `0` is the native grid; `x`/`y` are Albers metres, not degrees.
