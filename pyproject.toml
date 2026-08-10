@@ -120,6 +120,9 @@
     deploy   = ["coiled-deploy"]
     dev      = ["coiled-deploy", "data-mgmt", "dev"]
     docs     = ["coiled-deploy", "docs"]
+    # Standalone: Coiled package sync replicates the whole environment, and the
+    # default one carries packages its solver cannot resolve.
+    fdp = { features = ["fdp"], no-default-feature = true }
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
@@ -172,6 +175,22 @@
     jupyter-server-proxy = ">=4.4.0,<5"
     jupyterlab           = ">=4.4.7,<5"
     tippecanoe           = ">=2.78.0,<3"
+
+# Just what input-data/tensor/fdp/fdp.py imports, so Coiled package sync has a
+# small environment to replicate.
+[tool.pixi.feature.fdp.dependencies]
+    coiled    = ">=1.120.0,<2"
+    numpy     = ">=2,<3"
+    python    = "3.13.*"
+    requests  = ">=2,<3"
+    rioxarray = ">=0.19.0,<0.20"
+    s3fs      = ">=2025.9.0,<2026"
+    xarray    = ">=2025.9.0,<2026"
+    zarr      = ">=3.2.1,<4"
+
+[tool.pixi.feature.fdp.pypi-dependencies]
+    topozarr = "==0.1.2"
+    xproj    = "*"
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"
