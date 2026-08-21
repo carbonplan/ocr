@@ -20,6 +20,8 @@ grid, with return period as a real dimension instead of six sibling variables:
 
   damage_fraction  (return_period, lat, lon)  Eberenz NA2 impact function, 0..1
   wind_speed       (return_period, lat, lon)  1-min sustained 10-m wind, m/s
+  wind_speed_lower / wind_speed_upper         min/max of wind_speed across the
+                                              GCM members (median stores only)
   ead / ead_lower / ead_upper      (lat, lon) as in chaz_damage.py, yr^-1
   rp_exceed_33 / rp_exceed_50      (lat, lon) years between >=33 / >=50 m/s winds
 
@@ -113,6 +115,14 @@ ATTRS = {
         'long_name': '1-min sustained 10-m wind at each return period',
         'units': 'm s-1',
     },
+    'wind_speed_lower': {
+        'long_name': 'minimum wind_speed across the GCM members',
+        'units': 'm s-1',
+    },
+    'wind_speed_upper': {
+        'long_name': 'maximum wind_speed across the GCM members',
+        'units': 'm s-1',
+    },
     'ead': {'long_name': 'expected annual damage at unit exposure', 'units': 'yr-1'},
     'ead_lower': {
         'long_name': 'ead with v_half at the calibration 75th percentile',
@@ -179,14 +189,16 @@ def _v2_ds(wind: xr.Dataset, thr: xr.Dataset, calibration: str) -> xr.Dataset:
     ds = xr.Dataset(data_vars, coords={'return_period': RETURN_PERIODS, **wind.coords})
     ds['return_period'].attrs['units'] = 'yr'
     for name, attrs in ATTRS.items():
-        ds[name].attrs.update(attrs)
+        if name in ds:
+            ds[name].attrs.update(attrs)
     if 'gcm' in ds.coords:
         ds['gcm'].attrs = dict(wind['gcm'].attrs)
     return ds.proj.assign_crs(spatial_ref='EPSG:4326')
 
 
 def _median_v2(stacked: xr.Dataset) -> xr.Dataset:
-    """NaN-aware per-variable median over the gcm axis, as in chaz_matrix."""
+    """NaN-aware per-variable median over the gcm axis, as in chaz_matrix; the
+    wind_speed member spread also lands as a min/max envelope."""
     out = {}
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')  # all-NaN slice -> NaN (expected over ocean)
@@ -194,6 +206,11 @@ def _median_v2(stacked: xr.Dataset) -> xr.Dataset:
             axis = da.dims.index('gcm')
             dims = tuple(d for d in da.dims if d != 'gcm')
             out[name] = (dims, np.nanmedian(da.values, axis=axis).astype('float32'), da.attrs)
+        wind = stacked['wind_speed']
+        axis = wind.dims.index('gcm')
+        dims = tuple(d for d in wind.dims if d != 'gcm')
+        for name, reduce in (('wind_speed_lower', np.nanmin), ('wind_speed_upper', np.nanmax)):
+            out[name] = (dims, reduce(wind.values, axis=axis).astype('float32'), ATTRS[name])
     ds = xr.Dataset(
         out,
         coords={
@@ -214,7 +231,8 @@ def _record(sid, origin, calibration, sources, bounds, **extra) -> dict:
         'origin': origin,
         'representation': 'points',
         'dims': {'return_period': [int(t) for t in RETURN_PERIODS]},
-        'variables_3d': ['damage_fraction', 'wind_speed'],
+        'variables_3d': ['damage_fraction', 'wind_speed']
+        + (['wind_speed_lower', 'wind_speed_upper'] if origin == 'median' else []),
         'variables_2d': ['ead', 'ead_lower', 'ead_upper', 'rp_exceed_33', 'rp_exceed_50'],
         'clim': CLIM,
         'impact_function': 'Eberenz et al. 2021 (NHESS), region NA2',
@@ -233,6 +251,11 @@ def _record(sid, origin, calibration, sources, bounds, **extra) -> dict:
             'median stores transform each member first, then take the NaN-aware '
             'median per variable, so median wind_speed and median damage_fraction '
             'are not related through the impact function'
+        ),
+        **(
+            {'wind_bounds': 'wind_speed_lower/upper are the min/max across the GCM members'}
+            if origin == 'median'
+            else {}
         ),
         'sources': sources,
         **bounds,
@@ -304,12 +327,15 @@ def check_level(arrs: dict[str, np.ndarray]) -> list[str]:
     w = wind[np.isfinite(wind)]
     if w.size and w.min() < 0:
         problems.append(f'wind_speed negative ({w.min():.2f})')
-    for name, a, tol in (('damage_fraction', dmg, 1e-6), ('wind_speed', wind, 1e-4)):
+    bound_names = [n for n in ('wind_speed_lower', 'wind_speed_upper') if n in arrs]
+    curves = [('damage_fraction', dmg, 1e-6), ('wind_speed', wind, 1e-4)]
+    curves += [(name, arrs[name], 1e-4) for name in bound_names]
+    for name, a, tol in curves:
         drops = a[:-1] > a[1:] + tol  # non-decreasing along return_period
         if drops.any():
             problems.append(f'{name} shrinks with return period at {int(drops.sum())} cells')
     mask = np.isnan(dmg[0])
-    for name in ('damage_fraction', 'wind_speed'):
+    for name in ('damage_fraction', 'wind_speed', *bound_names):
         problems += [
             f'{name}[{i}] NaN mask differs from damage_fraction[0]'
             for i, s in enumerate(arrs[name])
@@ -321,6 +347,10 @@ def check_level(arrs: dict[str, np.ndarray]) -> list[str]:
     out = (arrs['ead_lower'] > arrs['ead'] + 1e-6) | (arrs['ead'] > arrs['ead_upper'] + 1e-6)
     if out.any():
         problems.append(f'ead outside envelope at {int(out.sum())} cells')
+    if bound_names:
+        out = (arrs['wind_speed_lower'] > wind + 1e-4) | (wind > arrs['wind_speed_upper'] + 1e-4)
+        if out.any():
+            problems.append(f'wind_speed outside the GCM envelope at {int(out.sum())} cells')
     for name in RP_EXCEED.values():
         a = arrs[name]
         r = a[np.isfinite(a)]
