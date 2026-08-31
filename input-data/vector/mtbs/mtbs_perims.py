@@ -187,6 +187,7 @@ def cmd_fetch(_args) -> None:
 
 def cmd_build(args) -> None:
     import geopandas as gpd
+    import pandas as pd
 
     s3 = s3fs.S3FileSystem()
     if s3.exists(f'{BUCKET}/{KEY}') and not args.force:
@@ -199,7 +200,7 @@ def cmd_build(args) -> None:
     gdf = gpd.read_file(info['local'])
     gdf.columns = [c.lower() for c in gdf.columns]
     gdf = gdf.to_crs('EPSG:4326')
-    gdf['year'] = gdf['ig_date'].dt.year
+    gdf['year'] = pd.to_datetime(gdf['ig_date'], errors='coerce').dt.year
     if not gdf['year'].isna().any():
         gdf['year'] = gdf['year'].astype(int)
     gdf = gdf[[*FIELDS, 'geometry']]
