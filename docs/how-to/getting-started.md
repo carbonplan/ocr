@@ -89,6 +89,8 @@ Risk scores represent a hypothetical structure and do NOT account for building-s
 ### For data users
 
 - **[Working with data](work-with-data.ipynb)**: Detailed guide on loading and analyzing Open Climate Risk datasets
+- **[100 locations demo](100-locations-fire-risk-demo.ipynb)**: Extract and rank fire risk scores for a set of point locations
+- **[Transmission lines analysis](transmission-lines-fire-risk.ipynb)**: Intersect transmission infrastructure with the fire risk raster to rank lines by exposure
 - **[Data schema](../reference/data-schema.md)**: Complete reference of available variables and metadata
 - **[Access data](../access-data.md)**: Direct download links and bulk access options
 
