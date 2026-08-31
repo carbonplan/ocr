@@ -20,7 +20,7 @@ jobs:
     unit-tests:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: configure aws credentials
               uses: aws-actions/configure-aws-credentials@v6
@@ -29,7 +29,7 @@ jobs:
                   role-session-name: ocr-etl-role-session
                   aws-region: us-west-2
 
-            - uses: prefix-dev/setup-pixi@v0.9.5
+            - uses: prefix-dev/setup-pixi@v0.10.0
               with:
                   activate-environment: true
                   environments: dev
@@ -49,7 +49,7 @@ jobs:
                   echo "PYTHON=$(pixi run --environment dev python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" >> $GITHUB_ENV
 
             - name: Upload code coverage to Codecov
-              uses: codecov/codecov-action@v6.0.0
+              uses: codecov/codecov-action@v7.0.0
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: ./coverage.xml
@@ -73,7 +73,7 @@ jobs:
               )
             )
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: configure aws credentials
               uses: aws-actions/configure-aws-credentials@v6
@@ -82,7 +82,7 @@ jobs:
                   role-session-name: ocr-etl-role-session
                   aws-region: us-west-2
 
-            - uses: prefix-dev/setup-pixi@v0.9.5
+            - uses: prefix-dev/setup-pixi@v0.10.0
               with:
                   cache: false # no pixi.lock
                   locked: false
@@ -104,7 +104,7 @@ jobs:
                   echo "PYTHON=$(pixi run --environment dev python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" >> $GITHUB_ENV
 
             - name: Upload code coverage to Codecov (integration)
-              uses: codecov/codecov-action@v6.0.0
+              uses: codecov/codecov-action@v7.0.0
               if: success()
               with:
                   # token: ${{ secrets.CODECOV_TOKEN }}  # uncomment if repository is private
