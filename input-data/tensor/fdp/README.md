@@ -106,6 +106,9 @@ ds = xr.open_zarr(f'{base}/flood_damage_probability/0', consolidated=False)
 - **Historical.** The predictors (2016 land cover, road density, floodplain,
   terrain) describe recent conditions; there is no climate scenario dimension.
 - **Continuous vs. binary.** The published product also ships a binary
-  presence/absence raster derived from a threshold on this surface. The viewer
-  reproduces that with a client-side `threshold` uniform instead of hosting the
-  second raster.
+  presence/absence raster, `Output_CONUS_binary_pres_abs_100m`. Its cut is not
+  one number: `Code_FDP_RandomForest_code.R` fits a separate error-minimizer
+  threshold per HUC-2 watershed, the probability where that watershed's false
+  positive and false negative rates cross, and the release ships the code but
+  not the resulting values. No client-side threshold reproduces it, so the
+  viewer carries the continuous surface alone.
