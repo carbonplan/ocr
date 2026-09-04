@@ -25,9 +25,9 @@ Requires tippecanoe on PATH and AWS credentials for carbonplan-ocr.
 
 Usage:
   uv run ibtracs_tracks.py fetch
-  uv run ibtracs_tracks.py build [--force]
-  uv run ibtracs_tracks.py verify
-  uv run ibtracs_tracks.py list
+  uv run ibtracs_tracks.py build [--force] [--subset conus]
+  uv run ibtracs_tracks.py verify [--subset conus]
+  uv run ibtracs_tracks.py list [--subset conus]
 """
 
 from __future__ import annotations
@@ -47,10 +47,15 @@ import s3fs
 BUCKET = 'carbonplan-ocr'
 PREFIX = 'ocr-explore'
 RAW = f'{PREFIX}/IBTrACS/raw'
-KEY = f'{PREFIX}/ibtracs_since1980.pmtiles'
 MANIFEST_KEY = f'{PREFIX}/manifest.json'
 
-ARTIFACT_ID = 'ibtracs_since1980'
+# 'conus' keeps only the storms in the wind footprint store (ibtracs_winds.py),
+# so the drawn tracks and the per-cell winds describe the same storm set
+ARTIFACTS = {
+    'global': ('ibtracs_since1980', f'{PREFIX}/ibtracs_since1980.pmtiles'),
+    'conus': ('ibtracs_conus_tracks', f'{PREFIX}/ibtracs_conus_tracks.pmtiles'),
+}
+STORMS_KEY = f'{PREFIX}/ibtracs_conus_winds/storms.json'
 SOURCE_URL = (
     'https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-'
     'ibtracs/v04r01/access/shapefile/IBTrACS.since1980.list.v04r01.lines.zip'
@@ -82,8 +87,8 @@ CACHE = Path.home() / '.cache' / 'ocr' / 'ibtracs'
 FETCH_INFO = CACHE / 'fetch_info.json'
 
 
-def artifact_uri() -> str:
-    return f's3://{BUCKET}/{KEY}'
+def artifact_uri(key: str) -> str:
+    return f's3://{BUCKET}/{key}'
 
 
 # ---------------------------------------------------------------------------
@@ -191,9 +196,10 @@ def cmd_fetch(_args) -> None:
 def cmd_build(args) -> None:
     import geopandas as gpd
 
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
-    if s3.exists(f'{BUCKET}/{KEY}') and not args.force:
-        sys.exit(f'{artifact_uri()} exists; use --force to overwrite')
+    if s3.exists(f'{BUCKET}/{key}') and not args.force:
+        sys.exit(f'{artifact_uri(key)} exists; use --force to overwrite')
     if not FETCH_INFO.exists():
         sys.exit('no fetched source; run `fetch` first')
     info = json.loads(FETCH_INFO.read_text())
@@ -201,25 +207,31 @@ def cmd_build(args) -> None:
     print(f'reading {info["local"]}')
     gdf = gpd.read_file(info['local'], columns=FIELDS)
     gdf = gdf[[*FIELDS, 'geometry']]
+    if args.subset == 'conus':
+        with s3.open(f'{BUCKET}/{STORMS_KEY}', 'rb') as fh:
+            sids = {r['sid'] for r in json.load(fh)}
+        gdf = gdf[gdf['SID'].isin(sids)]
+        print(f'{gdf["SID"].nunique()} of {len(sids)} footprint storms found')
     count = len(gdf)
     bounds = [round(float(b), 4) for b in gdf.total_bounds]
     print(f'{count} track segments, bounds={bounds}')
 
     with tempfile.TemporaryDirectory(prefix='ibtracs-') as tmp:
         geojsonl = Path(tmp) / 'tracks.geojsonl'
-        out = Path(tmp) / 'ibtracs_since1980.pmtiles'
+        out = Path(tmp) / key.rsplit('/', 1)[-1]
         gdf.to_file(geojsonl, driver='GeoJSONSeq')
         version = _run_tippecanoe(geojsonl, out, TIPPECANOE_ARGS)
         print(f'{out.name}: {out.stat().st_size / 1e6:.1f} MB ({version})')
-        s3.put(str(out), f'{BUCKET}/{KEY}')
-        print(f'uploaded -> {artifact_uri()}')
+        s3.put(str(out), f'{BUCKET}/{key}')
+        print(f'uploaded -> {artifact_uri(key)}')
 
     _write_manifest(
         s3,
         {
-            'id': ARTIFACT_ID,
+            'id': artifact_id,
             'format': 'pmtiles',
-            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{KEY}',
+            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{key}',
+            'subset': args.subset,
             'layer': LAYER,
             'fields': FIELDS,
             'feature_count': count,
@@ -242,12 +254,13 @@ def cmd_build(args) -> None:
     )
 
 
-def cmd_verify(_args) -> None:
+def cmd_verify(args) -> None:
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
     problems = []
-    if not s3.exists(f'{BUCKET}/{KEY}'):
-        sys.exit(f'{artifact_uri()} does not exist')
-    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{KEY}'))
+    if not s3.exists(f'{BUCKET}/{key}'):
+        sys.exit(f'{artifact_uri(key)} does not exist')
+    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{key}'))
     layers = {vl['id']: vl for vl in meta.get('vector_layers', [])}
     if LAYER not in layers:
         problems.append(f'layer {LAYER!r} missing (has {sorted(layers)})')
@@ -258,7 +271,7 @@ def cmd_verify(_args) -> None:
     if (header['min_zoom'], header['max_zoom']) != (MINZOOM, MAXZOOM):
         problems.append(f'zooms {header["min_zoom"]}-{header["max_zoom"]}')
 
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact_id)
     if rec is None:
         problems.append('no manifest record; rebuild to write provenance')
     else:
@@ -278,15 +291,16 @@ def cmd_verify(_args) -> None:
     sys.exit(1 if problems else 0)
 
 
-def cmd_list(_args) -> None:
+def cmd_list(args) -> None:
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
     raw = s3.ls(f'{BUCKET}/{RAW}') if s3.exists(f'{BUCKET}/{RAW}') else []
     print(f'raw mirrors: {[r.rsplit("/", 1)[-1] for r in raw] or "none"}')
-    if s3.exists(f'{BUCKET}/{KEY}'):
-        print(f'artifact: {artifact_uri()} ({s3.info(f"{BUCKET}/{KEY}")["size"] / 1e6:.1f} MB)')
+    if s3.exists(f'{BUCKET}/{key}'):
+        print(f'artifact: {artifact_uri(key)} ({s3.info(f"{BUCKET}/{key}")["size"] / 1e6:.1f} MB)')
     else:
         print('artifact: missing')
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact_id)
     print(f'manifest record: {json.dumps(rec, indent=2) if rec else "none"}')
 
 
@@ -296,8 +310,10 @@ def main() -> None:
     sub.add_parser('fetch', help='download the NCEI shapefile zip and mirror it to S3')
     b = sub.add_parser('build', help='build and upload the pmtiles + manifest record')
     b.add_argument('--force', action='store_true', help='overwrite the existing artifact')
-    sub.add_parser('verify', help='check the served artifact against code and manifest')
-    sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    v = sub.add_parser('verify', help='check the served artifact against code and manifest')
+    ls = sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    for sp in (b, v, ls):
+        sp.add_argument('--subset', choices=sorted(ARTIFACTS), default='global')
     args = p.parse_args()
     {'fetch': cmd_fetch, 'build': cmd_build, 'verify': cmd_verify, 'list': cmd_list}[args.cmd](args)
 

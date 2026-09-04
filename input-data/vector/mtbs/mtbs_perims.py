@@ -2,6 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #   "geopandas",
+#   "mapbox-vector-tile",
 #   "pmtiles",
 #   "pyogrio",
 #   "requests",
@@ -25,9 +26,9 @@ Requires tippecanoe on PATH and AWS credentials for carbonplan-ocr.
 
 Usage:
   uv run mtbs_perims.py fetch
-  uv run mtbs_perims.py build [--force]
-  uv run mtbs_perims.py verify
-  uv run mtbs_perims.py list
+  uv run mtbs_perims.py build [--force] [--subset conus]
+  uv run mtbs_perims.py verify [--subset conus] [--coverage]
+  uv run mtbs_perims.py list [--subset conus]
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ import argparse
 import datetime
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -47,10 +49,13 @@ import s3fs
 BUCKET = 'carbonplan-ocr'
 PREFIX = 'ocr-explore'
 RAW = f'{PREFIX}/MTBS/raw'
-KEY = f'{PREFIX}/mtbs_perims.pmtiles'
 MANIFEST_KEY = f'{PREFIX}/manifest.json'
 
-ARTIFACT_ID = 'mtbs_perims'
+ARTIFACTS = {
+    'national': ('mtbs_perims', f'{PREFIX}/mtbs_perims.pmtiles'),
+    'conus': ('mtbs_conus_perims', f'{PREFIX}/mtbs_conus_perims.pmtiles'),
+}
+CONUS_BBOX = (-125.0, 24.0, -66.0, 50.5)
 SOURCE_URL = (
     'https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/'
     'composite_data/burned_area_extent_shapefile/mtbs_perimeter_data.zip'
@@ -79,8 +84,8 @@ CACHE = Path.home() / '.cache' / 'ocr' / 'mtbs'
 FETCH_INFO = CACHE / 'fetch_info.json'
 
 
-def artifact_uri() -> str:
-    return f's3://{BUCKET}/{KEY}'
+def artifact_uri(key: str) -> str:
+    return f's3://{BUCKET}/{key}'
 
 
 # ---------------------------------------------------------------------------
@@ -189,9 +194,10 @@ def cmd_build(args) -> None:
     import geopandas as gpd
     import pandas as pd
 
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
-    if s3.exists(f'{BUCKET}/{KEY}') and not args.force:
-        sys.exit(f'{artifact_uri()} exists; use --force to overwrite')
+    if s3.exists(f'{BUCKET}/{key}') and not args.force:
+        sys.exit(f'{artifact_uri(key)} exists; use --force to overwrite')
     if not FETCH_INFO.exists():
         sys.exit('no fetched source; run `fetch` first')
     info = json.loads(FETCH_INFO.read_text())
@@ -204,25 +210,30 @@ def cmd_build(args) -> None:
     if not gdf['year'].isna().any():
         gdf['year'] = gdf['year'].astype(int)
     gdf = gdf[[*FIELDS, 'geometry']]
+    if args.subset == 'conus':
+        lo0, la0, lo1, la1 = CONUS_BBOX
+        gdf = gdf.cx[lo0:lo1, la0:la1]
     count = len(gdf)
     bounds = [round(float(b), 4) for b in gdf.total_bounds]
     print(f'{count} perimeters, bounds={bounds}')
 
     with tempfile.TemporaryDirectory(prefix='mtbs-') as tmp:
         geojsonl = Path(tmp) / 'mtbs_perims.geojsonl'
-        out = Path(tmp) / 'mtbs_perims.pmtiles'
+        out = Path(tmp) / key.rsplit('/', 1)[-1]
         gdf.to_file(geojsonl, driver='GeoJSONSeq')
         version = _run_tippecanoe(geojsonl, out, TIPPECANOE_ARGS)
         print(f'{out.name}: {out.stat().st_size / 1e6:.1f} MB ({version})')
-        s3.put(str(out), f'{BUCKET}/{KEY}')
-        print(f'uploaded -> {artifact_uri()}')
+        shutil.copy(out, CACHE / out.name)
+        s3.put(str(out), f'{BUCKET}/{key}')
+        print(f'uploaded -> {artifact_uri(key)}')
 
     _write_manifest(
         s3,
         {
-            'id': ARTIFACT_ID,
+            'id': artifact_id,
             'format': 'pmtiles',
-            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{KEY}',
+            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{key}',
+            'subset': args.subset,
             'layer': LAYER,
             'fields': FIELDS,
             'feature_count': count,
@@ -245,12 +256,33 @@ def cmd_build(args) -> None:
     )
 
 
-def cmd_verify(_args) -> None:
+def _maxzoom_ids(local: Path, maxzoom: int) -> set:
+    """Every event_id present in some max-zoom tile, where nothing should
+    have been dropped for size."""
+    import gzip
+
+    import mapbox_vector_tile
+    from pmtiles.reader import MmapSource, all_tiles
+
+    ids = set()
+    with open(local, 'rb') as fh:
+        for (z, _x, _y), data in all_tiles(MmapSource(fh)):
+            if z != maxzoom:
+                continue
+            if data[:2] == b'\x1f\x8b':
+                data = gzip.decompress(data)
+            for feature in mapbox_vector_tile.decode(data)[LAYER]['features']:
+                ids.add(feature['properties']['event_id'])
+    return ids
+
+
+def cmd_verify(args) -> None:
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
     problems = []
-    if not s3.exists(f'{BUCKET}/{KEY}'):
-        sys.exit(f'{artifact_uri()} does not exist')
-    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{KEY}'))
+    if not s3.exists(f'{BUCKET}/{key}'):
+        sys.exit(f'{artifact_uri(key)} does not exist')
+    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{key}'))
     layers = {vl['id']: vl for vl in meta.get('vector_layers', [])}
     if LAYER not in layers:
         problems.append(f'layer {LAYER!r} missing (has {sorted(layers)})')
@@ -261,7 +293,7 @@ def cmd_verify(_args) -> None:
     if (header['min_zoom'], header['max_zoom']) != (MINZOOM, MAXZOOM):
         problems.append(f'zooms {header["min_zoom"]}-{header["max_zoom"]}')
 
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact_id)
     if rec is None:
         problems.append('no manifest record; rebuild to write provenance')
     else:
@@ -269,6 +301,14 @@ def cmd_verify(_args) -> None:
         count = tilestats.get(LAYER, {}).get('count')
         if count != rec.get('feature_count'):
             problems.append(f'tilestats count {count} != manifest {rec.get("feature_count")}')
+        if args.coverage:
+            local = CACHE / key.rsplit('/', 1)[-1]
+            if not local.exists():
+                s3.get(f'{BUCKET}/{key}', str(local))
+            n = len(_maxzoom_ids(local, header['max_zoom']))
+            print(f'{n} of {rec.get("feature_count")} perimeters present at z{header["max_zoom"]}')
+            if n != rec.get('feature_count'):
+                problems.append(f'{rec.get("feature_count") - n} perimeters missing at max zoom')
         for field, want in (('fields', FIELDS), ('tippecanoe_args', TIPPECANOE_ARGS)):
             got = rec.get(field)
             if got is None:
@@ -281,15 +321,16 @@ def cmd_verify(_args) -> None:
     sys.exit(1 if problems else 0)
 
 
-def cmd_list(_args) -> None:
+def cmd_list(args) -> None:
+    artifact_id, key = ARTIFACTS[args.subset]
     s3 = s3fs.S3FileSystem()
     raw = s3.ls(f'{BUCKET}/{RAW}') if s3.exists(f'{BUCKET}/{RAW}') else []
     print(f'raw mirrors: {[r.rsplit("/", 1)[-1] for r in raw] or "none"}')
-    if s3.exists(f'{BUCKET}/{KEY}'):
-        print(f'artifact: {artifact_uri()} ({s3.info(f"{BUCKET}/{KEY}")["size"] / 1e6:.1f} MB)')
+    if s3.exists(f'{BUCKET}/{key}'):
+        print(f'artifact: {artifact_uri(key)} ({s3.info(f"{BUCKET}/{key}")["size"] / 1e6:.1f} MB)')
     else:
         print('artifact: missing')
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact_id)
     print(f'manifest record: {json.dumps(rec, indent=2) if rec else "none"}')
 
 
@@ -299,8 +340,11 @@ def main() -> None:
     sub.add_parser('fetch', help='download the MTBS shapefile zip and mirror it to S3')
     b = sub.add_parser('build', help='build and upload the pmtiles + manifest record')
     b.add_argument('--force', action='store_true', help='overwrite the existing artifact')
-    sub.add_parser('verify', help='check the served artifact against code and manifest')
-    sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    v = sub.add_parser('verify', help='check the served artifact against code and manifest')
+    v.add_argument('--coverage', action='store_true', help='decode max-zoom tiles for drops')
+    ls = sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    for sp in (b, v, ls):
+        sp.add_argument('--subset', choices=sorted(ARTIFACTS), default='national')
     args = p.parse_args()
     {'fetch': cmd_fetch, 'build': cmd_build, 'verify': cmd_verify, 'list': cmd_list}[args.cmd](args)
 
