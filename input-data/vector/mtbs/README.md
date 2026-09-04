@@ -14,3 +14,13 @@ uv run mtbs_perims.py fetch
 uv run mtbs_perims.py build --force
 uv run mtbs_perims.py verify
 ```
+
+ocr-web reads a CONUS-only build, `mtbs_conus_perims.pmtiles`, and looks up
+the perimeters under a point by decoding the max-zoom tile directly, so
+`verify --coverage` decodes every max-zoom tile to confirm no perimeter was
+dropped for tile size:
+
+```
+uv run mtbs_perims.py build --subset conus --force
+uv run mtbs_perims.py verify --subset conus --coverage
+```
