@@ -243,6 +243,8 @@ def cmd_store(args) -> None:
 
     records = storms.to_dict(orient='records')
     local = CACHE / KEY.rsplit('/', 1)[-1]
+    # every chunk is written, so point reads never 404 on empty cells
+    zarr.config.set({'array.write_empty_chunks': True})
     root = zarr.create_group(zarr.storage.LocalStore(local), zarr_format=3, overwrite=True)
     root.attrs.update(
         {
