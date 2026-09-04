@@ -223,7 +223,7 @@ def cmd_store(args) -> None:
         sys.exit(f's3://{BUCKET}/{KEY} exists; use --force to overwrite')
     intensity = sparse.load_npz(INTENSITY).tocsr()
     cent = np.load(CACHE / 'centroids.npz')
-    storms = pd.read_csv(STORMS)
+    storms = pd.read_csv(STORMS, keep_default_na=False)
     assert len(storms) == intensity.shape[0]
 
     hit = np.asarray(intensity.max(axis=1).todense()).ravel() > 0
