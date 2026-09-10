@@ -2,10 +2,12 @@
 
 Historic tracks alone can't say whether a storm mattered to a location: the
 USA wind radii only start in 2001, and a track 150 km away can still bring
-hurricane-force winds. So each storm is run through the same Holland (2008)
-wind model, on the same 300 arcsec CONUS centroids, as the CHAZ hazard maps
-(see input-data/tensor/chaz/climada/chaz_events.py), and the peak 1-min
-sustained wind per storm per cell is packed onto the served CHAZ grid.
+hurricane-force winds. So each storm goes through the same wind step as the
+CHAZ hazard maps (chaz_events.winds_parallel: CLIMADA Holland 2008 on the
+300 arcsec CONUS centroids, 30 min resampling) with its inputs normalized the
+way CLIMADA's CHAZ reader prepares synthetic tracks, so a historic storm is
+exactly what the hazard model would produce for that track and intensity and
+its wind at a cell sits on the cell's return-period curve.
 
   winds   climada env: IBTrACS (USA agency, NA + EP basins) -> CLIMADA
           TropCyclone -> ~/.cache/ocr/ibtracs/winds/{intensity.npz,storms.csv}
@@ -13,6 +15,8 @@ sustained wind per storm per cell is packed onto the served CHAZ grid.
           s3://carbonplan-ocr/ocr-explore/ibtracs_conus_winds.zarr
           wind(storm, lat, lon) uint8 m/s, 0 = below 17.5 m/s; storm table
           in the group attrs and as storms.json beside the store
+
+Imports chaz_events.py from input-data/tensor/chaz/climada (or PYTHONPATH).
 
   E=~/dev/carbonplan/ocr/.pixi/envs
   $E/climada/bin/python ibtracs_winds.py winds
@@ -25,16 +29,17 @@ import argparse
 import datetime
 import json
 import logging
-import multiprocessing as mp
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
 
+REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO / 'input-data' / 'tensor' / 'chaz' / 'climada'))
+
 BUCKET = 'carbonplan-ocr'
 PREFIX = 'ocr-explore'
-CENTROIDS_KEY = f'{PREFIX}/CHAZ/hazard/centroids_conus_0300as.hdf5'
 GRID_STORE = f'{PREFIX}/CHAZ/processed/chaz_conus_v2_ERA5_points/0'
 KEY = f'{PREFIX}/ibtracs_conus_winds.zarr'
 STORMS_KEY = f'{PREFIX}/ibtracs_conus_winds/storms.json'
@@ -43,19 +48,13 @@ IBTRACS_FILE = 'IBTrACS.since1980.v04r01.nc'
 YEAR_RANGE = (1980, datetime.date.today().year)
 BASINS = ('NA', 'EP')
 
-CONUS_BBOX = (-125.0, 24.0, -66.0, 50.5)
-BUFFER_DEG = 5.0
 INTENSITY_THRES = 17.5  # m/s, CLIMADA's wind-field floor (34 kt)
 KT_PER_MS = 1 / 0.514444
-TIME_STEP_H = 0.5
-WIND_MODEL = 'H08'
-CROP_MARGIN = 2
 CHUNK = 16
 
 CACHE = Path.home() / '.cache' / 'ocr' / 'ibtracs' / 'winds'
 INTENSITY = CACHE / 'intensity.npz'
 STORMS = CACHE / 'storms.csv'
-CENTROIDS = CACHE / 'centroids_conus_0300as.hdf5'
 
 log = logging.getLogger('ibtracs_winds')
 
@@ -66,52 +65,36 @@ def _s3():
     return s3fs.S3FileSystem()
 
 
-def in_conus_reach(lat, lon) -> np.ndarray:
-    lo0, la0, lo1, la1 = CONUS_BBOX
-    return (
-        (lon >= lo0 - BUFFER_DEG)
-        & (lon <= lo1 + BUFFER_DEG)
-        & (lat >= la0 - BUFFER_DEG)
-        & (lat <= la1 + BUFFER_DEG)
-    )
-
-
 # ---------------------------------------------------------------------------
 # winds (climada env)
 
 
-def crop_to_reach(track):
-    hit = np.nonzero(in_conus_reach(track['lat'].values, track['lon'].values))[0]
-    lo = max(int(hit[0]) - CROP_MARGIN, 0)
-    hi = min(int(hit[-1]) + CROP_MARGIN + 1, track.sizes['time'])
-    return track.isel(time=slice(lo, hi))
-
-
 def reaches_conus(track) -> bool:
+    from chaz_events import in_conus_reach
+
     strong = track['max_sustained_wind'].values >= INTENSITY_THRES * KT_PER_MS
     return bool((strong & in_conus_reach(track['lat'].values, track['lon'].values)).any())
 
 
-_CENT = None
+def as_chaz_inputs(track):
+    """Give the wind model the inputs it sees for a CHAZ track: pressure
+    estimated from wind and position, a constant environmental pressure, and
+    no radius of maximum wind (estimated from pressure downstream)."""
+    from climada.hazard.tc_tracks import DEF_ENV_PRESSURE, _estimate_pressure
+
+    n = track.sizes['time']
+    track['central_pressure'].values[:] = _estimate_pressure(
+        np.full(n, -1.0),
+        track['lat'].values,
+        track['lon'].values,
+        track['max_sustained_wind'].values,
+    )
+    track['environmental_pressure'].values[:] = DEF_ENV_PRESSURE
+    track['radius_max_wind'].values[:] = np.nan
+    return track
 
 
-def _init_worker(path: str):
-    global _CENT
-    from climada.hazard import Centroids
-
-    logging.getLogger('climada').setLevel(logging.WARNING)
-    _CENT = Centroids.from_hdf5(path)
-
-
-def _winds(data):
-    from climada.hazard import TCTracks, TropCyclone
-
-    haz = TropCyclone.from_tracks(TCTracks(data=data), centroids=_CENT, model=WIND_MODEL)
-    haz.event_name = [tr.sid for tr in data]
-    return haz
-
-
-def load_tracks():
+def load_tracks(observed_inputs: bool):
     from climada.hazard import TCTracks
 
     seen = set()
@@ -129,7 +112,7 @@ def load_tracks():
                 continue
             seen.add(tr.sid)
             tr.attrs['basin_query'] = basin
-            data.append(tr)
+            data.append(tr if observed_inputs else as_chaz_inputs(tr))
         log.info('%s: %d tracks read, %d reaching CONUS so far', basin, tracks.size, len(data))
     return TCTracks(data=data)
 
@@ -149,28 +132,20 @@ def storm_record(tr) -> dict:
 
 def cmd_winds(args) -> None:
     import pandas as pd
-    from climada.hazard import Hazard
+    from chaz_events import TIME_STEP_H, crop_to_reach, load_centroids, winds_parallel
     from scipy import sparse
 
     CACHE.mkdir(parents=True, exist_ok=True)
-    s3 = _s3()
-    if not CENTROIDS.exists():
-        s3.get(f'{BUCKET}/{CENTROIDS_KEY}', str(CENTROIDS))
+    cent = load_centroids(_s3())
     t0 = time.time()
-    tracks = load_tracks()
+    tracks = load_tracks(args.observed_inputs)
     records = [storm_record(tr) for tr in tracks.data]
     tracks.data = [crop_to_reach(tr) for tr in tracks.data]
     tracks.equal_timestep(TIME_STEP_H)
     log.info('%d tracks prepared in %.0fs', tracks.size, time.time() - t0)
 
     t1 = time.time()
-    workers = args.workers
-    parts = [tracks.data[k::workers] for k in range(workers)]
-    with mp.get_context('spawn').Pool(
-        workers, initializer=_init_worker, initargs=(str(CENTROIDS),)
-    ) as pool:
-        hazards = list(pool.imap_unordered(_winds, [p for p in parts if p]))
-    haz = Hazard.concat(hazards)
+    haz = winds_parallel(tracks, cent, args.workers, args.max_memory_gb)
     order = {sid: i for i, sid in enumerate(haz.event_name)}
     rows = np.array([order[r['sid']] for r in records])
     intensity = sparse.csr_matrix(haz.intensity)[rows]
@@ -180,13 +155,18 @@ def cmd_winds(args) -> None:
         f'({dt / tracks.size:.2f} s/track), max {intensity.max():.1f} m/s'
     )
     sparse.save_npz(INTENSITY, intensity)
-    np.savez(
-        CACHE / 'centroids.npz',
-        lat=haz.centroids.lat,
-        lon=haz.centroids.lon,
-    )
+    np.savez(CACHE / 'centroids.npz', lat=haz.centroids.lat, lon=haz.centroids.lon)
     pd.DataFrame(records).to_csv(STORMS, index=False)
+    (CACHE / 'inputs.json').write_text(
+        json.dumps({'observed_inputs': args.observed_inputs, 'climada': _climada_version()})
+    )
     print(f'wrote {INTENSITY} and {STORMS}')
+
+
+def _climada_version() -> str:
+    from importlib.metadata import version
+
+    return version('climada')
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +204,7 @@ def cmd_store(args) -> None:
     intensity = sparse.load_npz(INTENSITY).tocsr()
     cent = np.load(CACHE / 'centroids.npz')
     storms = pd.read_csv(STORMS, keep_default_na=False)
+    inputs = json.loads((CACHE / 'inputs.json').read_text())
     assert len(storms) == intensity.shape[0]
 
     hit = np.asarray(intensity.max(axis=1).todense()).ravel() > 0
@@ -246,13 +227,19 @@ def cmd_store(args) -> None:
     # every chunk is written, so point reads never 404 on empty cells
     zarr.config.set({'array.write_empty_chunks': True})
     root = zarr.create_group(zarr.storage.LocalStore(local), zarr_format=3, overwrite=True)
+    inputs_note = (
+        'observed IBTrACS pressure and radius of maximum wind'
+        if inputs['observed_inputs']
+        else 'pressure and radius of maximum wind estimated as for CHAZ tracks'
+    )
     root.attrs.update(
         {
             'storms': records,
             'units': 'm/s',
             'description': (
                 'Peak 1-min sustained wind per storm per cell, Holland (2008) model on '
-                'IBTrACS v04r01 USA-agency tracks (CLIMADA); 0 below 17.5 m/s'
+                f'IBTrACS v04r01 USA-agency tracks (CLIMADA {inputs["climada"]}, '
+                f'{inputs_note}); 0 below 17.5 m/s'
             ),
             'attribution': 'IBTrACS v04r01, NOAA NCEI; wind model via CLIMADA',
         }
@@ -289,11 +276,13 @@ def cmd_store(args) -> None:
             'grid': GRID_STORE,
             'chunks': [len(storms), CHUNK, CHUNK],
             'source': {'file': IBTRACS_FILE, 'provider': 'usa', 'basins': list(BASINS)},
+            'climada': inputs['climada'],
+            'observed_inputs': inputs['observed_inputs'],
             'transform': (
                 'IBTrACS since-1980 tracks with tropical-storm winds within 5 degrees of '
-                'CONUS, missing pressure/RMW estimated by CLIMADA, resampled to 30 min, '
-                f'Holland 2008 winds ({WIND_MODEL}) on the CHAZ 300 arcsec centroids, '
-                'peak per cell rounded to whole m/s and scattered onto the served grid'
+                f'CONUS, {inputs_note}, resampled to 30 min, Holland 2008 winds through '
+                'chaz_events.winds_parallel on the CHAZ 300 arcsec centroids, peak per cell '
+                'rounded to whole m/s and scattered onto the served grid'
             ),
             'attribution': 'IBTrACS v04r01, NOAA NCEI',
             'built': datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds'),
@@ -307,6 +296,12 @@ def main() -> None:
     sub = p.add_subparsers(dest='cmd', required=True)
     w = sub.add_parser('winds', help='run the CLIMADA wind model (climada env)')
     w.add_argument('--workers', type=int, default=8)
+    w.add_argument('--max-memory-gb', type=float, default=8)
+    w.add_argument(
+        '--observed-inputs',
+        action='store_true',
+        help='keep observed pressure and radius of maximum wind (validation only)',
+    )
     s = sub.add_parser('store', help='pack the winds onto the CHAZ grid and upload')
     s.add_argument('--force', action='store_true')
     args = p.parse_args()
