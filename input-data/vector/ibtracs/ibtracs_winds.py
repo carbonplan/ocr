@@ -247,6 +247,7 @@ def cmd_store(args) -> None:
     )
     root.create_array('lat', data=lat, chunks=lat.shape)
     root.create_array('lon', data=lon, chunks=lon.shape)
+    root.create_array('storm', data=np.arange(len(storms), dtype='int32'), chunks=(len(storms),))
     arr = root.create_array(
         'wind',
         shape=wind.shape,
