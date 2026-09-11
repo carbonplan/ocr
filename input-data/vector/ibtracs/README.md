@@ -1,5 +1,7 @@
 # IBTrACS hurricane tracks
 
+See `../historic-events.md` for how this artifact is used and what it means.
+
 NOAA NCEI IBTrACS v04r01 since-1980 lines shapefile ->
 `s3://carbonplan-ocr/ocr-explore/ibtracs_since1980.pmtiles` (layer `tracks`),
 read by the ocr-explore viewer (`datasets/ibtracs.tsx`). Provenance is merged
