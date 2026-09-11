@@ -7,7 +7,9 @@ CHAZ hazard maps (chaz_events.winds_parallel: CLIMADA Holland 2008 on the
 300 arcsec CONUS centroids, 30 min resampling) with its inputs normalized the
 way CLIMADA's CHAZ reader prepares synthetic tracks, so a historic storm is
 exactly what the hazard model would produce for that track and intensity and
-its wind at a cell sits on the cell's return-period curve.
+its wind at a cell sits on the cell's return-period curve. Track nodes below
+34 kt are left out first: they cannot produce tropical-storm-force wind, and
+kept in they trigger spurious winds (climada-translation-artifact.md).
 
   winds   climada env: IBTrACS (USA agency, NA + EP basins) -> CLIMADA
           TropCyclone -> ~/.cache/ocr/ibtracs/winds/{intensity.npz,storms.csv}
@@ -51,6 +53,11 @@ BASINS = ('NA', 'EP')
 
 INTENSITY_THRES = 17.5  # m/s, CLIMADA's wind-field floor (34 kt)
 KT_PER_MS = 1 / 0.514444
+# nodes below the tropical-storm threshold cannot lift any cell over the
+# model's floor (the profile peaks at the node wind), so they are left out;
+# see climada-translation-artifact.md for what they do when kept
+MIN_NODE_WIND_KT = 34
+MIN_RUN_NODES = 2
 CHUNK = 16
 
 CACHE = Path.home() / '.cache' / 'ocr' / 'ibtracs' / 'winds'
@@ -118,6 +125,24 @@ def load_tracks(observed_inputs: bool):
     return TCTracks(data=data)
 
 
+def strong_runs(track) -> list:
+    """Contiguous stretches of nodes at or above MIN_NODE_WIND_KT, as separate
+    tracks, so resampling never interpolates across a weak stretch."""
+    strong = list(track['max_sustained_wind'].values >= MIN_NODE_WIND_KT) + [False]
+    runs, start = [], None
+    for i, is_strong in enumerate(strong):
+        if is_strong and start is None:
+            start = i
+        elif not is_strong and start is not None:
+            if i - start >= MIN_RUN_NODES:
+                piece = track.isel(time=slice(start, i))
+                piece.attrs = dict(track.attrs)
+                piece.attrs['sid'] = f'{track.sid}#{len(runs)}'
+                runs.append(piece)
+            start = None
+    return runs
+
+
 def storm_record(tr) -> dict:
     t = tr['time'].values
     return {
@@ -139,27 +164,52 @@ def cmd_winds(args) -> None:
     CACHE.mkdir(parents=True, exist_ok=True)
     cent = load_centroids(_s3())
     t0 = time.time()
+    from chaz_events import in_conus_reach
+
     tracks = load_tracks(args.observed_inputs)
     records = [storm_record(tr) for tr in tracks.data]
-    tracks.data = [crop_to_reach(tr) for tr in tracks.data]
+    pieces = [
+        piece
+        for tr in tracks.data
+        for piece in strong_runs(tr)
+        if in_conus_reach(piece['lat'].values, piece['lon'].values).any()
+    ]
+    tracks.data = [crop_to_reach(piece) for piece in pieces]
     tracks.equal_timestep(TIME_STEP_H)
-    log.info('%d tracks prepared in %.0fs', tracks.size, time.time() - t0)
+    log.info(
+        '%d storms, %d track runs at %d+ kt prepared in %.0fs',
+        len(records),
+        tracks.size,
+        MIN_NODE_WIND_KT,
+        time.time() - t0,
+    )
 
     t1 = time.time()
     haz = winds_parallel(tracks, cent, args.workers, args.max_memory_gb)
-    order = {sid: i for i, sid in enumerate(haz.event_name)}
-    rows = np.array([order[r['sid']] for r in records])
-    intensity = sparse.csr_matrix(haz.intensity)[rows]
+    by_sid: dict[str, list[int]] = {}
+    for i, name in enumerate(haz.event_name):
+        by_sid.setdefault(name.split('#')[0], []).append(i)
+    pieces_int = sparse.csr_matrix(haz.intensity)
+    empty = sparse.csr_matrix((1, pieces_int.shape[1]))
+    intensity = sparse.vstack(
+        [pieces_int[by_sid[r['sid']]].max(axis=0) if r['sid'] in by_sid else empty for r in records]
+    ).tocsr()
     dt = time.time() - t1
     print(
-        f'{tracks.size} tracks, {intensity.getnnz():,} nonzeros, {dt:.0f}s '
-        f'({dt / tracks.size:.2f} s/track), max {intensity.max():.1f} m/s'
+        f'{len(records)} storms, {intensity.getnnz():,} nonzeros, {dt:.0f}s '
+        f'({dt / max(tracks.size, 1):.2f} s/run), max {intensity.max():.1f} m/s'
     )
     sparse.save_npz(INTENSITY, intensity)
     np.savez(CACHE / 'centroids.npz', lat=haz.centroids.lat, lon=haz.centroids.lon)
     pd.DataFrame(records).to_csv(STORMS, index=False)
     (CACHE / 'inputs.json').write_text(
-        json.dumps({'observed_inputs': args.observed_inputs, 'climada': _climada_version()})
+        json.dumps(
+            {
+                'observed_inputs': args.observed_inputs,
+                'min_node_wind_kt': MIN_NODE_WIND_KT,
+                'climada': _climada_version(),
+            }
+        )
     )
     print(f'wrote {INTENSITY} and {STORMS}')
 
@@ -240,7 +290,8 @@ def cmd_store(args) -> None:
             'description': (
                 'Peak 1-min sustained wind per storm per cell, Holland (2008) model on '
                 f'IBTrACS v04r01 USA-agency tracks (CLIMADA {inputs["climada"]}, '
-                f'{inputs_note}); 0 below 17.5 m/s'
+                f'{inputs_note}, nodes below {inputs["min_node_wind_kt"]} kt excluded); '
+                '0 below 17.5 m/s'
             ),
             'attribution': 'IBTrACS v04r01, NOAA NCEI; wind model via CLIMADA',
         }
@@ -293,9 +344,12 @@ def cmd_store(args) -> None:
             'source': {'file': IBTRACS_FILE, 'provider': 'usa', 'basins': list(BASINS)},
             'climada': inputs['climada'],
             'observed_inputs': inputs['observed_inputs'],
+            'min_node_wind_kt': inputs['min_node_wind_kt'],
             'transform': (
                 'IBTrACS since-1980 tracks with tropical-storm winds within 5 degrees of '
-                f'CONUS, {inputs_note}, resampled to 30 min, Holland 2008 winds through '
+                f'CONUS, {inputs_note}, nodes below {inputs["min_node_wind_kt"]} kt '
+                'excluded (each remaining run modeled separately, per-cell maximum per '
+                'storm), resampled to 30 min, Holland 2008 winds through '
                 'chaz_events.winds_parallel on the CHAZ 300 arcsec centroids, peak per cell '
                 'rounded to whole m/s and scattered onto the served grid'
             ),

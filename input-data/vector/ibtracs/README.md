@@ -34,6 +34,14 @@ model produces for that track and intensity, so its wind at a cell can be read
 against the cell's return-period curve. `--observed-inputs` keeps NHC's
 pressure and radius of maximum wind for validation runs only.
 
+Track nodes below 34 kt (the tropical-storm threshold and the model's own
+intensity floor) are excluded before the wind step: the Holland profile peaks
+at the node wind, so they cannot produce tropical-storm-force wind, and kept in
+they let CLIMADA's storm-motion handling generate spurious winds along remnant
+tracks far inland (`climada-translation-artifact.md`). Each remaining run of
+strong nodes is modeled separately and the per-cell maximum is taken per storm,
+so resampling never interpolates across a weak stretch.
+
 The `winds` stage needs the `climada` pixi environment and `chaz_events.py` on
 the import path; `store` runs in the default one. `build --subset conus` then
 tiles only those storms' tracks to `ibtracs_conus_tracks.pmtiles`, so the
