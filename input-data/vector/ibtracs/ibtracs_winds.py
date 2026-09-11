@@ -13,8 +13,9 @@ its wind at a cell sits on the cell's return-period curve.
           TropCyclone -> ~/.cache/ocr/ibtracs/winds/{intensity.npz,storms.csv}
   store   default env: scatter onto the 1/12 degree CHAZ grid ->
           s3://carbonplan-ocr/ocr-explore/ibtracs_conus_winds.zarr
-          wind(storm, lat, lon) uint8 m/s, 0 = below 17.5 m/s; storm table
-          in the group attrs and as storms.json beside the store
+          wind(storm, lat, lon) uint8 m/s, 0 = below 17.5 m/s, chunked for
+          point reads; footprint holds the same values one storm per chunk
+          for drawing; storm table in the group attrs and storms.json
 
 Imports chaz_events.py from input-data/tensor/chaz/climada (or PYTHONPATH).
 
@@ -255,6 +256,16 @@ def cmd_store(args) -> None:
         compressors=[zarr.codecs.GzipCodec(level=9)],
     )
     arr[:] = wind
+    # one storm per chunk, for drawing a single storm's field
+    footprint = root.create_array(
+        'footprint',
+        shape=wind.shape,
+        dtype='uint8',
+        chunks=(1, lat.size, lon.size),
+        dimension_names=['storm', 'lat', 'lon'],
+        compressors=[zarr.codecs.GzipCodec(level=9)],
+    )
+    footprint[:] = wind
     if s3.exists(f'{BUCKET}/{KEY}'):
         s3.rm(f'{BUCKET}/{KEY}', recursive=True)
     s3.put(str(local), f'{BUCKET}/{KEY}', recursive=True)
@@ -270,7 +281,10 @@ def cmd_store(args) -> None:
             'format': 'zarr',
             'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{KEY}',
             'storms_url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{STORMS_KEY}',
-            'arrays': {'wind': ['storm', 'lat', 'lon']},
+            'arrays': {
+                'wind': ['storm', 'lat', 'lon'],
+                'footprint': ['storm', 'lat', 'lon'],
+            },
             'units': 'm/s',
             'storm_count': len(storms),
             'grid': GRID_STORE,
