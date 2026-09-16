@@ -28,6 +28,7 @@ from ocr.testing import XarraySnapshotExtension, GeoDataFrameSnapshotExtension
 def xarray_snapshot(snapshot):
     return snapshot.use_extension(XarraySnapshotExtension)
 
+
 @pytest.fixture
 def geodataframe_snapshot(snapshot):
     return snapshot.use_extension(GeoDataFrameSnapshotExtension)
@@ -141,19 +142,22 @@ from ocr.testing import XarraySnapshotExtension
 def xarray_snapshot(snapshot):
     return snapshot.use_extension(XarraySnapshotExtension)
 
-@pytest.mark.integration # mark this test as integration
+
+@pytest.mark.integration  # mark this test as integration
 def test_fire_risk_calculation(xarray_snapshot):
     # Your data processing
-    result = xr.Dataset({
-        'fire_risk': xr.DataArray(
-            np.random.rand(100, 100),
-            dims=('lat', 'lon'),
-            coords={
-                'lat': np.linspace(30, 40, 100),
-                'lon': np.linspace(-120, -110, 100),
-            }
-        )
-    })
+    result = xr.Dataset(
+        {
+            'fire_risk': xr.DataArray(
+                np.random.rand(100, 100),
+                dims=('lat', 'lon'),
+                coords={
+                    'lat': np.linspace(30, 40, 100),
+                    'lon': np.linspace(-120, -110, 100),
+                },
+            )
+        }
+    )
 
     # Snapshot assertion
     assert xarray_snapshot == result

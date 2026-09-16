@@ -26,6 +26,7 @@ These are n-dimensional raster datasets stored in Zarr/Icechunk stores.
 
 ```python
 from ocr import catalog
+
 crps = catalog.get_dataset('scott-et-al-2024-30m-4326').to_xarray()
 ```
 
