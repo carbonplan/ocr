@@ -17,6 +17,9 @@ The scripts run in order:
 4. `chaz_v2.py` — join wind, damage, EAD and recurrence into one store per origin.
 5. `chaz_buildings.py` — sample the damage stores onto building footprints.
 
+The `climada/` directory rebuilds the ERA5 event set in CLIMADA to test the
+EAD tail convention against exact per-cell truth; see its README.
+
 The later scripts import the earlier ones, so run them from this directory (or
 by path, as below — the script's own directory is on `sys.path`). Set up the
 environment with `pixi` (see the contribution guide).
@@ -42,6 +45,35 @@ pixi run python input-data/tensor/chaz/fetch_chaz.py fetch exceedance_intensity
 
 Files land under `s3://carbonplan-ocr/ocr-explore/CHAZ/<product>/`, with the
 leading `<product>/` dir inside the zip stripped and macOS cruft dropped.
+
+### ERA5 event-set tracks
+
+The tracks behind the ERA5 hazard maps are not on Dryad; Simona Meiler shared
+them from Google Drive (September 2026). They live at
+`s3://carbonplan-ocr/ocr-explore/CHAZ/tracks/ERA5/`, copied over with `rclone`
+(a `gdrive` remote with `drive.readonly` scope and an `ocr` S3 remote using the
+ambient AWS credentials):
+
+```bash
+rclone copy gdrive: ocr:carbonplan-ocr/ocr-explore/CHAZ/tracks/ERA5/ \
+  --drive-root-folder-id 17ZyB2NMyR4ZGK8czdKEK1Mhp-4gHfg6V --transfers 4 -P
+```
+
+Forty netCDF3 files, `global_2019_2ens{000..039}_pre.nc`, ~393 MB each
+(14.6 GiB total), one per CHAZ track ensemble member. Each holds the same
+layout:
+
+|                                    |                                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| dims                               | `stormID` ~8,376 (varies per file) · `lifelength` 125 (6-hourly) · `ensembleNum` 40           |
+| `time`, `longitude`, `latitude`    | `(lifelength, stormID)` — track position, days since 1950-01-01                               |
+| `Mwspd`                            | `(ensembleNum, lifelength, stormID)` — max wind, **knots**, one intensity ensemble per member |
+| `ushear`, `vshear`, `PIWspd`, `rh` | `(lifelength, stormID)` — environmental predictors along the track                            |
+| `year`                             | `(stormID,)` — 1951–2019                                                                      |
+
+So the ERA5 event set is 40 track × 40 intensity members, each file its own
+~8,400-storm track set over 1951–2019, padded with NaN past each storm's
+lifetime.
 
 ## 2. Building the hazard matrix
 

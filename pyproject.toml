@@ -120,6 +120,8 @@
     deploy   = ["coiled-deploy"]
     dev      = ["coiled-deploy", "data-mgmt", "dev"]
     docs     = ["coiled-deploy", "docs"]
+    # CLIMADA pins python <3.13, so it gets a standalone environment
+    climada  = { features = ["climada"], no-default-feature = true }
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
@@ -166,6 +168,14 @@
     sphinxext-opengraph   = ">=0.13.0,<0.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
+
+# CHAZ event-set hazard (input-data/tensor/chaz/climada); see its README
+[tool.pixi.feature.climada.dependencies]
+    climada   = "6.1.*"
+    coiled    = ">=1.120.0,<2"
+    ipykernel = ">=6.29"
+    python    = "3.12.*"
+    s3fs      = ">=2025.3"
 
 [tool.pixi.feature.coiled-deploy.dependencies]
     coiled               = ">=1.120.0,<2"
