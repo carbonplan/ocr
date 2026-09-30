@@ -56,7 +56,14 @@ non-NA2 cells inside the CONUS bbox (Mexican coastline, northern Bahamas) are
 masked out rather than given the wrong function, as is open water. The CHAZ
 maps are 1-min sustained 10-m H08 parametric winds with no terrain-roughness
 downscaling, the same convention the calibration used, so the raw maps (not
-terrain-downscaled winds) are the consistent input.
+terrain-downscaled winds) are the consistent input. The software version
+matches too: the maps were built on CLIMADA before 4.1.0 (ERA5 ~3.3.0-dev,
+CMIP6 ~4.0.0-dev) and Eberenz et al. on 1.4.1, and every H08 implementation
+before 4.1.0 adds the storm's forward speed twice, raising winds 12-16%.
+v_half was fit to those inflated winds, so the two roughly cancel in damage.
+Correct the winds and v_half together: 4.1.0+ winds with this 2020 v_half
+would read 40-70% low in damage fraction at 40-60 m/s, a bias a v_half refit
+on the corrected winds removes.
 
 Output: chaz_damage_fraction_conus_* topozarr pyramids next to the source
 stores in s3://carbonplan-ocr/ocr-explore/CHAZ/processed/, merged into the

@@ -143,6 +143,7 @@ through the function directly. Per-GCM stores are transformed
 member-by-member; median stores take the NaN-aware median of the transformed
 members. The maps' wind convention (parametric winds, no terrain-roughness
 downscaling) matches the calibration's, so the raw maps are the right input.
+So does the CLIMADA version: see the caveat on the wind double count below.
 
 **Expected annual damage (`ead`, yr⁻¹).** The integral of damage over annual
 exceedance frequency, reconstructed from the six return levels: wind is
@@ -238,6 +239,18 @@ Each manifest record carries the calibration provenance (`v_half`,
   `rp_1000` was chosen to match one ERA5 event-set reference and is untested
   on the future scenarios; it is worth a couple of percent either way. The
   90 m/s cap is a fixed constant, not a physical bound.
+- **The wind double count cancels only on average.** Before 4.1.0 (PR #833),
+  CLIMADA's Holland 2008 model added a storm's forward speed twice, raising
+  winds 12–16%. The published maps were built on that code (ERA5 ~3.3.0-dev,
+  CMIP6 ~4.0.0-dev), so the served wind layers read about 13% high. Eberenz
+  et al. fit `v_half` on CLIMADA 1.4.1, which has the same double count, so
+  damage pairs inflated winds with a curve fit to inflated winds and roughly
+  cancels. That holds only on average: the extra wind equals forward speed,
+  so fast-moving storms are inflated more than slow ones. Correct the winds
+  and `v_half` together: 4.1.0+ winds with the 2020 `v_half` would read
+  40–70% low in damage fraction at 40–60 m/s, a bias a refit on the corrected
+  winds removes. No such refit exists yet; CLIMADA 6.1.0 still ships the
+  2020 values.
 - **Vulnerability is held fixed under climate change.** Future-period damage
   reflects hazard change only; Meiler et al. 2025 find exposure growth, not
   hazard change, dominates future TC risk.
