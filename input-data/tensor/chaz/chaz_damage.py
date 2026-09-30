@@ -64,6 +64,7 @@ shared manifest.json (18 per-GCM + 18 median + 1 ERA5 = 37 stores).
 
 Usage:
   uv run chaz_damage.py check-calibration
+  uv run --python 3.12 --with 'climada==6.1.*' chaz_damage.py check-impf
   uv run chaz_damage.py build --scenario ssp245 --period base --variant CRH
   uv run chaz_damage.py build --all
   uv run chaz_damage.py verify <store-id>
@@ -682,6 +683,30 @@ def cmd_check_calibration(_args):
     sys.exit(0 if ok else 1)
 
 
+def cmd_check_impf(_args):
+    """Compare _mdr against CLIMADA's own impact function for every vendored v_half."""
+    from importlib.metadata import version
+
+    from climada.entity import ImpfTropCyclone
+
+    v = np.concatenate([np.arange(0.0, 140.0, 0.05), [V_THRESH, np.nan]])
+    halves = {
+        (label, region): vh
+        for label, table in [*VHALF.items(), *((f'EDR q={q}', t) for q, t in VHALF_EDR.items())]
+        for region, vh in table.items()
+    }
+    worst = 0.0
+    for (label, region), vh in halves.items():
+        want = ImpfTropCyclone.from_emanuel_usa(v_thresh=V_THRESH, v_half=vh).calc_mdr(v)
+        got = _mdr(v, vh)
+        nan_ok = np.array_equal(np.isnan(got), np.isnan(want))
+        diff = float(np.nanmax(np.abs(got - want))) if nan_ok else np.inf
+        worst = max(worst, diff)
+        print(f'  {label:10s} {region:4s} v_half={vh:<7} max|diff|={diff:.1e}')
+    print(f'CLIMADA {version("climada")}: worst {worst:.1e}')
+    sys.exit(0 if worst < 1e-12 else 1)
+
+
 def main():
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -701,6 +726,7 @@ def main():
     v.add_argument('store')
 
     sub.add_parser('check-calibration', help='verify vendored v_half against CLIMADA CSVs')
+    sub.add_parser('check-impf', help="verify _mdr against CLIMADA's impact function")
     sub.add_parser('fetch-geometry', help=f're-vendor NA2 outlines from Natural Earth {NE_VERSION}')
 
     args = p.parse_args()
@@ -712,6 +738,7 @@ def main():
         'build': cmd_build,
         'verify': cmd_verify,
         'check-calibration': cmd_check_calibration,
+        'check-impf': cmd_check_impf,
         'fetch-geometry': lambda _: fetch_na2_geometry(),
     }[args.cmd](args)
 

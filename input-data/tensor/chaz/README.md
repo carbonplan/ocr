@@ -183,6 +183,8 @@ annual damage fraction for a generic structure — Miami ~0.24%/yr, CONUS max
 
 ```bash
 pixi run python input-data/tensor/chaz/chaz_damage.py check-calibration
+# _mdr against CLIMADA's own impact function (CLIMADA needs Python < 3.13)
+uv run --python 3.12 --with 'climada==6.1.*' input-data/tensor/chaz/chaz_damage.py check-impf
 pixi run python input-data/tensor/chaz/chaz_damage.py fetch-geometry   # only to bump Natural Earth
 pixi run python input-data/tensor/chaz/chaz_damage.py build --scenario ssp245 --period base --variant CRH
 pixi run python input-data/tensor/chaz/chaz_damage.py build --all
