@@ -6,6 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pydantic
 import pytest
+import zarr
 
 from ocr.config import ChunkingConfig, CoiledConfig, IcechunkConfig, OCRConfig, VectorConfig
 from ocr.types import Environment
@@ -655,8 +656,16 @@ class TestIcechunkConfig:
 
         config.init_repo()  # this calls .create_template() under the hood
 
-        # If we get here, the method executed without crashing
-        assert True
+        # region-sized shards are only safe if regions are regular except at the edges
+        chunk_info = ChunkingConfig().chunk_info
+        assert set(chunk_info['y_chunks'][:-1]) == {6000}
+        assert set(chunk_info['x_chunks'][:-1]) == {4500}
+
+        session = config.repo_and_session(readonly=True)['session']
+        base = zarr.open_group(session.store, mode='r')['0']
+        assert base['rps_2011'].shards == (6000, 4500)
+        assert base['rps_2011'].chunks == (375, 375)
+        assert base.attrs['proj:code'] == 'EPSG:4326'
 
     def test_commit_messages_ancestry(self, temp_dir):
         """Test commit messages ancestry."""

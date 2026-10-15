@@ -982,6 +982,14 @@ class VectorConfig(pydantic_settings.BaseSettings):
         console.print(Panel(table, title='VectorConfig paths', title_align='left'))
 
 
+def inner_chunk(shard: int, itemsize: int = 4) -> int:
+    """Divisor of `shard` closest to topozarr's ideal chunk edge (~362 for float32)."""
+    from topozarr.chunking import DEFAULT_CHUNK_BYTES, get_ideal_dim
+
+    ideal = get_ideal_dim(itemsize, DEFAULT_CHUNK_BYTES)
+    return min((d for d in range(128, shard + 1) if shard % d == 0), key=lambda d: abs(d - ideal))
+
+
 class IcechunkConfig(pydantic_settings.BaseSettings):
     """Configuration for icechunk processing."""
 
@@ -1124,6 +1132,8 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         import dask.array
         import numpy as np
         import xarray as xr
+        import xproj  # noqa
+        from topozarr import attach_geozarr_metadata
 
         repo_and_session = self.repo_and_session()
         # NOTE: This is hardcoded as using the USFS 30m chunking scheme!
@@ -1136,8 +1146,11 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
 
         template.attrs.update(self.metadata_dict)
 
+        # shards match processing regions so each region write owns whole shards
+        shards = (config.chunks['latitude'], config.chunks['longitude'])
         var_encoding_dict = {
-            'chunks': ((config.chunks['latitude'], config.chunks['longitude'])),
+            'chunks': tuple(inner_chunk(s) for s in shards),
+            'shards': shards,
             'fill_value': np.nan,
         }
         template_data_array = xr.DataArray(
@@ -1163,8 +1176,11 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
         for variable in variables:
             template[variable] = template_data_array
             template_encoding_dict[variable] = var_encoding_dict
+        template = template.proj.assign_crs(spatial_ref='EPSG:4326')
+        template = attach_geozarr_metadata(template, x_dim='longitude', y_dim='latitude')
         template.to_zarr(
             repo_and_session['session'].store,
+            group='0',
             compute=False,
             mode='w',
             encoding=template_encoding_dict,
@@ -1232,6 +1248,7 @@ class IcechunkConfig(pydantic_settings.BaseSettings):
                 session = self.repo_and_session(readonly=False, branch=branch)['session']
                 subset_ds.to_zarr(
                     session.store,
+                    group='0',
                     region='auto',
                     consolidated=False,
                 )
