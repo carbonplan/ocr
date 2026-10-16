@@ -11,6 +11,16 @@ Like the CHAZ scripts, this is run by hand and writes to the `ocr-explore`
 prefix, where the exploration viewer reads it. It is not wired into the OCR
 pipeline.
 
+For the proposed temporal validation and retraining with newer NOAA reports,
+see [the validation and rerun specification](RERUN_SPEC.md). The commands below
+package the published raster; they do not retrain the model.
+
+The executed [local validation notebook](validation-2026-10-15/validation.ipynb)
+compares the frozen raster with June 2020–December 2025 NOAA reports. An
+[HTML version](validation-2026-10-15/validation.html) and a
+[run record](validation-2026-10-15/README.md) accompany the results, limitations,
+input hashes and reproducible local validation script.
+
 ## Running it
 
 `build` moves ~12 GB and holds a 6 GB array in memory, so run it next to the
