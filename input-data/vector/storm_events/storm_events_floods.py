@@ -16,9 +16,9 @@ begin and end location that NWS Storm Data publishes as the two corners
 bounding the flooded area (NWSI 10-1605, section 2.4). Reports without both
 locations are dropped, which removes most of 1996-2005.
 
-Each report becomes a Polygon (its bounding box) or, when the box is under
-100 m on a side, a Point at its center, with date, type, cause, impacts, and
-location fields.
+Each report becomes a Polygon (its bounding box), a LineString between its
+corners when one side is under 100 m, or a Point at its center when both
+are, with date, type, cause, impacts, and location fields.
 
 Pipeline: fetch every year's latest CSV -> mirror raw to S3 -> filter to
 CONUS Flood / Flash Flood with locations -> GeoJSONL -> tippecanoe ->
@@ -64,7 +64,7 @@ DETAILS_RE = re.compile(r'StormEvents_details-ftp_v1\.0_d(\d{4})_c(\d{8})\.csv\.
 FIRST_YEAR = 1996
 EVENT_TYPES = {'Flood', 'Flash Flood'}
 CONUS_BBOX = (-125.0, 24.0, -66.0, 50.5)
-# Boxes narrower than this are coordinate jitter around a single location
+# A box side shorter than this is coordinate jitter, not extent
 POINT_BELOW_M = 100
 NON_CONUS_STATES = {
     'ALASKA',
@@ -243,8 +243,11 @@ def _geometry(row) -> dict:
     south, north = sorted((row.BEGIN_LAT, row.END_LAT))
     height = (north - south) * 111_320
     width = (east - west) * 111_320 * math.cos(math.radians((south + north) / 2))
-    if min(height, width) < POINT_BELOW_M:
+    if max(height, width) < POINT_BELOW_M:
         return {'type': 'Point', 'coordinates': [(west + east) / 2, (south + north) / 2]}
+    if min(height, width) < POINT_BELOW_M:
+        coords = [[row.BEGIN_LON, row.BEGIN_LAT], [row.END_LON, row.END_LAT]]
+        return {'type': 'LineString', 'coordinates': coords}
     ring = [[west, south], [east, south], [east, north], [west, north], [west, south]]
     return {'type': 'Polygon', 'coordinates': [ring]}
 
@@ -376,9 +379,9 @@ def cmd_build(args) -> None:
             'transform': (
                 'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
                 'begin and end coordinates inside CONUS, write each as its begin/end bounding '
-                'box (a Point at its center when under 100 m on a side) with damage summed '
-                'over property and crops and deaths/injuries summed over direct and indirect, '
-                'and tile with tippecanoe'
+                'box (a LineString between the corners when one side is under 100 m, a Point '
+                'at its center when both are) with damage summed over property and crops and '
+                'deaths/injuries summed over direct and indirect, and tile with tippecanoe'
             ),
             'tippecanoe': version,
             'tippecanoe_args': TIPPECANOE_ARGS,

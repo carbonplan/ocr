@@ -17,7 +17,7 @@ provenance record in `manifest.json` written by the script that built them.
 | `ibtracs_conus_winds.zarr`          | `wind(storm, lat, lon)`, uint8 m/s, the modeled peak 1-min sustained wind per storm per cell on the CHAZ 1/12 degree grid; 0 below 17.5 m/s. `footprint` holds the same values chunked one storm per chunk for drawing. Storm table in the group attrs and in `ibtracs_conus_winds/storms.json`. | `ibtracs/ibtracs_winds.py`                       |
 | `ibtracs_conus_tracks.pmtiles`      | IBTrACS track segments (layer `tracks`, z0 to z9, `promoteId: SID`) for exactly the storms in the wind store, with each segment's recorded wind and category.                                                                                                                                    | `ibtracs/ibtracs_tracks.py build --subset conus` |
 | `mtbs_conus_perims.pmtiles`         | MTBS burned-area perimeters clipped to CONUS (layer `mtbs_perims`, z0 to z11, `promoteId: event_id`), verified to hold every perimeter at max zoom.                                                                                                                                              | `mtbs/mtbs_perims.py build --subset conus`       |
-| `storm_events_conus_floods.pmtiles` | NOAA Storm Events Flood and Flash Flood reports inside CONUS (layer `floods`, z0 to z10, `promoteId: event_id`), each its reported bounding box or a point, verified to hold every report at max zoom.                                                                                           | `storm_events/storm_events_floods.py build`      |
+| `storm_events_conus_floods.pmtiles` | NOAA Storm Events Flood and Flash Flood reports inside CONUS (layer `floods`, z0 to z10, `promoteId: event_id`), each its reported bounding box, a line, or a point, verified to hold every report at max zoom.                                                                                  | `storm_events/storm_events_floods.py build`      |
 
 The wind store is 0.6 MB. Point reads fetch one 16x16-cell chunk holding
 every storm; footprint reads fetch one storm.
@@ -160,9 +160,10 @@ half the boxes are under 1.2 km across, and the location precision of the
 reports is about a kilometer anyway. The web app reads the z10 tiles covering
 that radius from the pmtiles archive and measures distance to each report's
 geometry; boxes crossing tile edges are clipped per tile, so the nearest part
-of any box within the radius is always in a tile that is read. Boxes under
-100 m on a side are written as points, because tippecanoe otherwise merges
-such tiny polygons away even at max zoom.
+of any box within the radius is always in a tile that is read. A box with
+one side under 100 m is written as a line between its corners and one with
+both sides under 100 m as a point: tippecanoe otherwise merges such slivers
+away even at max zoom.
 
 The flood damage probability layer (Collins et al. 2022) was trained on these
 same reports, so the two read together: the reports are where flood damage
