@@ -220,17 +220,18 @@ def _fetch_file(name: str, s3) -> dict:
     }
 
 
-def _parse_damage(value) -> float:
-    """Storm Data damage strings like '10.00K', '2.5M', '0' -> dollars."""
+def _parse_damage(value) -> float | None:
+    """Storm Data damage strings like '10.00K', '2.5M', '0' -> dollars; None
+    when no estimate was entered."""
     if not isinstance(value, str) or not value.strip():
-        return 0.0
+        return None
     value = value.strip().upper()
     scale = {'K': 1e3, 'M': 1e6, 'B': 1e9, 'H': 1e2}.get(value[-1])
     number = value[:-1] if scale else value
     try:
         return float(number or 0) * (scale or 1)
     except ValueError:
-        return 0.0
+        return None
 
 
 def _date(yearmonth, day) -> str:
@@ -257,7 +258,9 @@ def _load_reports(files: list[dict]):
 
     frames = []
     for f in files:
-        df = pd.read_csv(f['local'], low_memory=False)
+        df = pd.read_csv(
+            f['local'], low_memory=False, dtype={'DAMAGE_PROPERTY': str, 'DAMAGE_CROPS': str}
+        )
         frames.append(df[df['EVENT_TYPE'].isin(EVENT_TYPES)])
     df = pd.concat(frames, ignore_index=True)
     total = len(df)
@@ -278,7 +281,8 @@ def _load_reports(files: list[dict]):
 
 
 def _feature(row) -> dict:
-    damage = _parse_damage(row.DAMAGE_PROPERTY) + _parse_damage(row.DAMAGE_CROPS)
+    amounts = [_parse_damage(v) for v in (row.DAMAGE_PROPERTY, row.DAMAGE_CROPS)]
+    known = [a for a in amounts if a is not None]
     props = {
         'event_id': int(row.EVENT_ID),
         'episode_id': int(row.EPISODE_ID) if row.EPISODE_ID == row.EPISODE_ID else None,
@@ -292,7 +296,7 @@ def _feature(row) -> dict:
         if row.BEGIN_LOCATION == row.BEGIN_LOCATION
         else '',
         'cause': row.FLOOD_CAUSE if row.FLOOD_CAUSE == row.FLOOD_CAUSE else '',
-        'damage': round(damage),
+        'damage': round(sum(known)) if known else None,
         'deaths': int(row.DEATHS_DIRECT + row.DEATHS_INDIRECT),
         'injuries': int(row.INJURIES_DIRECT + row.INJURIES_INDIRECT),
     }
@@ -380,8 +384,9 @@ def cmd_build(args) -> None:
                 'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
                 'begin and end coordinates inside CONUS, write each as its begin/end bounding '
                 'box (a LineString between the corners when one side is under 100 m, a Point '
-                'at its center when both are) with damage summed over property and crops and '
-                'deaths/injuries summed over direct and indirect, and tile with tippecanoe'
+                'at its center when both are) with damage summed over property and crops '
+                '(omitted when neither was entered) and deaths/injuries summed over direct '
+                'and indirect, and tile with tippecanoe'
             ),
             'tippecanoe': version,
             'tippecanoe_args': TIPPECANOE_ARGS,

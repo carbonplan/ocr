@@ -165,6 +165,12 @@ one side under 100 m is written as a line between its corners and one with
 both sides under 100 m as a point: tippecanoe otherwise merges such slivers
 away even at max zoom.
 
+`damage` is property plus crop dollars. NWS must enter an amount for every
+flood report, so `0.00K` is an entered estimate: reports are logged when
+flooding threatens life or property (a road closed by high water qualifies),
+and about two thirds carry $0. The field is omitted for the ~3,200 reports,
+nearly all 2005-2006, where neither amount was entered.
+
 The flood damage probability layer (Collins et al. 2022) was trained on these
 same reports, so the two read together: the reports are where flood damage
 was recorded, the layer is where it is likely.
