@@ -91,6 +91,7 @@ FOOTPRINTS = {
         'dead',
         'displaced',
         'event_km2',
+        'patch',
     ],
 }
 GRIDS = {
@@ -341,6 +342,7 @@ def _accumulate(events: list[dict], geojsonl: Path):
     count = np.zeros((row1 - row0, col1 - col0), dtype='uint8')
     last_year = np.zeros_like(count, dtype='uint16')
     kept = []
+    patches = 0
     with open(geojsonl, 'w') as out:
         for event in events:
             tiles = [_tile_mask(p, res, col0, col1, row0, row1) for p in event['locals']]
@@ -358,17 +360,20 @@ def _accumulate(events: list[dict], geojsonl: Path):
             }
             for mask, transform, view in tiles:
                 for polygon in _polygons(mask, transform):
-                    out.write(
-                        json.dumps({'type': 'Feature', 'properties': props, 'geometry': polygon})
-                        + '\n'
-                    )
+                    feature = {
+                        'type': 'Feature',
+                        'properties': props | {'patch': patches},
+                        'geometry': polygon,
+                    }
+                    out.write(json.dumps(feature) + '\n')
+                    patches += 1
                 count[view] += mask
                 last_year[view] = np.where(
                     mask, np.maximum(last_year[view], event['year']), last_year[view]
                 )
             kept.append(props)
             print(f'DFO {event["dfo_id"]} {event["began"]} {event["country"]}: {event_km2:.0f} km²')
-    return count, last_year, kept, (res, col0, row0)
+    return count, last_year, kept, patches, (res, col0, row0)
 
 
 def _write_grid(values, grid, name: str, variable: str, tmp: Path, s3) -> dict:
@@ -462,7 +467,7 @@ def cmd_build(args) -> None:
     with tempfile.TemporaryDirectory(prefix='gfd-') as tmp:
         tmp = Path(tmp)
         geojsonl = tmp / 'gfd.geojsonl'
-        count, last_year, kept, grid = _accumulate(_events(info), geojsonl)
+        count, last_year, kept, patches, grid = _accumulate(_events(info), geojsonl)
         years = [min(e['year'] for e in kept), max(e['year'] for e in kept)]
         print(f'{len(kept)} events flood the CONUS box, {years[0]}-{years[1]}')
 
@@ -483,6 +488,7 @@ def cmd_build(args) -> None:
                 'fields': FOOTPRINTS['fields'],
                 'event_count': len(kept),
                 'event_ids': [e['dfo_id'] for e in kept],
+                'patch_count': patches,
                 'years': years,
                 'minzoom': MINZOOM,
                 'maxzoom': MAXZOOM,
@@ -551,11 +557,11 @@ def cmd_verify(args) -> None:
         local = CACHE / FOOTPRINTS['key'].rsplit('/', 1)[-1]
         if not local.exists():
             s3.get(f'{BUCKET}/{FOOTPRINTS["key"]}', str(local))
-        ids = _maxzoom_ids(local, header['max_zoom'], FOOTPRINTS['layer'], 'dfo_id')
-        missing = set(rec['event_ids']) - ids
-        print(f'{len(ids)} of {rec["event_count"]} events present at z{header["max_zoom"]}')
-        if missing:
-            problems.append(f'events missing at max zoom: {sorted(missing)}')
+        # point lookups test containment at max zoom, so every patch must be there
+        ids = _maxzoom_ids(local, header['max_zoom'], FOOTPRINTS['layer'], 'patch')
+        print(f'{len(ids)} of {rec["patch_count"]} patches present at z{header["max_zoom"]}')
+        if len(ids) != rec['patch_count']:
+            problems.append(f'{rec["patch_count"] - len(ids)} patches missing at max zoom')
     for name, grid in GRIDS.items():
         grec = _manifest_record(s3, grid['id'])
         if grec is None:
