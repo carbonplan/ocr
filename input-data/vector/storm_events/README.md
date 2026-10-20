@@ -5,7 +5,8 @@ See `../historic-events.md` for how this artifact is used and what it means.
 NOAA NCEI Storm Events Database, yearly details CSVs (1996-present), Flood
 and Flash Flood events inside CONUS ->
 `s3://carbonplan-ocr/ocr-explore/storm_events_conus_floods.pmtiles` (layer
-`floods`). Raw CSVs are mirrored under `ocr-explore/StormEvents/raw/`, and
+`floods`), and the same reports as begin points in
+`storm_events_conus_flood_points.pmtiles` (`build --artifact points`). Raw CSVs are mirrored under `ocr-explore/StormEvents/raw/`, and
 provenance is merged into `s3://carbonplan-ocr/ocr-explore/manifest.json`.
 
 Not wired into the OCR pipeline CLI — run by hand, with AWS credentials for

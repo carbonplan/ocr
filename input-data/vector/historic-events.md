@@ -175,6 +175,25 @@ The flood damage probability layer (Collins et al. 2022) was trained on these
 same reports, so the two read together: the reports are where flood damage
 was recorded, the layer is where it is likely.
 
+## Flood source comparison
+
+ocr-explore shows the candidate flood records side by side, one dataset per
+way of drawing them. These artifacts are not read by ocr-web.
+
+| Artifact                                  | What it holds                                                                                                                                                                                  | Built by                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `storm_events_conus_flood_points.pmtiles` | The same reports as `storm_events_conus_floods`, each a point at its begin location (the cell Collins et al. sampled), layer `floods`.                                                         | `storm_events/storm_events_floods.py build --artifact points`     |
+| `groundsource_conus_footprints.pmtiles`   | Google Groundsource news-derived flood records whose polygon centroid is in the CONUS bounding box (273k, 2000 to Feb 2026), each its geocoded place polygon, layer `groundsource`, z0 to z12. | `groundsource/groundsource_floods.py build --artifact footprints` |
+| `groundsource_conus_centroids.pmtiles`    | The same records as centroids, z0 to z10.                                                                                                                                                      | `groundsource/groundsource_floods.py build --artifact centroids`  |
+| `usfd_conus.pmtiles`                      | United States Flood Database v1.1 rows in the CONUS bounding box (668k points, 81% FEDB gauge events stacked at about 6,300 locations), layer `usfd`, colored by `source`.                     | `usfd/usfd_floods.py build`                                       |
+
+Groundsource records are one news article each, so one flood is often many
+records, and a third of the CONUS records are city- or county-sized
+polygons. Only 18% of its sub-1 km² records from 2006 to 2025 have a NOAA
+report within 2 km and two days. USFD's NOAA rows are Storm Events through
+2020 at a single point each; its 1996-2004 NOAA coordinates are geocoded to
+shared place points (one Iowa point holds 421 reports).
+
 ## Web side
 
 - `lib/historic-events/storm-winds.ts`: zarrita point read of one chunk,
@@ -201,6 +220,9 @@ $E/default/bin/python input-data/vector/ibtracs/ibtracs_winds.py store --force
 cd input-data/vector/ibtracs && uv run ibtracs_tracks.py build --subset conus --force && uv run ibtracs_tracks.py verify --subset conus
 cd ../mtbs && uv run mtbs_perims.py build --subset conus --force && uv run mtbs_perims.py verify --subset conus --coverage
 cd ../storm_events && uv run storm_events_floods.py fetch && uv run storm_events_floods.py build --force && uv run storm_events_floods.py verify --coverage
+uv run storm_events_floods.py build --artifact points --force && uv run storm_events_floods.py verify --artifact points --coverage
+cd ../groundsource && uv run groundsource_floods.py fetch && for a in footprints centroids; do uv run groundsource_floods.py build --artifact $a --force; done
+cd ../usfd && uv run usfd_floods.py fetch && uv run usfd_floods.py build --force && uv run usfd_floods.py verify --coverage
 ```
 
 The `winds` stage takes about 30 seconds on a laptop. Rebuild the tracks
