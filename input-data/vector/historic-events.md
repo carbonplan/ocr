@@ -180,12 +180,13 @@ was recorded, the layer is where it is likely.
 ocr-explore shows the candidate flood records side by side, one dataset per
 way of drawing them. These artifacts are not read by ocr-web.
 
-| Artifact                                  | What it holds                                                                                                                                                                                  | Built by                                                          |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `storm_events_conus_flood_points.pmtiles` | The same reports as `storm_events_conus_floods`, each a point at its begin location (the cell Collins et al. sampled), layer `floods`.                                                         | `storm_events/storm_events_floods.py build --artifact points`     |
-| `groundsource_conus_footprints.pmtiles`   | Google Groundsource news-derived flood records whose polygon centroid is in the CONUS bounding box (273k, 2000 to Feb 2026), each its geocoded place polygon, layer `groundsource`, z0 to z12. | `groundsource/groundsource_floods.py build --artifact footprints` |
-| `groundsource_conus_centroids.pmtiles`    | The same records as centroids, z0 to z10.                                                                                                                                                      | `groundsource/groundsource_floods.py build --artifact centroids`  |
-| `usfd_conus.pmtiles`                      | United States Flood Database v1.1 rows in the CONUS bounding box (668k points, 81% FEDB gauge events stacked at about 6,300 locations), layer `usfd`, colored by `source`.                     | `usfd/usfd_floods.py build`                                       |
+| Artifact                                                                                     | What it holds                                                                                                                                                                                                 | Built by                                                          |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `storm_events_conus_flood_points.pmtiles`                                                    | The same reports as `storm_events_conus_floods`, each a point at its begin location (the cell Collins et al. sampled), layer `floods`.                                                                        | `storm_events/storm_events_floods.py build --artifact points`     |
+| `groundsource_conus_footprints.pmtiles`                                                      | Google Groundsource news-derived flood records whose polygon centroid is in the CONUS bounding box (273k, 2000 to Feb 2026), each its geocoded place polygon, layer `groundsource`, z0 to z12.                | `groundsource/groundsource_floods.py build --artifact footprints` |
+| `groundsource_conus_centroids.pmtiles`                                                       | The same records as centroids, z0 to z10.                                                                                                                                                                     | `groundsource/groundsource_floods.py build --artifact centroids`  |
+| `usfd_conus.pmtiles`                                                                         | United States Flood Database v1.1 rows in the CONUS bounding box (668k points, 81% FEDB gauge events stacked at about 6,300 locations), layer `usfd`, colored by `source`.                                    | `usfd/usfd_floods.py build`                                       |
+| `gfd_conus_footprints.pmtiles`, `GFD/gfd_conus_flood_count`, `GFD/gfd_conus_last_flood_year` | Global Flood Database (MODIS, ~250 m) events flooding the CONUS box (107, 2001 to 2018): per-event flooded patches, layer `gfd`, and per-cell event count and last event year as zarr pyramids. CC BY-NC 4.0. | `gfd/gfd_floods.py build`                                         |
 
 Groundsource records are one news article each, so one flood is often many
 records, and a third of the CONUS records are city- or county-sized
@@ -223,6 +224,7 @@ cd ../storm_events && uv run storm_events_floods.py fetch && uv run storm_events
 uv run storm_events_floods.py build --artifact points --force && uv run storm_events_floods.py verify --artifact points --coverage
 cd ../groundsource && uv run groundsource_floods.py fetch && for a in footprints centroids; do uv run groundsource_floods.py build --artifact $a --force; done
 cd ../usfd && uv run usfd_floods.py fetch && uv run usfd_floods.py build --force && uv run usfd_floods.py verify --coverage
+cd ../gfd && uv run gfd_floods.py fetch && uv run gfd_floods.py build --force && uv run gfd_floods.py verify --coverage
 ```
 
 The `winds` stage takes about 30 seconds on a laptop. Rebuild the tracks
