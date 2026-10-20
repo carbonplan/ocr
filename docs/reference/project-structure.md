@@ -50,7 +50,7 @@ graph TB
         end
 
         subgraph Research["Research & Exploration"]
-            NOTEBOOKS[notebooks/]
+            NOTEBOOKS[notebooks/fire/]
             NOTEBOOKS --> NB1[Wind analysis notebooks]
             NOTEBOOKS --> NB2[Fire risk kernels]
             NOTEBOOKS --> NB3[Scaling experiments]
@@ -169,7 +169,7 @@ Raw data files are typically not committed. This directory contains ingestion sc
 
 ## Research notebooks (`notebooks/`)
 
-Exploratory Jupyter notebooks for prototyping and analysis:
+Exploratory Jupyter notebooks for prototyping and analysis, grouped by hazard (`notebooks/fire/`):
 
 - `conus404-winds.ipynb` - Wind data exploration and CONUS404 analysis
 - `elliptical_kernel.ipynb` - Fire spread kernel development
