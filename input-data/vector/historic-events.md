@@ -152,10 +152,33 @@ tiles are read and the nearest perimeter within 15 km is reported. Tiles at
 z11 resolve to about 5 m, and `verify --coverage` confirms no perimeter was
 dropped for tile size.
 
+## Flood history
+
+The "Previous floods" list combines three records, each read from its max-zoom
+tiles around the selected point with its own reach:
+
+- **Satellite** (`gfd_conus_footprints`): Global Flood Database patches within
+  250 m, one MODIS cell. Every patch carries an id and `verify --coverage`
+  confirms each is present at z10.
+- **NWS** (`storm_events_conus_floods`): reports within 3 km, as below.
+- **News** (`groundsource_conus_centroids`): Groundsource records whose place
+  is under 1 km² and whose centroid is within 500 m. Larger places are whole
+  towns or cities.
+
+Records are grouped into events by date: a record joins the event before it
+when it starts within 3 days of a member's start, or before a member's end
+when that member lasted no more than 31 days. Longer records, like the
+14-month Upper Midwest satellite composites, start their own event and do
+not absorb others. The map draws one source at a time.
+
+The satellite record misses much urban and short-lived flooding: neither
+Denham Springs, LA in August 2016 nor downtown Cedar Rapids in June 2008 has
+mapped water within 250 m, though both flooded badly.
+
 ## Flood reports
 
 Relevance is distance: a report is near the point when its bounding box (or
-point) is within 2 km. Containment alone would almost never match, since
+point) is within 3 km. Containment alone would almost never match, since
 half the boxes are under 1.2 km across, and the location precision of the
 reports is about a kilometer anyway. The web app reads the z10 tiles covering
 that radius from the pmtiles archive and measures distance to each report's
@@ -178,7 +201,8 @@ was recorded, the layer is where it is likely.
 ## Flood source comparison
 
 ocr-explore shows the candidate flood records side by side, one dataset per
-way of drawing them. These artifacts are not read by ocr-web.
+way of drawing them. ocr-web reads the GFD footprints and Groundsource
+centroids for its flood history; the rest are explore-only.
 
 | Artifact                                                                                     | What it holds                                                                                                                                                                                                 | Built by                                                          |
 | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -208,8 +232,10 @@ shared place points (one Iowa point holds 421 reports).
   list once a point is selected.
 - `components/storm-footprint.tsx`: draws one storm's `footprint` slice with
   the zarr layer and the Saffir-Simpson bins of the Peak winds colorbar.
-- `lib/historic-events/flood-reports.ts`: tile fetch and distance.
-- `components/flood-reports.tsx`: vector overlay, same emphasis and hover.
+- `lib/historic-events/flood-{reports,satellite,news}.ts`: tile fetch and
+  distance per source; `flood-history.ts` groups them into events.
+- `components/flood-{reports,satellite,news}.tsx`: one overlay per source,
+  same emphasis and hover, shown per the sidebar's map source picker.
 - `HISTORIC_URLS` in `lib/config.ts` holds the URLs.
 
 ## Rebuilding
