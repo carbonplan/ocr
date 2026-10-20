@@ -6,7 +6,7 @@
 
 import duckdb
 
-from ocr.utils import apply_s3_creds, install_load_extensions
+from ocr.risks.fire.utils import apply_s3_creds, install_load_extensions
 
 install_load_extensions()
 apply_s3_creds()

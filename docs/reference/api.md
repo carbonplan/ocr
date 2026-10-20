@@ -23,7 +23,7 @@ High-level package entry points and public exports.
 Configuration models for storage, chunking, Coiled, and processing settings.
 
 ```{eval-rst}
-.. automodule:: ocr.config
+.. automodule:: ocr.risks.fire.config
    :members:
    :show-inheritance:
 ```
@@ -33,7 +33,7 @@ Configuration models for storage, chunking, Coiled, and processing settings.
 Strongly typed enums for environment, platform, and risk types.
 
 ```{eval-rst}
-.. automodule:: ocr.types
+.. automodule:: ocr.risks.fire.types
    :members:
    :show-inheritance:
 ```
@@ -47,7 +47,7 @@ Strongly typed enums for environment, platform, and risk types.
 Dataset and Catalog abstractions for Zarr and GeoParquet on S3/local storage.
 
 ```{eval-rst}
-.. automodule:: ocr.datasets
+.. automodule:: ocr.risks.fire.datasets
    :members:
    :show-inheritance:
 ```
@@ -57,7 +57,7 @@ Dataset and Catalog abstractions for Zarr and GeoParquet on S3/local storage.
 Load CONUS404 variables, compute relative humidity, wind rotation and diagnostics. Geographic selection utilities (point/bbox) with CRS-aware transforms.
 
 ```{eval-rst}
-.. automodule:: ocr.conus404
+.. automodule:: ocr.risks.fire.conus404
    :members:
    :show-inheritance:
 ```
@@ -71,7 +71,7 @@ Load CONUS404 variables, compute relative humidity, wind rotation and diagnostic
 Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file transfer.
 
 ```{eval-rst}
-.. automodule:: ocr.utils
+.. automodule:: ocr.risks.fire.utils
    :members:
    :show-inheritance:
 ```
@@ -81,7 +81,7 @@ Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file tr
 Snapshot testing extensions for xarray and GeoPandas.
 
 ```{eval-rst}
-.. automodule:: ocr.testing
+.. automodule:: ocr.risks.fire.testing
    :members:
    :show-inheritance:
 ```
@@ -95,7 +95,7 @@ Snapshot testing extensions for xarray and GeoPandas.
 Core fire/wind risk utilities used by the pipeline (kernels, wind classification, risk composition).
 
 ```{eval-rst}
-.. automodule:: ocr.risks.fire
+.. automodule:: ocr.risks.fire.risks.fire
    :members:
    :show-inheritance:
 ```
@@ -115,7 +115,7 @@ These modules are used internally by the pipeline and are not intended for direc
 Orchestration backends for local and Coiled execution.
 
 ```{eval-rst}
-.. automodule:: ocr.deploy.managers
+.. automodule:: ocr.risks.fire.deploy.managers
    :members:
    :show-inheritance:
 ```
@@ -125,7 +125,7 @@ Orchestration backends for local and Coiled execution.
 Command-line interface exposed as the `ocr` command. For detailed usage and options, see the [Data Pipeline](../how-to/data-pipeline.md) guide.
 
 ```{eval-rst}
-.. click:: ocr.deploy.cli:ocr
+.. click:: ocr.risks.fire.deploy.cli:ocr
    :prog: ocr
    :nested: full
 ```

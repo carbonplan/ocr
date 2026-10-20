@@ -10,14 +10,15 @@
     # for conda/pixi users this section is intentionally empty.
     dependencies = ["topozarr>=0.0.4"]
 [project.scripts]
-    ocr        = "ocr.deploy.cli:app"
-    ocr-deploy = "ocr.deploy.cli:app"
+    ocr        = "ocr.risks.fire.deploy.cli:app"
+    ocr-deploy = "ocr.risks.fire.deploy.cli:app"
 
 [tool.setuptools.packages.find]
     include = ["ocr*"]
+    where   = ["src"]
 
 [tool.setuptools.package-data]
-    ocr = ["data/*.json"]
+    "ocr.risks.fire" = ["data/*.json"]
 
 [tool.setuptools_scm]
     fallback_version = "999"
@@ -92,7 +93,7 @@
     addopts = [
         "--cov-report=term-missing",
         "--cov-report=xml",
-        "--cov=./ocr",
+        "--cov=./src/ocr",
         "--verbose",
     ]
     console_output_style = "count"

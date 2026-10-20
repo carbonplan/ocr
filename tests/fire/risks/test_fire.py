@@ -1,0 +1,455 @@
+import numpy as np
+import pandas as pd
+import pytest
+import xarray as xr
+
+from ocr.risks.fire.risks.fire import (
+    FIRE_RISK_SCORE_BINS,
+    apply_wind_directional_convolution,
+    classify_wind_directions,
+    create_weighted_composite_bp_map,
+    generate_weights,
+    generate_wind_directional_kernels,
+    rps_to_score,
+)
+
+#######################################
+# Tests for fire risk score bins     ##
+#######################################
+
+
+class TestRpsToScore:
+    def test_bins_has_twelve_edges(self):
+        assert len(FIRE_RISK_SCORE_BINS) == 12
+
+    def test_zero_rps_is_score_zero(self):
+        assert rps_to_score(0.0) == 0
+
+    def test_tiny_nonzero_rps_is_score_one(self):
+        # anything in (0, 0.01) that is above the near-zero threshold → score 1
+        assert rps_to_score(1e-10) == 1
+
+    def test_max_rps_is_score_ten(self):
+        assert rps_to_score(100.0) == 10
+
+    @pytest.mark.parametrize(
+        'rps,expected_score',
+        [
+            (0.0, 0),
+            (1e-65, 0),  # below the near-zero threshold → score 0
+            (1e-64, 1),  # at the near-zero threshold boundary → score 1
+            (1e-10, 1),  # within (1e-64, 0.01) → score 1
+            (0.01, 2),  # at the 0.01 boundary → score 2
+            (0.015, 2),
+            (0.02, 3),
+            (0.035, 4),
+            (0.06, 5),
+            (0.1, 6),
+            (0.2, 7),
+            (0.5, 8),
+            (1.0, 9),
+            (3.0, 10),
+            (50.0, 10),
+            (100.0, 10),
+        ],
+    )
+    def test_scalar_boundary_values(self, rps, expected_score):
+        assert rps_to_score(rps) == expected_score
+
+    def test_array_input(self):
+        rps = np.array([0.0, 0.015, 3.5])
+        result = rps_to_score(rps)
+        np.testing.assert_array_equal(result, [0, 2, 10])
+
+    def test_returns_scalar_int_for_scalar_input(self):
+        result = rps_to_score(0.5)
+        assert isinstance(result, int)
+
+    def test_returns_ndarray_for_array_input(self):
+        result = rps_to_score(np.array([0.0, 1.0]))
+        assert isinstance(result, np.ndarray)
+
+    def test_scores_are_monotonically_nondecreasing(self):
+        rps_values = np.linspace(0, 100, 500)
+        scores = rps_to_score(rps_values)
+        assert np.all(np.diff(scores) >= 0)
+
+    def test_all_scores_in_valid_range(self):
+        rps_values = np.linspace(0, 100, 500)
+        scores = rps_to_score(rps_values)
+        assert scores.min() >= 0
+        assert scores.max() <= 10
+
+
+############################################
+# Tests for wind direction classification ##
+############################################
+
+NORTH = 0
+NORTHEAST = 1
+EAST = 2
+SOUTHEAST = 3
+SOUTH = 4
+SOUTHWEST = 5
+WEST = 6
+NORTHWEST = 7
+
+
+@pytest.fixture
+def make_mode_array():
+    """Module-level fixture to build a (time, latitude, longitude) classification array."""
+
+    def _make(values: np.ndarray) -> xr.DataArray:
+        assert values.ndim == 3, 'values must be 3D (time, lat, lon)'
+        t, ny, nx = values.shape
+        times = pd.date_range('2000-01-01', periods=t, freq='D')
+        lats = np.linspace(45, 50, ny)
+        lons = np.linspace(-125, -120, nx)
+        da = xr.DataArray(
+            values,
+            dims=['time', 'latitude', 'longitude'],
+            coords={'time': times, 'latitude': lats, 'longitude': lons},
+            name='wind_direction_classification',
+        )
+        da.attrs['direction_labels'] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+        return da
+
+    return _make
+
+
+class TestWindDirectionClassification:
+    @pytest.fixture
+    def create_test_data(self):
+        """Create test wind direction data as xarray DataArray"""
+
+        def _create(values):
+            if isinstance(values, int | float):
+                values = np.array([values])
+            return xr.DataArray(values).astype('float32')
+
+        return _create
+
+    @pytest.mark.parametrize(
+        'angle,expected_class',
+        [
+            # Test center of each bin
+            (0, NORTH),  # North center
+            (45, NORTHEAST),  # Northeast center
+            (90, EAST),  # East center
+            (135, SOUTHEAST),  # Southeast center
+            (180, SOUTH),  # South center
+            (225, SOUTHWEST),  # Southwest center
+            (270, WEST),  # West center
+            (315, NORTHWEST),  # Northwest center
+            # Test exact boundary cases
+            (22.5, NORTHEAST),  # N-NE boundary
+            (67.5, EAST),  # NE-E boundary
+            (112.5, SOUTHEAST),  # E-SE boundary
+            (157.5, SOUTH),  # SE-S boundary
+            (202.5, SOUTHWEST),  # S-SW boundary
+            (247.5, WEST),  # SW-W boundary
+            (292.5, NORTHWEST),  # W-NW boundary
+            (337.5, NORTH),  # NW-N boundary
+            # Test near-boundary cases
+            (22.4, NORTH),
+            (22.6, NORTHEAST),
+            (337.4, NORTHWEST),
+            (337.6, NORTH),
+            # Test critical North edge case (near 360)
+            (359.9, NORTH),
+            (0.1, NORTH),
+            (360, NORTH),
+        ],
+    )
+    def test_direction_classification(self, angle, expected_class, create_test_data):
+        """Test classification for various wind directions."""
+        wind_dir = create_test_data(angle)
+        result = classify_wind_directions(wind_dir).values[0]
+        assert result == expected_class, f'Expected {expected_class} for {angle}°, got {result}'
+
+    def test_north_edge_case(self, create_test_data):
+        """Specifically test the North direction edge case."""
+        angles = [0, 10, 20, 340, 345, 350, 355, 359, 360]
+        wind_dir = create_test_data(angles)
+        result = classify_wind_directions(wind_dir).values
+        expected = np.array([NORTH] * len(angles))
+        np.testing.assert_array_equal(result, expected)
+
+    def test_values_outside_range(self, create_test_data):
+        """Test handling of values outside the 0-360 range."""
+        # Values outside standard range should wrap around properly
+        angles = [-45, 405, 720, -315]  # Equivalent to 315, 45, 0, 45
+        expected = [NORTHWEST, NORTHEAST, NORTH, NORTHEAST]
+        wind_dir = create_test_data(angles)
+        result = classify_wind_directions(wind_dir).values
+        np.testing.assert_array_equal(result, expected)
+
+    def test_nan_handling(self, create_test_data):
+        """Test handling of NaN values."""
+        angles = [0, np.nan, 90, np.nan, 180]
+        wind_dir = create_test_data(angles)
+        result = classify_wind_directions(wind_dir).values
+        expected = np.array([NORTH, np.nan, EAST, np.nan, SOUTH])
+        np.testing.assert_array_equal(result, expected)
+
+
+def test_generate_weights_defaults():
+    """Test generate_weights with default parameters."""
+    weights = generate_weights()
+
+    # Check returned type
+    assert isinstance(weights, np.ndarray)
+
+    # Check shape with default kernel_size=81.0
+    expected_shape = (81, 81)
+    assert weights.shape == expected_shape
+
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
+    unique_vals = np.unique(weights)
+    assert set(unique_vals).issubset({0, 1})
+    # Should have some non-zero elements
+    assert np.sum(weights > 0) > 0
+
+
+def test_generate_weights_skewed():
+    """Test generate_weights with 'skewed' method."""
+    weights = generate_weights(method='skewed', kernel_size=51.0, circle_diameter=25.0)
+
+    # Check shape
+    assert weights.shape == (51, 51)
+
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
+    unique_vals = np.unique(weights)
+    assert set(unique_vals).issubset({0, 1})
+    assert 0 in unique_vals
+    assert 1 in unique_vals
+
+
+def test_generate_weights_circular_focal_mean():
+    """Test generate_weights with 'circular_focal_mean' method."""
+    weights = generate_weights(method='circular_focal_mean', kernel_size=61.0, circle_diameter=29.0)
+
+    # Check shape
+    assert weights.shape == (61, 61)
+
+    # Check normalization
+    assert np.isclose(weights.sum(), 1.0)
+
+    # Check that values are binary before normalization (0 outside circle, positive inside)
+    unique_values = np.unique(weights * weights.sum())
+    assert len(unique_values) == 2
+    assert 0 in unique_values
+
+    # Check that weights are radially symmetric (no directional roll applied)
+    center_y, center_x = weights.shape[0] // 2, weights.shape[1] // 2
+    sub = weights[center_y - 10 : center_y + 10, center_x - 10 : center_x + 10]
+    # Symmetry checks (horizontal/vertical & both axis flips)
+    assert np.allclose(sub, np.flipud(sub))
+    assert np.allclose(sub, np.fliplr(sub))
+    assert np.allclose(sub, np.flip(sub))
+
+
+def test_generate_weights_odd_kernel_size():
+    """Test with odd kernel sizes to check proper centering."""
+    odd_kernel = 41
+    weights = generate_weights(kernel_size=odd_kernel)
+
+    # Check shape
+    assert weights.shape == (41, 41)
+
+    # Check center point is at the middle
+    center_y, center_x = odd_kernel // 2, odd_kernel // 2
+
+    # For 'skewed' method, the central region should have non-zero values
+    assert weights[center_y, center_x] > 0
+
+
+def test_generate_weights_even_kernel_size():
+    """Test with even kernel sizes which might require special handling."""
+    even_kernel = 40
+    weights = generate_weights(kernel_size=even_kernel)
+
+    # Check shape
+    # Current implementation for 'skewed' returns an array of shape (kernel_size, kernel_size)
+    assert weights.shape == (40, 40)
+    # Note: generate_weights now returns binary values (0 or 1)
+    # Normalization happens in generate_wind_directional_kernels
+    unique_vals = np.unique(weights)
+    assert set(unique_vals).issubset({0, 1})
+
+
+def test_generate_weights_small_circle():
+    """Test with a small circle diameter."""
+    weights = generate_weights(method='circular_focal_mean', kernel_size=31.0, circle_diameter=5.0)
+
+    # Count non-zero elements - should be small with a small circle
+    non_zero = np.count_nonzero(weights)
+
+    # Should occupy only a small fraction of the kernel
+    assert non_zero < weights.size * 0.2
+
+    # Check normalization
+    assert np.isclose(weights.sum(), 1.0)
+
+
+def test_generate_weights_large_circle():
+    """Test with a large circle diameter relative to kernel size."""
+    kernel_size = 41.0
+    circle_diameter = 39.0  # Almost as big as the kernel
+
+    weights = generate_weights(
+        method='circular_focal_mean', kernel_size=kernel_size, circle_diameter=circle_diameter
+    )
+
+    # Most of the kernel should be non-zero
+    non_zero_fraction = np.count_nonzero(weights) / weights.size
+    assert non_zero_fraction > 0.5
+
+    # Check normalization
+    np.testing.assert_allclose(weights.sum(), 1.0)
+
+
+def test_weights_positive():
+    """Test that all weights are non-negative."""
+    weights = generate_weights()
+    assert np.all(weights >= 0)
+
+
+def test_invalid_method():
+    """Test that an invalid method raises an error."""
+    with pytest.raises(ValueError):
+        generate_weights(method='invalid_method')  # type: ignore[arg-type]
+
+
+def test_generate_wind_directional_kernels_normalized():
+    """Test that each kernel is normalized (weights sum to 1)."""
+    result = generate_wind_directional_kernels()
+    for direction, kernel in result.items():
+        # Allow a small tolerance due to float32 accumulation after rotations
+        np.testing.assert_allclose(kernel.sum(), 1.0, rtol=1e-6, atol=1e-6)
+
+
+def test_generate_wind_directional_kernels_non_negative():
+    """Ensure no negative weights remain after rotation/clipping."""
+    result = generate_wind_directional_kernels()
+    for direction, kernel in result.items():
+        assert (kernel >= 0).all(), f'Kernel {direction} contains negative values'
+
+
+def test_classify_wind_directions_output_domain():
+    """All classified outputs must be in 0-7 or NaN (no -1 sentinel)."""
+    angles = xr.DataArray(
+        np.array([0, 45, 90, 135, 180, 225, 270, 315, np.nan, 720, -45]), dims=['sample']
+    ).astype('float32')
+    classified = classify_wind_directions(angles)
+    vals = classified.values
+    # mask NaNs then check domain
+    domain_vals = vals[~np.isnan(vals)]
+    assert domain_vals.min() >= 0
+    assert domain_vals.max() <= 7
+    assert -1 not in domain_vals
+
+
+def test_apply_wind_directional_convolution_non_negative_output():
+    """After convolution and clipping, outputs should have no negative values."""
+    data = np.zeros((41, 41), dtype=np.float32)
+    data[20, 20] = 1.0  # impulse at center
+    da = xr.DataArray(
+        data, dims=['latitude', 'longitude'], coords={'latitude': range(41), 'longitude': range(41)}
+    )
+    result = apply_wind_directional_convolution(
+        da, iterations=2, kernel_size=41.0, circle_diameter=21.0
+    )
+    for direction in result.data_vars:
+        arr = result[direction].values
+        assert (arr >= -1e-8).all(), f'Negative residual beyond tolerance in {direction}'
+        # Hard clip tolerance check (should have been clipped to >=0)
+        assert (arr >= 0).all() or np.isclose(arr.min(), 0.0)
+
+
+def test_create_weighted_composite_bp_map_basic():
+    """Weighted composite should equal manual dot product across directional layers."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 3, 4
+    # Each direction layer is a constant equal to its index so dot product is easy
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    # Distribution over 8 directions. Let it vary spatially a bit.
+    probs = np.array(
+        [0.10, 0.05, 0.15, 0.20, 0.05, 0.10, 0.25, 0.10], dtype=np.float32
+    )  # sums to 1.0
+    dist = xr.DataArray(
+        np.tile(probs[:, None, None], (1, ny, nx)),
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+
+    # Manual expected value = sum(i * probs[i]) for i=0..7
+    expected_scalar = float(sum(i * p for i, p in enumerate(probs)))
+    expected = np.full((ny, nx), expected_scalar, dtype=np.float32)
+    np.testing.assert_allclose(weighted.values, expected)
+    assert weighted.name == 'wind_weighted_bp'
+    assert 'long_name' in weighted.attrs
+
+
+def test_create_weighted_composite_bp_map_zero_distribution():
+    """All-zero distributions should yield NaNs (no valid fire-weather hours)."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 2, 2
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    zeros = np.zeros((8, ny, nx), dtype=np.float32)
+    dist = xr.DataArray(
+        zeros,
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+    assert np.isnan(weighted.values).all()
+
+
+def test_create_weighted_composite_bp_map_all_one_distribution():
+    """All-one distributions should yield the mean of all directional layers."""
+    direction_labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'circular']
+    ny, nx = 2, 2
+    data_vars = {
+        lab: (('latitude', 'longitude'), np.full((ny, nx), float(i)))
+        for i, lab in enumerate(direction_labels)
+    }
+    lat = np.linspace(0, 1, ny)
+    lon = np.linspace(10, 11, nx)
+    bp = xr.Dataset(data_vars, coords={'latitude': lat, 'longitude': lon})
+
+    ones = np.ones((8, ny, nx), dtype=np.float32)
+    dist = xr.DataArray(
+        ones,
+        dims=['wind_direction', 'latitude', 'longitude'],
+        coords={'wind_direction': direction_labels[:8], 'latitude': lat, 'longitude': lon},
+        name='wind_direction_distribution',
+    )
+
+    weighted = create_weighted_composite_bp_map(bp, dist)
+
+    # Expected value is mean of indices 0..7
+    expected_scalar = float(sum(range(8)) / 8.0)
+    expected = np.full((ny, nx), expected_scalar, dtype=np.float32)
+    np.testing.assert_allclose(weighted.values, expected)

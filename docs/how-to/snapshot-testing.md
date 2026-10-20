@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 import xarray as xr
 import geopandas as gpd
-from ocr.testing import XarraySnapshotExtension, GeoDataFrameSnapshotExtension
+from ocr.risks.fire.testing import XarraySnapshotExtension, GeoDataFrameSnapshotExtension
 
 
 @pytest.fixture
@@ -135,7 +135,7 @@ aws s3 rm s3://carbonplan-ocr/integration-tests/snapshots/ --recursive
 import numpy as np
 import pytest
 import xarray as xr
-from ocr.testing import XarraySnapshotExtension
+from ocr.risks.fire.testing import XarraySnapshotExtension
 
 
 @pytest.fixture

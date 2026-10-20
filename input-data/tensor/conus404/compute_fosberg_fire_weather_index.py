@@ -17,14 +17,14 @@ from odc.geo import CRS
 from odc.geo.xr import assign_crs, xr_reproject
 
 from ocr import catalog
-from ocr.conus404 import (
+from ocr.risks.fire.conus404 import (
     compute_relative_humidity,
     compute_wind_speed_and_direction,
     load_conus404,
     rotate_winds_to_earth,
 )
-from ocr.risks.fire import fosberg_fire_weather_index
-from ocr.utils import geo_sel
+from ocr.risks.fire.risks.fire import fosberg_fire_weather_index
+from ocr.risks.fire.utils import geo_sel
 
 console = rich.console.Console()
 app = typer.Typer(help='Compute Fosberg Fire Weather Index from CONUS404 data.')

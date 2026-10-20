@@ -1,0 +1,269 @@
+import subprocess
+import tempfile
+from pathlib import Path
+
+import duckdb
+from upath import UPath
+
+from ocr.risks.fire.config import OCRConfig
+from ocr.risks.fire.console import console
+from ocr.risks.fire.utils import (
+    apply_s3_creds,
+    copy_or_upload,
+    get_temp_dir,
+    install_load_extensions,
+)
+
+
+def create_regional_pmtiles(
+    config: OCRConfig,
+):
+    """Create PMTiles for county, tract, block, state, and nation regional risk statistics.
+
+    Refactored to use DuckDB's Python API instead of spawning the DuckDB CLI.
+    We materialize the feature rows to newline-delimited GeoJSON (NDJSON) files
+    via DuckDB ``COPY ... TO`` and then invoke ``tippecanoe`` on those files.
+
+    Parameters
+    ----------
+    config : OCRConfig
+        Project configuration object (provides input/output URIs and debug flag).
+
+    """
+
+    block_summary_stats_path = config.vector.block_summary_stats_uri
+    tracts_summary_stats_path = config.vector.tracts_summary_stats_uri
+    counties_summary_stats_path = config.vector.counties_summary_stats_uri
+    states_summary_stats_path = config.vector.states_summary_stats_uri
+    nation_summary_stats_path = config.vector.nation_summary_stats_uri
+
+    region_pmtiles_output = config.vector.region_pmtiles_uri
+    needs_s3 = any(
+        str(p).startswith('s3://')
+        for p in [
+            block_summary_stats_path,
+            tracts_summary_stats_path,
+            counties_summary_stats_path,
+            states_summary_stats_path,
+            nation_summary_stats_path,
+        ]
+    )
+
+    connection = duckdb.connect(database=':memory:')
+
+    try:
+        install_load_extensions(aws=needs_s3, spatial=True, httpfs=True, con=connection)
+        if needs_s3:
+            apply_s3_creds(region='us-west-2', con=connection)
+
+        with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmpdir:
+            tmp_path = UPath(tmpdir)
+            region_pmtiles = tmp_path / 'regions.pmtiles'
+
+            block_ndjson = Path(tmpdir) / 'blocks.ndjson'
+            tract_ndjson = Path(tmpdir) / 'tracts.ndjson'
+            county_ndjson = Path(tmpdir) / 'counties.ndjson'
+            state_ndjson = Path(tmpdir) / 'states.ndjson'
+            nation_ndjson = Path(tmpdir) / 'nation.ndjson'
+
+            if config.debug:
+                console.log(f'Creating block PMTiles from {block_summary_stats_path}')
+
+            if config.debug:
+                console.log(
+                    f'Exporting NDJSON features: {block_ndjson} from {block_summary_stats_path} for block PMTiles'
+                )
+            duckdb_block_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', rps_2011_mean,
+                        '2', rps_2047_mean,
+                        '3', rps_2011_median,
+                        '4', rps_2047_median,
+                        '5', risk_score_2011_hist,
+                        '6', risk_score_2047_hist,
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ]
+
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{block_summary_stats_path}')
+            ) TO '{block_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_block_copy)
+
+            if config.debug:
+                console.log(
+                    f'Exporting tract PMTiles from {tracts_summary_stats_path} to {tract_ndjson}'
+                )
+            duckdb_tract_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', rps_2011_mean,
+                        '2', rps_2047_mean,
+                        '3', rps_2011_median,
+                        '4', rps_2047_median,
+                        '5', risk_score_2011_hist,
+                        '6', risk_score_2047_hist,
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ]
+
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{tracts_summary_stats_path}')
+            ) TO '{tract_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_tract_copy)
+
+            if config.debug:
+                console.log(
+                    f'Exporting county PMTiles from {counties_summary_stats_path} to {county_ndjson}'
+                )
+            duckdb_county_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', rps_2011_mean,
+                        '2', rps_2047_mean,
+                        '3', rps_2011_median,
+                        '4', rps_2047_median,
+                        '5', risk_score_2011_hist,
+                        '6', risk_score_2047_hist,
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ],
+                        '9', NAME
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{counties_summary_stats_path}')
+            ) TO '{county_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_county_copy)
+
+            if config.debug:
+                console.log(
+                    f'Exporting state PMTiles from {states_summary_stats_path} to {state_ndjson}'
+                )
+            duckdb_state_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', rps_2011_mean,
+                        '2', rps_2047_mean,
+                        '3', rps_2011_median,
+                        '4', rps_2047_median,
+                        '5', risk_score_2011_hist,
+                        '6', risk_score_2047_hist,
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ],
+                        '9', NAME,
+                        '10', STUSPS
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{states_summary_stats_path}')
+            ) TO '{state_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_state_copy)
+
+            if config.debug:
+                console.log(
+                    f'Exporting nation PMTiles from {nation_summary_stats_path} to {nation_ndjson}'
+                )
+            duckdb_nation_copy = f"""
+            COPY (
+                SELECT
+                    'Feature' AS type,
+                    json_object(
+                        '0', building_count,
+                        '1', rps_2011_mean,
+                        '2', rps_2047_mean,
+                        '3', rps_2011_median,
+                        '4', rps_2047_median,
+                        '5', risk_score_2011_hist,
+                        '6', risk_score_2047_hist,
+                        '7', GEOID,
+                        '8', [
+                                ST_XMin(geometry),
+                                ST_YMin(geometry),
+                                ST_XMax(geometry),
+                                ST_YMax(geometry)
+                            ],
+                        '9', NAME
+                    ) AS properties,
+                    json(ST_AsGeoJson(geometry)) AS geometry
+                FROM read_parquet('{nation_summary_stats_path}')
+            ) TO '{nation_ndjson.as_posix()}' (FORMAT json);
+            """
+            connection.execute(duckdb_nation_copy)
+
+            if config.debug:
+                console.log(f'Generating combined PMTiles at {region_pmtiles}')
+
+            tippecanoe_cmd = [
+                'tippecanoe',
+                '-o',
+                str(region_pmtiles),
+                '-L',
+                f'counties:{county_ndjson}',
+                '-L',
+                f'tracts:{tract_ndjson}',
+                '-L',
+                f'blocks:{block_ndjson}',
+                '-L',
+                f'states:{state_ndjson}',
+                '-L',
+                f'nation:{nation_ndjson}',
+                '-n',
+                'regions',
+                '-f',
+                '-P',
+                '--drop-smallest-as-needed',
+                '-q',
+                '--extend-zooms-if-still-dropping',
+                '-zg',
+            ]
+
+            subprocess.run(tippecanoe_cmd, check=True)
+
+            if config.debug:
+                console.log(
+                    f'Uploading region combined (county, tract, block, state, nation) to {region_pmtiles_output}'
+                )
+            copy_or_upload(region_pmtiles, region_pmtiles_output)
+
+            if config.debug:
+                console.log('PMTiles uploads completed successfully')
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass

@@ -6,13 +6,13 @@ This page documents the Open Climate Risk (OCR) repository layout and explains t
 
 ## Repository overview
 
-The OCR platform is organized into distinct layers: the core Python package (`ocr/`), supporting infrastructure (configuration, deployment, testing), input data management, exploratory research notebooks, and comprehensive documentation. The structure follows best practices for scientific Python projects with emphasis on reproducibility, modularity, and cloud-native execution.
+The OCR platform is organized into distinct layers: the core Python package (`src/ocr/`, with one subpackage per hazard under `src/ocr/risks/`), supporting infrastructure (configuration, deployment, testing), input data management, exploratory research notebooks, and comprehensive documentation. The structure follows best practices for scientific Python projects with emphasis on reproducibility, modularity, and cloud-native execution.
 
 ```mermaid
 graph TB
     subgraph Repository["OCR Repository"]
         subgraph Core["Core Package"]
-            OCR[ocr/]
+            OCR[src/ocr/risks/fire/]
             OCR --> CONFIG[config.py - Configuration models]
             OCR --> TYPES[types.py - Type definitions]
             OCR --> DATASETS[datasets.py - Data catalog]
@@ -94,9 +94,9 @@ graph TB
 
 ---
 
-## Core package (`ocr/`)
+## Core package (`src/ocr/`)
 
-Contains all production code organized into logical modules:
+Each hazard lives in its own subpackage under `src/ocr/risks/` (`fire/`, `flood/`, `hurricane/`). Shared code will live as modules directly under `src/ocr/`. The fire subpackage (`src/ocr/risks/fire/`, imported as `ocr.risks.fire`) is organized into these modules:
 
 ### Top-level modules
 
@@ -205,7 +205,7 @@ Documentation is built with Sphinx using the sphinx-book-theme and deployed auto
 
 ## Testing (`tests/`)
 
-Comprehensive test suite with unit and integration tests:
+Tests mirror the hazard layout (`tests/fire/` for `ocr.risks.fire`). Fire test suite:
 
 | File                         | Purpose                                               |
 | ---------------------------- | ----------------------------------------------------- |
@@ -278,8 +278,8 @@ GitHub Actions workflows for automated testing, building, and deployment:
 
 ### Adding new code
 
-1. **Create module** under `ocr/` (or in appropriate subpackage)
-2. **Add tests** under `tests/` (unit tests are required, integration tests for complex scenarios)
+1. **Create module** under `src/ocr/risks/<hazard>/` (or `src/ocr/` if shared across hazards)
+2. **Add tests** under `tests/<hazard>/` (unit tests are required, integration tests for complex scenarios)
 3. **Update documentation**:
     - Add how-to guide if introducing new user-facing workflow
     - Update API reference if adding public functions/classes
@@ -288,7 +288,7 @@ GitHub Actions workflows for automated testing, building, and deployment:
 ### Adding new datasets
 
 1. **Create ingestion script** under `input-data/tensor/` or `input-data/vector/`
-2. **Register dataset** in `ocr.datasets` catalog with metadata
+2. **Register dataset** in `ocr.risks.fire.datasets` catalog with metadata
 3. **Document provenance**: Add new source information to `docs/reference/data-sources.md`
 4. **Document ingestion** Add information to `docs/how-to/input-dataset-ingestion.md`
 5. **Document workflow** Add information to `docs/how-to/work-with-input-datasets.md`
