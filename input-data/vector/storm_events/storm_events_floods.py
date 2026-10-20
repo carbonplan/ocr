@@ -16,23 +16,25 @@ begin and end location that NWS Storm Data publishes as the two corners
 bounding the flooded area (NWSI 10-1605, section 2.4). Reports without both
 locations are dropped, which removes most of 1996-2005.
 
-Each report becomes a Polygon (its bounding box), a LineString between its
-corners when one side is under 100 m, or a Point at its center when both
-are, with date, type, cause, impacts, and location fields.
+Two artifacts share the same reports and fields. In `boxes`, each report
+becomes a Polygon (its bounding box), a LineString between its corners when
+one side is under 100 m, or a Point at its center when both are. In
+`points`, each report is a Point at its begin location, the cell Collins et
+al. (2022) sampled as a damage presence.
 
 Pipeline: fetch every year's latest CSV -> mirror raw to S3 -> filter to
 CONUS Flood / Flash Flood with locations -> GeoJSONL -> tippecanoe ->
-s3://carbonplan-ocr/ocr-explore/storm_events_conus_floods.pmtiles, with a
-provenance record merged into ocr-explore/manifest.json (keyed by id,
+s3://carbonplan-ocr/ocr-explore/storm_events_conus_floods.pmtiles (boxes) or
+storm_events_conus_flood_points.pmtiles (points), with a provenance record merged into ocr-explore/manifest.json (keyed by id,
 read-modify-write, so partial rebuilds never drop other artifacts' records).
 
 Requires tippecanoe on PATH and AWS credentials for carbonplan-ocr.
 
 Usage:
   uv run storm_events_floods.py fetch
-  uv run storm_events_floods.py build [--force]
-  uv run storm_events_floods.py verify [--coverage]
-  uv run storm_events_floods.py list
+  uv run storm_events_floods.py build [--artifact boxes|points] [--force]
+  uv run storm_events_floods.py verify [--artifact boxes|points] [--coverage]
+  uv run storm_events_floods.py list [--artifact boxes|points]
 """
 
 from __future__ import annotations
@@ -57,8 +59,33 @@ PREFIX = 'ocr-explore'
 RAW = f'{PREFIX}/StormEvents/raw'
 MANIFEST_KEY = f'{PREFIX}/manifest.json'
 
-ARTIFACT_ID = 'storm_events_conus_floods'
-KEY = f'{PREFIX}/storm_events_conus_floods.pmtiles'
+ARTIFACTS = {
+    'boxes': {
+        'id': 'storm_events_conus_floods',
+        'key': f'{PREFIX}/storm_events_conus_floods.pmtiles',
+        'name': 'NOAA Storm Events flood reports',
+        'transform': (
+            'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
+            'begin and end coordinates inside CONUS, write each as its begin/end bounding '
+            'box (a LineString between the corners when one side is under 100 m, a Point '
+            'at its center when both are) with damage summed over property and crops '
+            '(omitted when neither was entered) and deaths/injuries summed over direct '
+            'and indirect, and tile with tippecanoe'
+        ),
+    },
+    'points': {
+        'id': 'storm_events_conus_flood_points',
+        'key': f'{PREFIX}/storm_events_conus_flood_points.pmtiles',
+        'name': 'NOAA Storm Events flood report begin points',
+        'transform': (
+            'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
+            'begin and end coordinates inside CONUS, write each as a Point at its begin '
+            'location with damage summed over property and crops (omitted when neither '
+            'was entered) and deaths/injuries summed over direct and indirect, and tile '
+            'with tippecanoe'
+        ),
+    },
+}
 SOURCE_INDEX = 'https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/'
 DETAILS_RE = re.compile(r'StormEvents_details-ftp_v1\.0_d(\d{4})_c(\d{8})\.csv\.gz')
 FIRST_YEAR = 1996
@@ -92,23 +119,27 @@ FIELDS = [
     'injuries',
 ]
 MINZOOM, MAXZOOM = 0, 10
-TIPPECANOE_ARGS = [
-    '-l',
-    LAYER,
-    '-n',
-    'NOAA Storm Events flood reports',
-    '-A',
-    ATTRIBUTION,
-    '-Z',
-    str(MINZOOM),
-    '-z',
-    str(MAXZOOM),
-    '-B',
-    str(MAXZOOM),
-    '--drop-densest-as-needed',
-    '--no-tiny-polygon-reduction-at-maximum-zoom',
-    '--force',
-]
+
+
+def tippecanoe_args(artifact: dict) -> list[str]:
+    return [
+        '-l',
+        LAYER,
+        '-n',
+        artifact['name'],
+        '-A',
+        ATTRIBUTION,
+        '-Z',
+        str(MINZOOM),
+        '-z',
+        str(MAXZOOM),
+        '-B',
+        str(MAXZOOM),
+        '--drop-densest-as-needed',
+        '--no-tiny-polygon-reduction-at-maximum-zoom',
+        '--force',
+    ]
+
 
 CACHE = Path.home() / '.cache' / 'ocr' / 'storm-events'
 FETCH_INFO = CACHE / 'fetch_info.json'
@@ -280,7 +311,14 @@ def _load_reports(files: list[dict]):
     return df
 
 
-def _feature(row) -> dict:
+def _begin_point(row) -> dict:
+    return {'type': 'Point', 'coordinates': [row.BEGIN_LON, row.BEGIN_LAT]}
+
+
+GEOMETRY = {'boxes': _geometry, 'points': _begin_point}
+
+
+def _feature(row, geometry) -> dict:
     amounts = [_parse_damage(v) for v in (row.DAMAGE_PROPERTY, row.DAMAGE_CROPS)]
     known = [a for a in amounts if a is not None]
     props = {
@@ -304,7 +342,7 @@ def _feature(row) -> dict:
         'type': 'Feature',
         'id': props['event_id'],
         'properties': props,
-        'geometry': _geometry(row),
+        'geometry': geometry(row),
     }
 
 
@@ -327,9 +365,11 @@ def cmd_fetch(_args) -> None:
 
 
 def cmd_build(args) -> None:
+    artifact = ARTIFACTS[args.artifact]
+    key = artifact['key']
     s3 = s3fs.S3FileSystem()
-    if s3.exists(f'{BUCKET}/{KEY}') and not args.force:
-        sys.exit(f'{artifact_uri(KEY)} exists; use --force to overwrite')
+    if s3.exists(f'{BUCKET}/{key}') and not args.force:
+        sys.exit(f'{artifact_uri(key)} exists; use --force to overwrite')
     if not FETCH_INFO.exists():
         sys.exit('no fetched source; run `fetch` first')
     info = json.loads(FETCH_INFO.read_text())
@@ -350,22 +390,23 @@ def cmd_build(args) -> None:
 
     with tempfile.TemporaryDirectory(prefix='storm-events-') as tmp:
         geojsonl = Path(tmp) / 'floods.geojsonl'
-        out = Path(tmp) / KEY.rsplit('/', 1)[-1]
+        out = Path(tmp) / key.rsplit('/', 1)[-1]
+        geometry = GEOMETRY[args.artifact]
         with open(geojsonl, 'w') as fh:
             for row in df.itertuples(index=False):
-                fh.write(json.dumps(_feature(row)) + '\n')
-        version = _run_tippecanoe(geojsonl, out, TIPPECANOE_ARGS)
+                fh.write(json.dumps(_feature(row, geometry)) + '\n')
+        version = _run_tippecanoe(geojsonl, out, tippecanoe_args(artifact))
         print(f'{out.name}: {out.stat().st_size / 1e6:.1f} MB ({version})')
         shutil.copy(out, CACHE / out.name)
-        s3.put(str(out), f'{BUCKET}/{KEY}')
-        print(f'uploaded -> {artifact_uri(KEY)}')
+        s3.put(str(out), f'{BUCKET}/{key}')
+        print(f'uploaded -> {artifact_uri(key)}')
 
     _write_manifest(
         s3,
         {
-            'id': ARTIFACT_ID,
+            'id': artifact['id'],
             'format': 'pmtiles',
-            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{KEY}',
+            'url': f'https://{BUCKET}.s3.us-west-2.amazonaws.com/{key}',
             'subset': 'conus',
             'layer': LAYER,
             'fields': FIELDS,
@@ -380,16 +421,9 @@ def cmd_build(args) -> None:
                 'files': [{k: f[k] for k in ('name', 'sha256')} for f in info['files']],
             },
             'raw_mirror': f's3://{BUCKET}/{RAW}/',
-            'transform': (
-                'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
-                'begin and end coordinates inside CONUS, write each as its begin/end bounding '
-                'box (a LineString between the corners when one side is under 100 m, a Point '
-                'at its center when both are) with damage summed over property and crops '
-                '(omitted when neither was entered) and deaths/injuries summed over direct '
-                'and indirect, and tile with tippecanoe'
-            ),
+            'transform': artifact['transform'],
             'tippecanoe': version,
-            'tippecanoe_args': TIPPECANOE_ARGS,
+            'tippecanoe_args': tippecanoe_args(artifact),
             'attribution': ATTRIBUTION,
             'display': {'promoteId': 'event_id', 'year_field': 'year'},
             'built': datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds'),
@@ -418,11 +452,13 @@ def _maxzoom_ids(local: Path, maxzoom: int) -> set:
 
 
 def cmd_verify(args) -> None:
+    artifact = ARTIFACTS[args.artifact]
+    key = artifact['key']
     s3 = s3fs.S3FileSystem()
     problems = []
-    if not s3.exists(f'{BUCKET}/{KEY}'):
-        sys.exit(f'{artifact_uri(KEY)} does not exist')
-    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{KEY}'))
+    if not s3.exists(f'{BUCKET}/{key}'):
+        sys.exit(f'{artifact_uri(key)} does not exist')
+    header, meta = _pmtiles_metadata(_s3_get_bytes(s3, f'{BUCKET}/{key}'))
     layers = {vl['id']: vl for vl in meta.get('vector_layers', [])}
     if LAYER not in layers:
         problems.append(f'layer {LAYER!r} missing (has {sorted(layers)})')
@@ -433,7 +469,7 @@ def cmd_verify(args) -> None:
     if (header['min_zoom'], header['max_zoom']) != (MINZOOM, MAXZOOM):
         problems.append(f'zooms {header["min_zoom"]}-{header["max_zoom"]}')
 
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact['id'])
     if rec is None:
         problems.append('no manifest record; rebuild to write provenance')
     else:
@@ -442,14 +478,14 @@ def cmd_verify(args) -> None:
         if count != rec.get('feature_count'):
             problems.append(f'tilestats count {count} != manifest {rec.get("feature_count")}')
         if args.coverage:
-            local = CACHE / KEY.rsplit('/', 1)[-1]
+            local = CACHE / key.rsplit('/', 1)[-1]
             if not local.exists():
-                s3.get(f'{BUCKET}/{KEY}', str(local))
+                s3.get(f'{BUCKET}/{key}', str(local))
             n = len(_maxzoom_ids(local, header['max_zoom']))
             print(f'{n} of {rec.get("feature_count")} reports present at z{header["max_zoom"]}')
             if n != rec.get('feature_count'):
                 problems.append(f'{rec.get("feature_count") - n} reports missing at max zoom')
-        for field, want in (('fields', FIELDS), ('tippecanoe_args', TIPPECANOE_ARGS)):
+        for field, want in (('fields', FIELDS), ('tippecanoe_args', tippecanoe_args(artifact))):
             got = rec.get(field)
             if got is None:
                 problems.append(f'manifest record predates `{field}`')
@@ -461,15 +497,17 @@ def cmd_verify(args) -> None:
     sys.exit(1 if problems else 0)
 
 
-def cmd_list(_args) -> None:
+def cmd_list(args) -> None:
+    artifact = ARTIFACTS[args.artifact]
+    key = artifact['key']
     s3 = s3fs.S3FileSystem()
     raw = s3.ls(f'{BUCKET}/{RAW}') if s3.exists(f'{BUCKET}/{RAW}') else []
     print(f'raw mirrors: {len(raw)} files')
-    if s3.exists(f'{BUCKET}/{KEY}'):
-        print(f'artifact: {artifact_uri(KEY)} ({s3.info(f"{BUCKET}/{KEY}")["size"] / 1e6:.1f} MB)')
+    if s3.exists(f'{BUCKET}/{key}'):
+        print(f'artifact: {artifact_uri(key)} ({s3.info(f"{BUCKET}/{key}")["size"] / 1e6:.1f} MB)')
     else:
         print('artifact: missing')
-    rec = _manifest_record(s3, ARTIFACT_ID)
+    rec = _manifest_record(s3, artifact['id'])
     print(f'manifest record: {json.dumps(rec, indent=2) if rec else "none"}')
 
 
@@ -481,7 +519,9 @@ def main() -> None:
     b.add_argument('--force', action='store_true', help='overwrite the existing artifact')
     v = sub.add_parser('verify', help='check the served artifact against code and manifest')
     v.add_argument('--coverage', action='store_true', help='decode max-zoom tiles for drops')
-    sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    lst = sub.add_parser('list', help='show raw mirrors, artifact, and manifest record')
+    for parser in (b, v, lst):
+        parser.add_argument('--artifact', choices=sorted(ARTIFACTS), default='boxes')
     args = p.parse_args()
     {'fetch': cmd_fetch, 'build': cmd_build, 'verify': cmd_verify, 'list': cmd_list}[args.cmd](args)
 
