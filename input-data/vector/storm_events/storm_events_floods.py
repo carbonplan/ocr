@@ -59,11 +59,13 @@ PREFIX = 'ocr-explore'
 RAW = f'{PREFIX}/StormEvents/raw'
 MANIFEST_KEY = f'{PREFIX}/manifest.json'
 
+MINZOOM, MAXZOOM = 0, 10
 ARTIFACTS = {
     'boxes': {
         'id': 'storm_events_conus_floods',
         'key': f'{PREFIX}/storm_events_conus_floods.pmtiles',
         'name': 'NOAA Storm Events flood reports',
+        'thinning': ['-B', str(MAXZOOM)],
         'transform': (
             'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
             'begin and end coordinates inside CONUS, write each as its begin/end bounding '
@@ -77,6 +79,8 @@ ARTIFACTS = {
         'id': 'storm_events_conus_flood_points',
         'key': f'{PREFIX}/storm_events_conus_flood_points.pmtiles',
         'name': 'NOAA Storm Events flood report begin points',
+        # keep every point at every zoom unless a tile overflows
+        'thinning': ['-r1'],
         'transform': (
             'concatenate the yearly details CSVs, keep Flood and Flash Flood events with '
             'begin and end coordinates inside CONUS, write each as a Point at its begin '
@@ -118,7 +122,6 @@ FIELDS = [
     'deaths',
     'injuries',
 ]
-MINZOOM, MAXZOOM = 0, 10
 
 
 def tippecanoe_args(artifact: dict) -> list[str]:
@@ -133,8 +136,7 @@ def tippecanoe_args(artifact: dict) -> list[str]:
         str(MINZOOM),
         '-z',
         str(MAXZOOM),
-        '-B',
-        str(MAXZOOM),
+        *artifact['thinning'],
         '--drop-densest-as-needed',
         '--no-tiny-polygon-reduction-at-maximum-zoom',
         '--force',

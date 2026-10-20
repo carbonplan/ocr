@@ -96,8 +96,8 @@ def tippecanoe_args(artifact: dict) -> list[str]:
         str(MINZOOM),
         '-z',
         maxzoom,
-        '-B',
-        maxzoom,
+        # keep every feature at every zoom unless a tile overflows
+        '-r1',
         '--drop-densest-as-needed',
         '--no-tiny-polygon-reduction-at-maximum-zoom',
         '--force',

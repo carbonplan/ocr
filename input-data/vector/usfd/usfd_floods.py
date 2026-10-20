@@ -89,8 +89,8 @@ TIPPECANOE_ARGS = [
     str(MINZOOM),
     '-z',
     str(MAXZOOM),
-    '-B',
-    str(MAXZOOM),
+    # keep every point at every zoom unless a tile overflows
+    '-r1',
     '--drop-densest-as-needed',
     '--force',
 ]
