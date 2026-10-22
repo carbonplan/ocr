@@ -139,7 +139,7 @@ def sample_buildings(
     for var, col in sampled.items():
         tbl = tbl.append_column(var, col)
     tbl = tbl.select(['id', *sampled, 'geometry', 'bbox'])
-    # Parquet metadata only holds text, so non-text attrs are stored as JSON.
+    # Parquet metadata values must be text, so numbers, lists etc. are saved as JSON.
     meta = {'overture_release': release} | {
         f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()
     }
