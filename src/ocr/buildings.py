@@ -20,6 +20,7 @@ from ocr.duck import duckdb_connect
 from ocr.extent import CONUS
 
 OVERTURE_RELEASE = '2026-09-23.1'
+OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings theme; includes OpenStreetMap data
 
 
 class PointSamplingStrategy(StrEnum):
@@ -108,7 +109,7 @@ def sample_buildings(
     PointSamplingStrategy.ON_SURFACE can't.
 
     Returns columns id (GERS ID), one per var, geometry and bbox. The Overture
-    release and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
+    release, its license and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
 
     >>> ds = xr.open_zarr(icechunk_store, chunks=None, consolidated=False)
     >>> tbl = sample_buildings(ds[['rps_2011']])
@@ -141,7 +142,7 @@ def sample_buildings(
         tbl = tbl.append_column(var, col)
     tbl = tbl.select(['id', *sampled, 'geometry', 'bbox'])
     # Copy ds.attrs into parquet key-value metadata. Values must be text, so non-strings become JSON.
-    meta = {'overture_release': release} | {
+    meta = {'overture_release': release, 'overture_license': OVERTURE_LICENSE} | {
         f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()
     }
     return tbl.replace_schema_metadata(meta)
