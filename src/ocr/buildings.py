@@ -107,15 +107,15 @@ def sample_buildings(
     PointSamplingStrategy.CENTROID can land outside an L-shaped building;
     PointSamplingStrategy.ON_SURFACE can't.
 
-    Returns columns id, geometry, bbox and one per var. The Overture release and
-    `ds.attrs` (as dataset_<name>) are stored in the table metadata.
+    Returns columns id (GERS ID), one per var, geometry and bbox. The Overture
+    release and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
 
     >>> ds = xr.open_zarr(icechunk_store, chunks=None, consolidated=False)
     >>> tbl = sample_buildings(ds[['rps_2011']])
     >>> write_patable_to_gpq(tbl, 's3://bucket/buildings.parquet')
     """
 
-    # Validation of dataset inputs
+    # Validation of dataset inputs. A plain str would go straight into the SQL.
     point_strategy = PointSamplingStrategy(point_strategy)
     y, x = _validate_dataset(ds)
 
@@ -135,10 +135,10 @@ def sample_buildings(
     ).to_arrow_table()
     # Read the raster value at every building's cell in one batch.
     sampled = _sample(ds, tbl['iy'].to_numpy(), tbl['ix'].to_numpy())
-    # Drop row/column, add one value column per var (same row order).
-    tbl = tbl.select(['id', 'geometry', 'bbox'])
+    # Add one value column per var (same row order), then drop row/column.
     for var, col in sampled.items():
         tbl = tbl.append_column(var, col)
+    tbl = tbl.select(['id', *sampled, 'geometry', 'bbox'])
     # Parquet metadata only holds text, so non-text attrs are stored as JSON.
     meta = {'overture_release': release} | {
         f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()
