@@ -1,10 +1,3 @@
-"""Look up hazard raster values for every Overture building in CONUS.
-
-1. DuckDB reads the buildings, picks one point per footprint and works out
-   which raster cell (row, column) that point falls in.
-2. xarray reads the value at each of those cells in one batch.
-"""
-
 import json
 from enum import StrEnum
 from pathlib import Path
@@ -26,15 +19,12 @@ OVERTURE_ATTRIBUTION = 'OpenStreetMap contributors, Overture Maps Foundation'
 
 
 class PointSamplingStrategy(StrEnum):
-    """How to pick one point per building footprint (the DuckDB function name)."""
+    """How to pick one point per building footprint (the DuckDB function name).
+    Either CENTROID, which can sample outside of a building's extent for strange shaped polygons,
+    or ON_SURFACE, which guarantees in-polygon sampling, but not centroid."""
 
     CENTROID = 'ST_Centroid'
     ON_SURFACE = 'ST_PointOnSurface'
-
-    @classmethod
-    def _missing_(cls, value: object) -> None:
-        options = ', '.join(f'{cls.__name__}.{m.name}' for m in cls)
-        raise ValueError(f'{value!r} is not a valid {cls.__name__}; use one of {options}')
 
 
 class Axis(NamedTuple):
@@ -100,15 +90,12 @@ def sample_buildings(
     release: str = OVERTURE_RELEASE,
     point_strategy: PointSamplingStrategy = PointSamplingStrategy.CENTROID,
 ) -> pa.Table:
-    """Get the value of every var in `ds` for each Overture building inside CONUS.
+    """Sample a 2D xarray dataset at every Overture building in CONUS (point, not zonal stats).
 
     `ds` must be a 2D lat/lon (EPSG:4326) grid with evenly spaced coords. Open it
-    with chunks=None; dask is about 3.5x slower. Pick vars first with ds[[...]].
+    with chunks=None; dask is about 3.5x slower! Pick vars first with ds[[...]].
 
-    Everything is held in memory (CONUS: 179M rows, about 5 min on r9g.8xlarge).
-    Buildings in the CONUS box but off the raster (Canada, Mexico) get null; raster NaN stays NaN.
-    PointSamplingStrategy.CENTROID can land outside an L-shaped building;
-    PointSamplingStrategy.ON_SURFACE can't.
+    Buildings in the CONUS box but off the raster get null; raster NaN stays NaN.
 
     Returns columns id (GERS ID), one per var, geometry and bbox. The Overture
     release, its license, attribution (+ url) and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
@@ -118,25 +105,34 @@ def sample_buildings(
     >>> write_patable_to_gpq(tbl, 's3://bucket/buildings.parquet')
     """
 
-    # Validation of dataset inputs. A plain str would go straight into the SQL.
     point_strategy = PointSamplingStrategy(point_strategy)
     y, x = _validate_dataset(ds)
 
     con = duckdb_connect()
     url = f's3://overturemaps-us-west-2/release/{release}/theme=buildings/type=building/*.parquet'
-    # Numbers are pasted into the SQL with an f-string, not passed as $params:
-    # with $params, DuckDB ran this query on one CPU core instead of all of them.
     tbl = con.sql(
         f"""
         SELECT id, geometry, bbox,
                {_cell('ST_Y(c)', y)} AS iy,
                {_cell('ST_X(c)', x)} AS ix
         FROM (SELECT id, geometry, bbox, {point_strategy}(geometry) AS c
-              FROM read_parquet('{url}')
-              WHERE bbox.xmin >= {CONUS.left} AND bbox.ymin >= {CONUS.bottom}
-                AND bbox.xmax <= {CONUS.right} AND bbox.ymax <= {CONUS.top})
-        """
+              FROM read_parquet($url)
+              WHERE bbox.xmin >= $left AND bbox.ymin >= $bottom
+                AND bbox.xmax <= $right AND bbox.ymax <= $top)
+        """,
+        params={
+            'url': url,
+            'left': CONUS.left,
+            'bottom': CONUS.bottom,
+            'right': CONUS.right,
+            'top': CONUS.top,
+        },
     ).to_arrow_table()
+    return _assemble(tbl, ds, release)
+
+
+def _assemble(tbl: pa.Table, ds: xr.Dataset, release: str) -> pa.Table:
+    """Add the sampled vars to `tbl` (id, iy, ix, geometry, bbox) and set the output metadata."""
     # Read the raster value at every building's cell in one batch.
     sampled = _sample(ds, tbl['iy'].to_numpy(), tbl['ix'].to_numpy())
     # Go in order: ID (GERS), [Xarray dataset vars], geometry, bbox

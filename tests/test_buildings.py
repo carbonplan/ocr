@@ -6,7 +6,16 @@ import pyarrow as pa
 import pytest
 import xarray as xr
 
-from ocr.buildings import _cell, _grid, _sample, sample_buildings, write_patable_to_gpq
+from ocr.buildings import (
+    OVERTURE_RELEASE,
+    _assemble,
+    _cell,
+    _grid,
+    _sample,
+    sample_buildings,
+    write_patable_to_gpq,
+)
+from ocr.duck import duckdb_connect
 
 
 def _ds(crs: str = 'EPSG:4326') -> xr.Dataset:
@@ -52,8 +61,7 @@ def test_rejects_bad_inputs_before_s3() -> None:
 
 def test_write_geoparquet_metadata(tmp_path: Path) -> None:
     meta = {'overture_release': '2026-09-23.1', "dataset_it's": "it's"}
-    con = duckdb.connect()
-    con.sql('INSTALL spatial; LOAD spatial;')
+    con = duckdb_connect()
     tbl = con.sql(
         "SELECT * FROM (VALUES ('a', ST_Point(0, 0)), ('b', ST_Point(1, 1))) t(id, geometry)"
     ).to_arrow_table()
@@ -94,3 +102,19 @@ def test_sample_matches_sel_nearest() -> None:
         latitude=xr.DataArray(y, dims='pt'), longitude=xr.DataArray(x, dims='pt'), method='nearest'
     )
     np.testing.assert_array_equal(got, expected.values)
+
+
+def test_assemble_columns_and_metadata() -> None:
+    ds = _ds()
+    ds.attrs = {'title': 'fire', 'version': 2}
+    tbl = pa.table(
+        {'id': ['a', 'b'], 'iy': [0, -1], 'ix': [1, 0], 'geometry': [b'g0', b'g1'], 'bbox': [1, 2]}
+    )
+    got = _assemble(tbl, ds, OVERTURE_RELEASE)
+    assert got.column_names == ['id', 'risk', 'geometry', 'bbox']
+    assert got['risk'].to_pylist() == [1, None]
+    meta = {k.decode(): v.decode() for k, v in got.schema.metadata.items()}
+    assert meta['overture_release'] == OVERTURE_RELEASE
+    assert meta['overture_license'] == 'ODbL-1.0'
+    assert meta['dataset_title'] == 'fire'
+    assert meta['dataset_version'] == '2'
