@@ -8,7 +8,7 @@
     requires-python = ">= 3.13"
     # All runtime dependencies are managed by Pixi via conda-forge.
     # for conda/pixi users this section is intentionally empty.
-    dependencies = ["topozarr>=0.0.4"]
+    dependencies = ["duckdb>=2.0.0", "topozarr>=0.0.4"]
 [project.scripts]
     ocr        = "ocr.risks.fire.deploy.cli:app"
     ocr-deploy = "ocr.risks.fire.deploy.cli:app"
@@ -178,8 +178,6 @@
     bottleneck            = ">=1.6.0,<2"
     cartopy               = ">=0.25.0,<0.26"
     dask                  = ">=2025.12.0,<2026"
-    duckdb                = ">=1.3.2,<2"
-    duckdb-cli            = ">=1.3.2,<2"
     flox                  = ">=0.10.6,<0.11"
     fsspec                = ">=2025.9.0,<2026"
     gdal                  = ">=3.10.3,<4"
@@ -194,6 +192,7 @@
     opencv                = ">=4.12.0,<5"
     pint-xarray           = ">=0.6.0,<0.7"
     pooch                 = ">=1.8.2,<2"
+    # TODO: swap pyarrow for arro3-core/arro3-io if dask is removed (and some fire deps are refactored).
     pyarrow               = ">=21.0.0,<22"
     pydantic              = ">=2.11.9,<3"
     pydantic-extra-types  = ">=2.10.5,<3"
