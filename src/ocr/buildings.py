@@ -20,9 +20,9 @@ from ocr.duck import duckdb_connect
 from ocr.extent import CONUS
 
 OVERTURE_RELEASE = '2026-09-23.1'
-OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings theme; includes OpenStreetMap data
-# From https://docs.overturemaps.org/attribution/
-OVERTURE_ATTRIBUTION = '© OpenStreetMap contributors, Overture Maps Foundation'
+OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings dataset; includes OpenStreetMap data
+OVERTURE_ATTRIBUTION_URL = 'https://docs.overturemaps.org/attribution/'
+OVERTURE_ATTRIBUTION = 'OpenStreetMap contributors, Overture Maps Foundation'
 
 
 class PointSamplingStrategy(StrEnum):
@@ -111,7 +111,7 @@ def sample_buildings(
     PointSamplingStrategy.ON_SURFACE can't.
 
     Returns columns id (GERS ID), one per var, geometry and bbox. The Overture
-    release, its license, attribution and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
+    release, its license, attribution (+ url) and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
 
     >>> ds = xr.open_zarr(icechunk_store, chunks=None, consolidated=False)
     >>> tbl = sample_buildings(ds[['rps_2011']])
@@ -148,5 +148,6 @@ def sample_buildings(
         'overture_release': release,
         'overture_license': OVERTURE_LICENSE,
         'overture_attribution': OVERTURE_ATTRIBUTION,
+        'overture_attribution_url': OVERTURE_ATTRIBUTION_URL,
     } | {f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()}
     return tbl.replace_schema_metadata(meta)
