@@ -114,14 +114,14 @@ def sample_buildings(
     >>> tbl = sample_buildings(ds[['rps_2011']])
     >>> write_patable_to_gpq(tbl, 's3://bucket/buildings.parquet')
     """
-    # Check inputs now, before the slow S3 read. A plain str would go straight into the SQL.
+
+    # Validation of dataset inputs
     point_strategy = PointSamplingStrategy(point_strategy)
     y, x = _validate_dataset(ds)
 
     con = duckdb_connect()
     url = f's3://overturemaps-us-west-2/release/{release}/theme=buildings/type=building/*.parquet'
     # Numbers go straight into the SQL text: $param placeholders made DuckDB use one core.
-    # ::FLOAT matches Overture's bbox type, which lets DuckDB skip files outside CONUS.
     tbl = con.sql(
         f"""
         SELECT id, geometry, bbox,
@@ -129,8 +129,8 @@ def sample_buildings(
                {_cell('ST_X(c)', x)} AS ix
         FROM (SELECT id, geometry, bbox, {point_strategy}(geometry) AS c
               FROM read_parquet('{url}')
-              WHERE bbox.xmin >= {CONUS.left}::FLOAT AND bbox.ymin >= {CONUS.bottom}::FLOAT
-                AND bbox.xmax <= {CONUS.right}::FLOAT AND bbox.ymax <= {CONUS.top}::FLOAT)
+              WHERE bbox.xmin >= {CONUS.left} AND bbox.ymin >= {CONUS.bottom}
+                AND bbox.xmax <= {CONUS.right} AND bbox.ymax <= {CONUS.top})
         """
     ).to_arrow_table()
     # Read the raster value at every building's cell in one batch.
