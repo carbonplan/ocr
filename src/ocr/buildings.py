@@ -135,11 +135,11 @@ def sample_buildings(
     ).to_arrow_table()
     # Read the raster value at every building's cell in one batch.
     sampled = _sample(ds, tbl['iy'].to_numpy(), tbl['ix'].to_numpy())
-    # Add one value column per var (same row order), then drop row/column.
+    # Go in order: ID (GERS), [Xarray dataset vars], geometry, bbox
     for var, col in sampled.items():
         tbl = tbl.append_column(var, col)
     tbl = tbl.select(['id', *sampled, 'geometry', 'bbox'])
-    # Parquet metadata values must be text, so numbers, lists etc. are saved as JSON.
+    # Copy ds.attrs into parquet key-value metadata. Values must be text, so non-strings become JSON.
     meta = {'overture_release': release} | {
         f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()
     }
