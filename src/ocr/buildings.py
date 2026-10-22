@@ -121,7 +121,8 @@ def sample_buildings(
 
     con = duckdb_connect()
     url = f's3://overturemaps-us-west-2/release/{release}/theme=buildings/type=building/*.parquet'
-    # Numbers go straight into the SQL text: $param placeholders made DuckDB use one core.
+    # Numbers are pasted into the SQL with an f-string, not passed as $params:
+    # with $params, DuckDB ran this query on one CPU core instead of all of them.
     tbl = con.sql(
         f"""
         SELECT id, geometry, bbox,
