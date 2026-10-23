@@ -61,20 +61,38 @@ out of headline comparisons. NOAA revises older years as well as recent years;
 record the filename creation date, retrieval time and SHA-256 of every input.
 See the [NOAA README](https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/README).
 
-USGS metadata lists about 18.0 GB of compressed predictor archives. The small
-README and R script were retrieved successfully. Response archive links returned
-HTML through the listed manager URLs; a name-based presence download returned 404. Actual retrieval of response archives and predictors remains a readiness
-gate. Do not equate catalog availability with verified downloadable inputs.
-The code also expects `HUC2_CONUS_proj`, absent from the top-level file list;
-obtain and version the matching watershed boundaries.
+All release files download without a CAPTCHA from
+`https://www.sciencebase.gov/catalog/file/get/<item>?name=<file>`; the
+`manager/...` links in the item metadata are the browser flow. `fdp_inputs.py`
+stages the predictors and response points this way (see the README).
 
-Access update (2026-10-16): the browser download flow requires a human CAPTCHA.
-The floodplain predictor was successfully downloaded and inspected locally
-(100 m, EPSG:5070); the remaining predictors have not been acquired. The latest
-2026 NOAA details file, `StormEvents_details-ftp_v1.0_d2026_c20260918.csv.gz`,
-contains January–June only, including 2,473 raw Flood/Flash Flood event rows.
-A refit using all currently available reports would therefore end in June 2026,
-not December. Keep the completed 2020–2025 validation snapshot unchanged.
+The released response points are 71,434 presences and 71,434 absences in
+EPSG:5070, carrying only a `flood` 1/0 attribute. Checked on 2026-10-22:
+
+- 71,148 presence cells (99.6%) are NOAA begin-coordinate cells of Dec
+  2006–May 2020 Flood/Flash Flood events; 6,248 match end coordinates.
+  No damage filter was applied: the paper defines damage to include
+  disruption, and treats every report as a damage event.
+- Presences sit at report coordinates, one per cell of the FDP grid; absences
+  sit at cell centres of the same grid. All 71,434 absences are outside the
+  combined floodplain; 21 share a cell with a presence.
+
+The code also expects `HUC2_CONUS_proj`, absent from the release; training uses
+WBD HUC-2 boundaries rasterized onto the predictor grid.
+
+The released script calls dismo's `ssb()` and `pwdSample()` with their default
+`lonlat = TRUE` on these Albers metre coordinates (dismo 1.3-3, current in 2021,
+behaves the same). The distances are haversine values of metres read as
+degrees, uncorrelated with true separation (r ≈ 0 on a test grid), so the
+pairwise-distance sampling meant to remove spatial sorting bias from the CV
+test sets is effectively random. The paper's CV AUCs are computed on those test
+sets.
+
+The latest 2026 NOAA details file,
+`StormEvents_details-ftp_v1.0_d2026_c20260918.csv.gz`, contains January–June
+only, including 2,473 raw Flood/Flash Flood event rows. A refit using all
+currently available reports would therefore end in June 2026, not December.
+Keep the completed 2020–2025 validation snapshot unchanged.
 
 ## Phase 1: frozen-map temporal validation
 

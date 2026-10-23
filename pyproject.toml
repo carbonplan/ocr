@@ -123,6 +123,8 @@
     # Standalone: Coiled package sync replicates the whole environment, and the
     # default one carries packages its solver cannot resolve.
     fdp = { features = ["fdp"], no-default-feature = true }
+    # fdp plus R for train_fdp.R; run `pixi run -e fdp-r fdp-r-cran` once.
+    fdp-r = { features = ["fdp", "fdp-r"], no-default-feature = true }
 
 # Tasks grouped by features
 [tool.pixi.feature.dev.tasks]
@@ -194,6 +196,41 @@
 [tool.pixi.feature.fdp.pypi-dependencies]
     topozarr = "==0.1.2"
     xproj    = "*"
+
+# dismo, smoof, mlrMBO and tuneRanger have no osx-arm64 conda builds, so the
+# fdp-r-cran task compiles them from CRAN into the environment.
+[tool.pixi.feature.fdp-r]
+    platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.fdp-r.dependencies]
+    c-compiler        = "*"
+    cxx-compiler      = "*"
+    fortran-compiler  = "*"
+    make              = "*"
+    r-base            = "4.4.*"
+    r-bbmisc          = "*"
+    r-checkmate       = "*"
+    "r-data.table"    = "*"
+    r-dicekriging     = "*"
+    r-ggplot2         = "*"
+    r-jsonlite        = "*"
+    r-lhs             = "*"
+    r-lubridate       = "*"
+    r-mlr             = "*"
+    r-paramhelpers    = "*"
+    r-parallelmap     = "*"
+    r-plotly          = "*"
+    r-ranger          = "*"
+    r-raster          = "*"
+    r-rcolorbrewer    = "*"
+    r-rcpp            = "*"
+    r-rcpparmadillo   = "*"
+    r-snow            = "*"
+    r-sp              = "*"
+    r-terra           = "*"
+
+[tool.pixi.feature.fdp-r.tasks]
+    fdp-r-cran = { cmd = "Rscript -e 'options(Ncpus = 8); need <- setdiff(c(\"dismo\", \"smoof\", \"mlrMBO\", \"tuneRanger\"), rownames(installed.packages())); if (length(need)) install.packages(need, repos = \"https://cloud.r-project.org\", type = \"source\")'" }
 # Project-wide Conda dependencies (runtime + CLI + geo stack)
 [tool.pixi.dependencies]
     bottleneck            = ">=1.6.0,<2"

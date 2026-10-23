@@ -68,7 +68,6 @@ DOI = 'https://doi.org/10.5066/P954TTQN'
 
 SB_ITEM = '6170694ed34ea36449a67ef7'
 SB_ZIP = 'Output_CONUS_FDP_100m.zip'
-SB_URL = f'https://www.sciencebase.gov/catalog/file/get/{SB_ITEM}?name={SB_ZIP}'
 TIF_NAME = 'CONUS_FDP_100m.tif'
 
 CACHE = Path(os.environ.get('FDP_CACHE', Path.home() / '.cache/ocr/fdp'))
@@ -89,19 +88,23 @@ def store_uri() -> str:
 # ---------------------------------------------------------------------------
 
 
-def _download_zip(dest: Path) -> None:
-    """Stream the 3 GB source zip from ScienceBase.
+def sciencebase_url(name: str) -> str:
+    return f'https://www.sciencebase.gov/catalog/file/get/{SB_ITEM}?name={name}'
+
+
+def download(url: str, dest: Path) -> None:
+    """Stream a ScienceBase file to `dest`.
 
     The endpoint ignores Range headers and streams the whole file, so there is
     no way to pull just the tif member: the zip lands on disk in full.
     """
     part = dest.with_suffix(dest.suffix + '.part')
-    print(f'  downloading {SB_ZIP}')
+    print(f'  downloading {dest.name}')
     t0 = time.time()
     # A captured log has no carriage return, so tick every ~320 MB there instead
     # of redrawing one line every chunk.
     tty = sys.stdout.isatty()
-    with requests.get(SB_URL, stream=True, timeout=(30, 300)) as r:
+    with requests.get(url, stream=True, timeout=(30, 300)) as r:
         r.raise_for_status()
         got = 0
         with part.open('wb') as fh:
@@ -156,7 +159,7 @@ def source_tif() -> Path:
 
     zip_path = CACHE / SB_ZIP
     if not zip_path.exists():
-        _download_zip(zip_path)
+        download(sciencebase_url(SB_ZIP), zip_path)
     _extract_tif(zip_path, tif)
     print(f'  staging -> {raw_uri()}')
     t0 = time.time()
@@ -201,7 +204,7 @@ def _bounds(ds) -> list[float]:
     ]
 
 
-def _sync(local: Path, prefix: str) -> None:
+def _sync(local: Path, prefix: str, name: str = NAME) -> None:
     """Upload `local` to s3://<prefix>/, pruning keys this build did not write.
 
     The prune is what a previous build's orphans need: chunks left behind by a
@@ -209,7 +212,7 @@ def _sync(local: Path, prefix: str) -> None:
     It deletes under `prefix`, so the guard below keeps a wrong prefix from
     reaching anything but this store.
     """
-    if not prefix.endswith(f'/{NAME}') or prefix.count('/') < 3:
+    if not prefix.endswith(f'/{name}') or prefix.count('/') < 3:
         raise ValueError(f'refusing to sync to prefix {prefix!r}')
 
     s3 = s3fs.S3FileSystem()
