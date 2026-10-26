@@ -4,8 +4,9 @@ The "Previous storms", "Previous fires", and "Previous floods" rows in the ocr-w
 for a selected building or point, which recorded events affected it. This
 note is the reference for what those artifacts are, how they are built, what
 the numbers mean, and what is still open. Build details for each artifact are
-in `ibtracs/README.md`, `mtbs/README.md`, and `storm_events/README.md`; the wind-field problem found
-along the way is in `ibtracs/climada-translation-artifact.md`.
+in the `README.md` under `ibtracs/`, `mtbs/`, `storm_events/`, `groundsource/`,
+`usfd/`, and `gfd/`; the wind-field problem found along the way is in
+`ibtracs/climada-translation-artifact.md`.
 
 ## Artifacts
 
