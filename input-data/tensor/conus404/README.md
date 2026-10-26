@@ -181,6 +181,6 @@ import xarray as xr
 
 base = 's3://carbonplan-ocr/input/fire-risk/tensor/conus404-ffwi'
 ffwi = xr.open_zarr(f'{base}/fosberg-fire-weather-index.icechunk', consolidated=False)
-q99  = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99.icechunk', consolidated=False)
+q99 = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99.icechunk', consolidated=False)
 mode = xr.open_zarr(f'{base}/fosberg-fire-weather-index_p99_mode.icechunk', consolidated=False)
 ```

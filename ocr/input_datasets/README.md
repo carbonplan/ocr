@@ -76,6 +76,7 @@ See the [full documentation](../../docs/how-to/input-dataset-ingestion.md) for:
 ```python
 from ocr.input_datasets.base import BaseDatasetProcessor, InputDatasetConfig
 
+
 class MyDatasetProcessor(BaseDatasetProcessor):
     """Processor for My Dataset."""
 
