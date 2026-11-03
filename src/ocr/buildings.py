@@ -1,4 +1,5 @@
 import json
+import tempfile
 from enum import StrEnum
 from pathlib import Path
 from typing import NamedTuple
@@ -6,11 +7,14 @@ from typing import NamedTuple
 import numpy as np
 import odc.geo.xr  # noqa: F401
 import pyarrow as pa
+import pyarrow.parquet as pq
 import xarray as xr
+from odc.geo import CRS
 from odc.geo.geom import BoundingBox
-from upath import UPath
 
 from ocr.duck import duckdb_connect
+from ocr.geoparquet import write_relation
+from ocr.regions import TIGER_VINTAGE, RegionLevel
 
 CONUS = BoundingBox(-125.0, 24.0, -66.0, 50.0, crs='EPSG:4326')
 
@@ -18,6 +22,15 @@ OVERTURE_RELEASE = '2026-09-23.1'
 OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings dataset; includes OpenStreetMap data
 OVERTURE_ATTRIBUTION_URL = 'https://docs.overturemaps.org/attribution/'
 OVERTURE_ATTRIBUTION = 'OpenStreetMap contributors, Overture Maps Foundation'
+# Fire's OCRConfig.vector.metadata_dict, minus `version` (comes with the versioned storage layout).
+VECTOR_METADATA = {
+    'provider': 'CarbonPlan',
+    'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',
+    'data_sources': 'https://docs.carbonplan.org/ocr/en/latest/reference/data-sources.html',
+    'license_name': 'ODBL',
+    'license_url': 'https://opendatacommons.org/licenses/odbl/',
+    'notice': 'Contains information from the Overture Maps Foundation database, which is made available here under the Open Database License (ODbL), a copy of which is available at https://opendatacommons.org/licenses/odbl/1-0/.',
+}
 
 
 class PointSamplingStrategy(StrEnum):
@@ -45,15 +58,15 @@ def _axis(coord: np.ndarray) -> Axis:
     return Axis(float(coord[0]), step)
 
 
-def _validate_dataset(ds: xr.Dataset) -> tuple[Axis, Axis]:
-    """Check `ds` is a 2D EPSG:4326 grid with evenly spaced coords; return its (y, x) axes."""
-    if ds.odc.crs != CONUS.crs:
-        raise ValueError(f'ds CRS {ds.odc.crs} is not {CONUS.crs}')
+def _validate_dataset(ds: xr.Dataset) -> tuple[CRS, Axis, Axis]:
+    """Check `ds` is a 2D grid with a CRS and evenly spaced coords; return its CRS and (y, x) axes."""
+    if (crs := ds.odc.crs) is None:
+        raise ValueError('ds has no CRS; write CF attrs (xproj write_crs_info)')
     ydim, xdim = ds.odc.spatial_dims
     if not_2d := [v for v, da in ds.data_vars.items() if set(da.dims) != {ydim, xdim}]:
         raise ValueError(f'variables {not_2d} are not 2D over {(ydim, xdim)}')
-    # Start and spacing of each axis, so SQL can turn lon/lat into row/column.
-    return _axis(ds[ydim].values), _axis(ds[xdim].values)
+    # Start and spacing of each axis, so SQL can turn a point into row/column.
+    return crs, _axis(ds[ydim].values), _axis(ds[xdim].values)
 
 
 def _cell_index_sql(coord: str, axis: Axis) -> str:
@@ -78,83 +91,121 @@ def _sample(ds: xr.Dataset, iy: np.ndarray, ix: np.ndarray) -> dict[str, pa.Arra
             xdim: xr.DataArray(np.where(inside, ix, 0), dims='pt'),
         }
     )
-    return {str(v): pa.array(da.values, mask=~inside) for v, da in pts.data_vars.items()}
-
-
-def write_geoparquet(tbl: pa.Table, out: str | Path) -> None:
-    """Save `tbl` as GeoParquet (local path or s3://), keeping its metadata."""
-    meta = {k.decode(): v.decode() for k, v in (tbl.schema.metadata or {}).items()}
-    to_s3 = UPath(out).protocol == 's3'
-    if not to_s3:
-        Path(out).parent.mkdir(parents=True, exist_ok=True)  # DuckDB COPY won't create dirs
-    with duckdb_connect(s3_write=to_s3) as con:
-        con.register('tbl', tbl)
-        con.execute(
-            "COPY tbl TO $out (FORMAT parquet, GEOPARQUET_VERSION 'V2', KV_METADATA $meta)",
-            {'out': str(out), 'meta': meta},
-        )
+    # NaN -> NULL: pyarrow's stats skip NaN, so DuckDB NaN filters (region stats, lod_shown) miss it (duckdb#25521).
+    return {
+        str(v): pa.array(da.values, mask=~inside | np.isnan(da.values))
+        for v, da in pts.data_vars.items()
+    }
 
 
 def sample_buildings(
     ds: xr.Dataset,
+    out: str | Path,
     *,
+    blocks: str | Path | None = None,
+    source: str | Path | None = None,
     release: str = OVERTURE_RELEASE,
     point_strategy: PointSamplingStrategy = PointSamplingStrategy.CENTROID,
-) -> pa.Table:
-    """Sample a 2D xarray dataset at every Overture building in CONUS (point, not zonal stats).
+    temp_dir: str | Path | None = None,
+) -> None:
+    """Sample a 2D xarray dataset at every Overture building in a CONUS block and write GeoParquet to `out`
+    (local path or s3://). Point sampling, not zonal stats.
 
-    `ds` must be a 2D lat/lon (EPSG:4326) grid with evenly spaced coords. Open it
+    `ds` must be a 2D grid with a CRS and evenly spaced coords; sampling points move into its CRS. Open it
     with chunks=None; dask is about 3.5x slower! Pick vars first with ds[[...]].
 
-    Buildings in the CONUS box but off the raster get null; raster NaN stays NaN.
+    Each building gets GEOID, the TIGER block (`blocks`, default RegionLevel.BLOCK.uri) holding its
+    sampling point; buildings in no block (Canada, Mexico, offshore) are dropped. A point on a shared
+    block edge keeps the lowest GEOID. Buildings off the raster get null; raster NaN stays NaN.
+    `source` overrides the Overture buildings URL.
 
-    Returns columns id (GERS ID), one per var, geometry and bbox. The Overture
-    release, its license, attribution (+ url) and `ds.attrs` (as dataset_<name>) are stored in the table metadata.
+    Columns: id (GERS ID), GEOID, one per var, geometry and bbox. Metadata: VECTOR_METADATA, the Overture
+    release, its license, attribution (+ url), TIGER vintage and `ds.attrs` (as dataset_<name>).
+
+    Streams through local files in `temp_dir`, so peak RAM is the cell indexes and sampled values, not
+    the table: DuckDB writes the join, `_sample` reads only iy/ix, then a positional join puts them together.
 
     >>> ds = xr.open_zarr(icechunk_store, chunks=None, consolidated=False)
-    >>> tbl = sample_buildings(ds[['rps_2011']])
-    >>> write_geoparquet(tbl, 's3://bucket/buildings.geoparquet')
+    >>> sample_buildings(ds[['rps_2011']], 'buildings.parquet')
     """
 
     point_strategy = PointSamplingStrategy(point_strategy)
-    y, x = _validate_dataset(ds)
+    ds_crs, y, x = _validate_dataset(ds)
 
-    url = f's3://overturemaps-us-west-2/release/{release}/theme=buildings/type=building/*.parquet'
-    with duckdb_connect() as con:
-        tbl = con.sql(
+    url = str(
+        source
+        or f's3://overturemaps-us-west-2/release/{release}/theme=buildings/type=building/*.parquet'
+    )
+    params = {
+        'url': url,
+        'blocks': str(blocks or RegionLevel.BLOCK.uri),
+        'left': CONUS.left,
+        'bottom': CONUS.bottom,
+        'right': CONUS.right,
+        'top': CONUS.top,
+    }
+    with tempfile.TemporaryDirectory(dir=temp_dir) as tmp, duckdb_connect() as con:
+        joined, values = Path(tmp) / 'joined.parquet', Path(tmp) / 'values.parquet'
+        # Relabels blocks to the buildings' CRS. Same as ST_Transform here (PROJ's default NAD83 -> WGS84 is a
+        # null transform), so both ignore the real ~1-1.5 m datum offset. ponytail: a projected block CRS needs ST_Transform.
+        crs = con.sql(
+            'SELECT ST_CRS(geometry) FROM read_parquet($url) LIMIT 1', params={'url': url}
+        ).fetchall()[0][0]
+        geom = f"ST_SetCRS(geometry, '{crs}')" if crs else 'geometry'
+        # Sampling point in the raster's CRS (lon/lat in, x/y out). Blocks still join on the lon/lat point.
+        p = 'c' if ds_crs == CONUS.crs else f"ST_Transform(c, 'OGC:CRS84', '{ds_crs}', true)"
+        con.execute(
             f"""
-            SELECT id, geometry, bbox,
-                   {_cell_index_sql('ST_Y(c)', y)} AS iy,
-                   {_cell_index_sql('ST_X(c)', x)} AS ix
-            FROM (SELECT id, geometry, bbox, {point_strategy}(geometry) AS c
-                  FROM read_parquet($url)
-                  WHERE bbox.xmin >= $left AND bbox.ymin >= $bottom
-                    AND bbox.xmax <= $right AND bbox.ymax <= $top)
+            COPY (
+                WITH blk AS (SELECT GEOID, {geom} AS geometry FROM read_parquet($blocks))
+                SELECT b.id, blk.GEOID, b.geometry, b.bbox,
+                       {_cell_index_sql('ST_Y(b.p)', y)} AS iy,
+                       {_cell_index_sql('ST_X(b.p)', x)} AS ix
+                FROM (SELECT id, geometry, bbox, {point_strategy}(geometry) AS c, {p} AS p
+                      FROM read_parquet($url)
+                      WHERE bbox.xmin >= $left AND bbox.ymin >= $bottom
+                        AND bbox.xmax <= $right AND bbox.ymax <= $top) b
+                JOIN blk ON ST_Intersects(blk.geometry, b.c)
+            ) TO $joined (FORMAT parquet)
             """,
-            params={
-                'url': url,
-                'left': CONUS.left,
-                'bottom': CONUS.bottom,
-                'right': CONUS.right,
-                'top': CONUS.top,
-            },
-        ).to_arrow_table()
-    return _assemble(tbl, ds, release)
+            params | {'joined': str(joined)},
+        )
+        # Read the raster value at every row's cell in one batch, in the joined file's row order.
+        idx = pq.read_table(joined, columns=['iy', 'ix'])
+        pq.write_table(pa.table(_sample(ds, idx['iy'].to_numpy(), idx['ix'].to_numpy())), values)
+        del idx
+        # A point on a shared block edge joins twice (1 in 20.4M in Texas); keep the row with
+        # the lowest GEOID. By row number, so one row per id even if GEOIDs tie.
+        rel = con.sql(
+            """
+            WITH j AS (SELECT * FROM read_parquet($joined, file_row_number = true)),
+            dups AS (
+                SELECT id, arg_min(file_row_number, GEOID) AS keep
+                FROM j GROUP BY id HAVING count(*) > 1
+            )
+            SELECT j.id, j.GEOID, v.*, j.geometry, j.bbox
+            FROM j POSITIONAL JOIN read_parquet($values) v
+            LEFT JOIN dups USING (id)
+            WHERE dups.id IS NULL OR j.file_row_number = dups.keep
+            """,
+            params={'joined': str(joined), 'values': str(values)},
+        )
+        write_relation(rel, _metadata(ds, release, point_strategy), out)
 
 
-def _assemble(tbl: pa.Table, ds: xr.Dataset, release: str) -> pa.Table:
-    """Add the sampled vars to `tbl` (id, iy, ix, geometry, bbox) and set the output metadata."""
-    # Read the raster value at every building's cell in one batch.
-    sampled = _sample(ds, tbl['iy'].to_numpy(), tbl['ix'].to_numpy())
-    # Go in order: ID (GERS), [Xarray dataset vars], geometry, bbox
-    for var, col in sampled.items():
-        tbl = tbl.append_column(var, col)
-    tbl = tbl.select(['id', *sampled, 'geometry', 'bbox'])
-    # Copy ds.attrs into parquet key-value metadata. Values must be text, so non-strings become JSON.
-    meta = {
-        'overture_release': release,
-        'overture_license': OVERTURE_LICENSE,
-        'overture_attribution': OVERTURE_ATTRIBUTION,
-        'overture_attribution_url': OVERTURE_ATTRIBUTION_URL,
-    } | {f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()}
-    return tbl.replace_schema_metadata(meta)
+def _metadata(
+    ds: xr.Dataset, release: str, point_strategy: PointSamplingStrategy
+) -> dict[str, str]:
+    """Output key/value metadata. `ds.attrs` values must be text, so non-strings become JSON."""
+    return (
+        VECTOR_METADATA
+        | {
+            'overture_release': release,
+            'overture_license': OVERTURE_LICENSE,
+            'overture_attribution': OVERTURE_ATTRIBUTION,
+            'overture_attribution_url': OVERTURE_ATTRIBUTION_URL,
+            'point_strategy': str(point_strategy),
+            'tiger_vintage': TIGER_VINTAGE,
+        }
+        | {f'dataset_{k}': v if isinstance(v, str) else json.dumps(v) for k, v in ds.attrs.items()}
+    )

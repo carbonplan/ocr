@@ -139,7 +139,8 @@
     no-build = ["cartopy", "h5py", "netcdf4", "opencv-python-headless", "pyogrio", "pyproj", "rasterio", "shapely"]
 
 [tool.pixi.pypi-dependencies]
-    ocr = { path = ".", editable = true }
+    geoparquet-lod = { git = "https://github.com/Shane98c/geoparquet-lod.git", rev = "5f4556a6d581ad850f247893652484fb713f7dfe" }
+    ocr            = { path = ".", editable = true }
 
 [tool.pixi.environments]
     # Map environments to features
@@ -174,6 +175,7 @@
 [tool.pixi.tasks]
     export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
     export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
+    regions-etl                  = { cmd = "python -m ocr.regions.tiger" }
     export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
     start-coiled-notebook        = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
     start-coiled-notebook-bigger = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }

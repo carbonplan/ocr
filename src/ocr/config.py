@@ -6,6 +6,7 @@ from typing import Annotated
 
 import icechunk
 import pydantic_settings
+from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
 from pydantic import BeforeValidator, field_validator
 from pydantic.dataclasses import dataclass
@@ -29,7 +30,10 @@ class StorageConfig(pydantic_settings.BaseSettings):
     def object_store(self) -> LocalStore | S3Store:
         if self.local_root:
             return LocalStore(self.local_root, mkdir=True)
-        return S3Store(self.bucket, region=self.region)
+        # boto3's chain covers SSO profiles, which obstore's own (env/IMDS only) misses on laptops.
+        return S3Store(
+            self.bucket, region=self.region, credential_provider=Boto3CredentialProvider()
+        )
 
     def uri(self, key: str) -> str:
         if self.local_root:

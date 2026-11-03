@@ -42,7 +42,8 @@ def read_tif(cfg: StorageConfig) -> xr.Dataset:
         'source': SOURCE,
         'doi': 'https://doi.org/10.5066/P954TTQN',
     }
-    return ds.proj.assign_crs(spatial_ref='EPSG:5070')
+    # write_crs_info stores CF crs_wkt on spatial_ref, so the CRS survives a reopen (odc reads it).
+    return ds.proj.assign_crs(spatial_ref='EPSG:5070').proj.write_crs_info()
 
 
 def write_icechunk(cfg: StorageConfig, ds: xr.Dataset, overwrite: bool) -> str:

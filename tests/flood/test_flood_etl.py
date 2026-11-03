@@ -2,6 +2,7 @@ from pathlib import Path
 
 import icechunk
 import numpy as np
+import odc.geo.xr  # noqa: F401
 import pytest
 import rioxarray  # noqa: F401
 import typer
@@ -58,6 +59,7 @@ def test_main_roundtrip(cfg: StorageConfig) -> None:
     _, ds = _open(cfg)
     np.testing.assert_array_equal(ds['fdp'].values, read_tif(cfg)['fdp'].values)
     assert 'EPSG:5070' in str(ds.attrs.get('proj:code'))
+    assert ds.odc.crs.epsg == 5070  # crs_wkt on spatial_ref survives the reopen
 
 
 def test_overwrite_guard(cfg: StorageConfig) -> None:

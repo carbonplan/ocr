@@ -197,6 +197,12 @@ Vector datasets contain the same risk variables as raster datasets, sampled at e
 | `bp_2011_riley` | float32 | Annual burn probability ~2011 (Riley et al, 2025) at building location             |
 | `bp_2047_riley` | float32 | Annual burn probability ~2047 (Riley et al, 2025) at building location             |
 
+#### Region column
+
+| Column  | Type   | Description                                                                                  |
+| ------- | ------ | -------------------------------------------------------------------------------------------- |
+| `GEOID` | string | Census TIGER block holding the building's sampling point; buildings in no CONUS block are dropped |
+
 #### Map columns
 
 The file also carries the columns the web map draws tiles from. `lod` is about 28% of the file,
@@ -233,7 +239,7 @@ still filter on `bbox` without selecting it.
 The consolidated building dataset is available at:
 
 ```text
-{building_geoparquet_uri}
+output/{risk}/v{version}/vector/buildings.geoparquet
 ```
 
 This single-file format enables:
@@ -245,14 +251,14 @@ This single-file format enables:
 ## Regional statistics datasets
 
 Regional statistics are published as GeoParquet, one dataset per region level, with each region's full
-geometry and the same values as the CSV and GeoJSON downloads (see
-[Regional statistics downloads](../access-data.md#regional-statistics-downloads) for the variables).
-The web map reads its region statistics from these files.
+TIGER geometry. Each region gets `building_count`, plus `{var}_mean`, `{var}_median` and `{var}_missing`
+(NULL or NaN count) for every building value and `{var}_hist` for the risk's histogram variables.
+Buildings roll up from their block `GEOID`, so levels nest. The web map reads its region statistics from these files.
 
 ### Layout
 
 ```text
-{regions_uri}/
+output/{risk}/v{version}/vector/regions/
   nation.parquet
   states.parquet
   counties/state_fips=SS/data.parquet
@@ -265,22 +271,28 @@ only the matching files:
 
 ```sql
 SELECT GEOID, building_count, rps_2011_median
-FROM read_parquet('{regions_uri}/blocks/*/*/data.parquet', hive_partitioning = true)
+FROM read_parquet('output/fire/v{version}/vector/regions/blocks/*/*/data.parquet', hive_partitioning = true)
 WHERE state_fips = '08' AND county_fips = '013';
 ```
 
-### Columns that differ from the CSV and GeoJSON
+### Columns
 
 | Column                                         | Type                          | Description                                      |
 | ---------------------------------------------- | ----------------------------- | ------------------------------------------------ |
 | `GEOID`                                        | string                        | Census GEOID, with leading zeros                 |
 | `STUSPS`                                       | string                        | State abbreviation (states only)                 |
 | `NAME`                                         | string                        | Region name (nation, states and counties)        |
-| `risk_score_2011_hist`, `risk_score_2047_hist` | list&lt;double&gt;            | Building count for each risk score, as a list    |
+| `{var}_hist` (e.g. `rps_2011_hist`)            | list&lt;int64&gt;             | Building count per bin: see below                |
 | `bbox`                                         | struct                        | Bounding box covering, with page statistics      |
-| `geometry`                                     | WKB (Polygon or MultiPolygon) | Full region geometry in WGS84 longitude/latitude |
+| `geometry`                                     | WKB (Polygon or MultiPolygon) | Full region geometry in EPSG:4269 (NAD83, from TIGER) longitude/latitude |
 
 There are no `longitude` and `latitude` columns; the centroid follows from the geometry.
+
+A hist with bin edges `b` (file metadata `bins`) is `[x = 0, x <= b[0], b[0] < x <= b[1], ..., x > b[-2]]`:
+negatives fall in the first nonzero bin and values above `b[-2]` in the last, so it sums to the
+non-null count. The last edge `b[-1]` is only a display cap for the last bin's label: values above it
+are still counted there (fire's legacy hist dropped them). NaN counts as missing. File metadata also carries `version`, `tiger_vintage` and the
+Overture release.
 
 ### Storage characteristics
 
