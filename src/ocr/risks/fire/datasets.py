@@ -7,6 +7,10 @@ import pydantic
 import xarray as xr
 from shapely import wkt
 
+# Public Source Coop mirror of s3://carbonplan-ocr; read anonymously
+SOURCE_COOP_BUCKET = 'us-west-2.opendata.source.coop'
+SOURCE_COOP_PREFIX = 'carbonplan/carbonplan-ocr'
+
 
 class Dataset(pydantic.BaseModel):
     """
@@ -58,13 +62,15 @@ class Dataset(pydantic.BaseModel):
         if self.data_format != 'zarr':
             raise ValueError("Dataset must be in 'zarr' format to convert to xarray.")
 
+        is_public = self.bucket == SOURCE_COOP_BUCKET
         xarray_open_kwargs = xarray_open_kwargs or {}
-        xarray_storage_options = xarray_storage_options or {}
+        xarray_storage_options = xarray_storage_options or ({'anon': True} if is_public else {})
+        storage_kwargs = {'anonymous': True, 'region': 'us-west-2'} if is_public else {}
 
         # Try icechunk if is_icechunk is True or None
         if is_icechunk is not False:
             try:
-                storage = ic.s3_storage(bucket=self.bucket, prefix=self.prefix)
+                storage = ic.s3_storage(bucket=self.bucket, prefix=self.prefix, **storage_kwargs)
                 repo = ic.Repository.open(storage=storage)
                 session = repo.readonly_session('main')
 
@@ -441,203 +447,203 @@ datasets = [
     Dataset(
         name='conus-overture-addresses',
         description='CONUS Overture Addresses',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/overture-maps/CONUS-overture-addresses-2025-09-24.0.parquet',
         data_format='geoparquet',
         version='v2025-09-24.0',
     ),
     Dataset(
         name='conus-overture-buildings',
         description='CONUS Overture Buildings',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/overture-maps/CONUS-overture-buildings-2025-09-24.0.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/overture-maps/CONUS-overture-buildings-2025-09-24.0.parquet',
         data_format='geoparquet',
         version='v2025-09-24.0',
     ),
     Dataset(
         name='conus-overture-region-id-tagged-buildings',
         description='CONUS Overture Buildings with census region identifiers added',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/overture-maps/CONUS-overture-region-tagged-buildings-2025-09-24.0.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='conus-overture-buildings-5070',
         description='CONUS Overture Buildings in EPSG 5070. Columns are: bbox, bbox_5070, geometry, geometry_5070',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/CONUS_overture_buildings_5070_2025-03-19.1.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/CONUS_overture_buildings_5070_2025-03-19.1.parquet',
         data_format='geoparquet',
         version='v2025-03-19.1',
     ),
     Dataset(
         name='conus404-hourly-Q2',
         description='Q2 variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/Q2',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/Q2',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-TD2',
         description='TD2 variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/TD2',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/TD2',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-PSFC',
         description='PSFC variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/PSFC',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/PSFC',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-T2',
         description='T2 variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/T2',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/T2',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-V10',
         description='V10 variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/V10',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/V10',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-hourly-U10',
         description='U10 variable from CONUS404 hourly data in Icechunk format',
-        bucket='carbonplan-ocr',
-        prefix='input/conus404-hourly-icechunk/U10',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/conus404-hourly-icechunk/U10',
         data_format='zarr',
     ),
     Dataset(
         name='us-census-blocks',
         description='US Census Blocks',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/census-tiger/blocks/blocks.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/census-tiger/blocks/blocks.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-tracts',
         description='US Census Tracts',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/census-tiger/tracts/tracts.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/census-tiger/tracts/tracts.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-counties',
         description='US Census Counties',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/census-tiger/counties/counties.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/census-tiger/counties/counties.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-states',
         description='US Census States',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/census-tiger/states/states.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/census-tiger/states/states.parquet',
         data_format='geoparquet',
     ),
     Dataset(
         name='us-census-nation',
         description='US Census CONUS States',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/vector/census-tiger/nation/nation.parquet',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/vector/census-tiger/nation/nation.parquet',
         data_format='geoparquet',
     ),
     # CONUS404 Fosberg Fire Weather Index (FFWI) datasets
     Dataset(
         name='conus404-ffwi',
         description='Fosberg Fire Weather Index (FFWI) on CONUS404 native grid',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-ffwi-p99',
         description='FFWI p99 (99th percentile) on CONUS404 native grid',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-ffwi-p99-wind-direction-distribution',
         description='Wind direction distribution during FFWI p99 conditions on CONUS404 native grid',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-ffwi-winds',
         description='Wind variables associated with FFWI computations on CONUS404 native grid',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/conus404-ffwi/winds.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/conus404-ffwi/winds.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='conus404-ffwi-p99-wind-direction-distribution-30m-4326',
         description='Wind direction distribution during FFWI p99 conditions reprojected to USFS wildfire risk geobox (EPSG:4326)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/conus404-ffwi/fosberg-fire-weather-index-p99-wind-direction-distribution-30m-4326.icechunk',
         data_format='zarr',
     ),
     # USFS Scott et al. 2024 (RDS-2020-0016-02)
     Dataset(
         name='scott-et-al-2024',
         description='USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02, EPSG:5070)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/scott-et-al-2024/processed.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/scott-et-al-2024/processed.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='scott-et-al-2024-30m-4326',
         description='USFS Wildfire Risk to Communities (2nd Edition, RDS-2020-0016-02, EPSG:4326, 30m)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/scott-et-al-2024/processed-30m-4326.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/scott-et-al-2024/processed-30m-4326.icechunk',
         data_format='zarr',
     ),
     # USFS Riley et al. 2025 (RDS-2025-0006)
     Dataset(
         name='riley-et-al-2025-2011-270m-5070',
         description='USFS Riley et al. 2025 2011 Climate Run (EPSG:5070)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-270m-5070.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-270m-5070.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='riley-et-al-2025-2047-270m-5070',
         description='USFS Riley et al. 2025 2047 Climate Run (EPSG:5070)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-270m-5070.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-270m-5070.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='riley-et-al-2025-2011-30m-4326',
         description='USFS Riley et al. 2025 2011 Climate Run (EPSG:4326, 30m)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-30m-4326.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/riley-et-al-2025/2011-climate-run-30m-4326.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='riley-et-al-2025-2047-30m-4326',
         description='USFS Riley et al. 2025 2047 Climate Run (EPSG:4326, 30m)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-30m-4326.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/riley-et-al-2025/2047-climate-run-30m-4326.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='dillon-et-al-2023-270m-5070',
         description='USFS Dillon et al. 2023 Wildfire Risk to Communities (EPSG:5070)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-270m-5070.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-270m-5070.icechunk',
         data_format='zarr',
     ),
     Dataset(
         name='dillon-et-al-2023-30m-4326',
         description='USFS Dillon et al. 2023 Wildfire Risk to Communities (EPSG:4326, 30m)',
-        bucket='carbonplan-ocr',
-        prefix='input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/fire-risk/tensor/USFS/dillon-et-al-2023/processed-30m-4326.icechunk',
         data_format='zarr',
     ),
     Dataset(

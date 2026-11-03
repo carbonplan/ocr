@@ -3,7 +3,14 @@ from unittest.mock import MagicMock, patch
 import pydantic
 import pytest
 
-from ocr.risks.fire.datasets import Catalog, Dataset, catalog, datasets
+from ocr.risks.fire.datasets import (
+    SOURCE_COOP_BUCKET,
+    SOURCE_COOP_PREFIX,
+    Catalog,
+    Dataset,
+    catalog,
+    datasets,
+)
 
 # ============= Dataset Tests =============
 
@@ -194,6 +201,28 @@ def test_to_xarray_without_icechunk(mock_open_dataset, sample_dataset):
         storage_options=storage_options,
     )
     assert result == mock_ds
+
+
+@patch('icechunk.s3_storage', side_effect=RuntimeError('no repo'))
+@patch('xarray.open_dataset')
+def test_source_coop_dataset_reads_anonymously(mock_open_dataset, mock_s3_storage):
+    dataset = Dataset(
+        name='public-dataset',
+        description='Public Dataset',
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/data.zarr',
+        data_format='zarr',
+    )
+
+    dataset.to_xarray()
+
+    mock_s3_storage.assert_called_once_with(
+        bucket=SOURCE_COOP_BUCKET,
+        prefix=f'{SOURCE_COOP_PREFIX}/input/data.zarr',
+        anonymous=True,
+        region='us-west-2',
+    )
+    assert mock_open_dataset.call_args.kwargs['storage_options'] == {'anon': True}
 
 
 # ============= Catalog Tests =============
