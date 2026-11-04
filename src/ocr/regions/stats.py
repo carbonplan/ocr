@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
 
+from ocr.config import TIGER_VINTAGE
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import kv_metadata, write_relation
-from ocr.regions import TIGER_VINTAGE, RegionLevel
+from ocr.regions import RegionLevel
 
 
 @dataclass(frozen=True)

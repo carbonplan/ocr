@@ -38,6 +38,8 @@ Edit `.env` and set required variables:
 - `OCR_ENVIRONMENT` — environment name (`QA`, `STAGING`, or `PROD`)
 - `OCR_DEBUG` — set to `1` for verbose logging
 
+Those are for the fire CLI (`ocr-deploy`). The `ocr` CLI reads `OCR_STORAGE_BUCKET`, `OCR_STORAGE_REGION` and `OCR_STORAGE_LOCAL_ROOT` instead; see [Storage and environment](data-pipeline.md#storage-and-environment).
+
 ### 4. Verify installation
 
 ```bash

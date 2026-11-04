@@ -7,14 +7,14 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from ocr.config import OutputPaths, Risk
+from ocr.config import TIGER_VINTAGE, OutputPaths, Risk
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import bbox_sql
-from ocr.regions import TIGER_VINTAGE, RegionLevel
+from ocr.regions import RegionLevel
 from ocr.regions.layout import write_level
 from ocr.regions.stats import Hist, write_region_stats
 from ocr.regions.tiger import nation_sql
-from ocr.stages import RISKS, RiskOutputs, write_regions
+from ocr.stages import RISKS, RiskSpec, write_regions
 
 BINS = [0.01, 0.1, 1, 100]
 HISTS = [Hist(['v'], BINS)]
@@ -173,7 +173,7 @@ def test_write_regions(paths, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     (root / 'output/flood/v2.0.0/vector').mkdir(parents=True)
     shutil.copy(paths['buildings'], root / 'output/flood/v2.0.0/vector/buildings.geoparquet')
     monkeypatch.setenv('OCR_STORAGE_LOCAL_ROOT', str(root))
-    monkeypatch.setitem(RISKS, Risk.FLOOD, RiskOutputs(HISTS, 'true', []))
+    monkeypatch.setitem(RISKS, Risk.FLOOD, RiskSpec(HISTS, 'true', []))
     # temp_dir is used: a missing one fails, an existing one is left empty.
     with pytest.raises(FileNotFoundError):
         write_regions(OutputPaths(Risk.FLOOD, 'v2.0.0'), levels, temp_dir=tmp_path / 'missing')

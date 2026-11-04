@@ -73,7 +73,7 @@
     ]
 
 [project.scripts]
-    ocr        = "ocr.risks.fire.deploy.cli:app"
+    ocr        = "ocr.cli:app"
     ocr-deploy = "ocr.risks.fire.deploy.cli:app"
 
 [tool.setuptools.packages.find]
@@ -163,7 +163,9 @@
     docs-serve = { cmd = "sphinx-autobuild docs _build/html" }
 
 [tool.pixi.feature.flood.tasks]
-    flood-etl = { cmd = "python -m ocr.risks.flood.etl.flood" }
+    flood-etl   = { cmd = "ocr stage flood etl" }  # pixi run flood-etl --version v2.0.0 [--overwrite]
+    flood-all   = { cmd = "ocr run runs/flood/v2.0.0.toml" }
+    flood-local = { cmd = "ocr run runs/flood/local.toml" }
 
 [tool.pixi.feature.data-mgmt.tasks]
     jupyter = { cmd = "jupyter lab" }
@@ -173,10 +175,8 @@
     python = "3.13.*"
 
 [tool.pixi.tasks]
-    export-and-create-coiled     = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
-    export-conda-file            = { cmd = "pixi project export conda-environment > environment.yml" }
-    regions-etl                  = { cmd = "python -m ocr.regions.tiger" }
-    export-conda-file-clean      = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml" }
-    start-coiled-notebook        = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-bigger = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.2xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
-    start-coiled-notebook-extra  = { cmd = "NAME=\"ocr-$(date +%Y%m%d-%H%M%S)\"; COILED_ENV_NAME=\"$NAME\" pixi run export-and-create-coiled ; coiled notebook start --software \"$NAME\" --sync --vm-type m8g.16xlarge --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR" }
+    # Fire deploy CI (.github/workflows/deploy.yaml) still builds a software env with this.
+    export-and-create-coiled = { cmd = "pixi project export conda-environment | python .github/scripts/export_pixi_to_conda.py --stdin --output environment.yaml --create-coiled" }
+    regions-etl              = { cmd = "python -m ocr.regions.tiger" }
+    # Package-syncs the local env. Bigger VM: `pixi run start-coiled-notebook m8g.2xlarge`.
+    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type {{ vm }} --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR", args = [{ arg = "vm", default = "m8g.xlarge" }] }

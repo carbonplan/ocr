@@ -1,0 +1,19 @@
+# Full flood deploy on Coiled: `pixi run flood-all`. Fields: `ocr.cli.RunFile`; reruns: `ocr run --help`.
+# Coiled package-syncs your local env, so run from one with the flood extra (etl imports rioxarray).
+risk = "flood"
+version = "v2.0.0"
+stages = ["pyramid", "buildings", "regions"]  # no etl: run `pixi run flood-etl --version v2.0.0` first
+coiled = true
+# bucket = "carbonplan-ocr"  # default; over env OCR_STORAGE_BUCKET
+# prefix = "output"  # default, outputs only; e.g. "scratch/<you>" for a trial run
+
+# Keyword args of each stage's utils (`ocr.stages.STAGE_KWARGS`), checked before any job starts.
+[kwargs.pyramid]
+levels = "auto"  # flood: 7 levels, factors 1..64
+
+[kwargs.buildings]
+point_strategy = "ST_Centroid"  # or "ST_PointOnSurface"
+
+# Optional coiled.batch.run overrides per stage (`ocr.cli.JobConfig`), over `ocr.cli.JOBS`, e.g.
+# [job.buildings]
+# vm_type = ["r7g.8xlarge"]

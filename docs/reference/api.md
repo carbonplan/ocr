@@ -120,12 +120,24 @@ Orchestration backends for local and Coiled execution.
    :show-inheritance:
 ```
 
-### CLI application
+### Pipeline stages
 
-Command-line interface exposed as the `ocr` command. For detailed usage and options, see the [Data Pipeline](../how-to/data-pipeline.md) guide.
+Stages, preflight checks and stage kwargs behind the `ocr` command. Usage: [Data pipeline](../how-to/data-pipeline.md).
 
 ```{eval-rst}
-.. click:: ocr.risks.fire.deploy.cli:ocr
-   :prog: ocr
-   :nested: full
+.. automodule:: ocr.stages
+   :members:
 ```
+
+### CLI application
+
+The `ocr` command (`ocr run`, `ocr stage`), run files (`RunFile`) and Coiled job settings (`JobConfig`, `JOBS`).
+
+```{eval-rst}
+.. automodule:: ocr.cli
+   :members:
+```
+
+### Fire CLI application
+
+The older fire CLI, exposed as `ocr-deploy` until the fire refactor. Options: `ocr-deploy --help`.

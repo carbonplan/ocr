@@ -12,13 +12,13 @@ import xarray as xr
 from odc.geo import CRS
 from odc.geo.geom import BoundingBox
 
+from ocr.config import OVERTURE_RELEASE, TIGER_VINTAGE
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import write_relation
-from ocr.regions import TIGER_VINTAGE, RegionLevel
+from ocr.regions import RegionLevel
 
 CONUS = BoundingBox(-125.0, 24.0, -66.0, 50.0, crs='EPSG:4326')
 
-OVERTURE_RELEASE = '2026-09-23.1'
 OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings dataset; includes OpenStreetMap data
 OVERTURE_ATTRIBUTION_URL = 'https://docs.overturemaps.org/attribution/'
 OVERTURE_ATTRIBUTION = 'OpenStreetMap contributors, Overture Maps Foundation'
@@ -106,6 +106,7 @@ def sample_buildings(
     source: str | Path | None = None,
     release: str = OVERTURE_RELEASE,
     point_strategy: PointSamplingStrategy = PointSamplingStrategy.CENTROID,
+    bbox: tuple[float, float, float, float] = CONUS.bbox,
     temp_dir: str | Path | None = None,
 ) -> None:
     """Sample a 2D xarray dataset at every Overture building in a CONUS block and write GeoParquet to `out`
@@ -117,7 +118,8 @@ def sample_buildings(
     Each building gets GEOID, the TIGER block (`blocks`, default RegionLevel.BLOCK.uri) holding its
     sampling point; buildings in no block (Canada, Mexico, offshore) are dropped. A point on a shared
     block edge keeps the lowest GEOID. Buildings off the raster get null; raster NaN stays NaN.
-    `source` overrides the Overture buildings URL.
+    `source` overrides the Overture buildings URL. `bbox` (lon/lat xmin, ymin, xmax, ymax; default CONUS)
+    keeps buildings whose bbox lies inside it, e.g. a city for a dev run.
 
     Columns: id (GERS ID), GEOID, one per var, geometry and bbox. Metadata: VECTOR_METADATA, the Overture
     release, its license, attribution (+ url), TIGER vintage and `ds.attrs` (as dataset_<name>).
@@ -131,6 +133,9 @@ def sample_buildings(
 
     point_strategy = PointSamplingStrategy(point_strategy)
     ds_crs, y, x = _validate_dataset(ds)
+    left, bottom, right, top = bbox
+    if not (left < right and bottom < top):
+        raise ValueError(f'bbox {bbox} is not (xmin, ymin, xmax, ymax)')
 
     url = str(
         source
@@ -139,10 +144,10 @@ def sample_buildings(
     params = {
         'url': url,
         'blocks': str(blocks or RegionLevel.BLOCK.uri),
-        'left': CONUS.left,
-        'bottom': CONUS.bottom,
-        'right': CONUS.right,
-        'top': CONUS.top,
+        'left': left,
+        'bottom': bottom,
+        'right': right,
+        'top': top,
     }
     with tempfile.TemporaryDirectory(dir=temp_dir) as tmp, duckdb_connect() as con:
         joined, values = Path(tmp) / 'joined.parquet', Path(tmp) / 'values.parquet'

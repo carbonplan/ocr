@@ -54,3 +54,13 @@ def test_write_multiscales_too_small() -> None:
     with pytest.raises(ValueError, match='no levels to write'):
         write_multiscales(repo, 'EPSG:4326', levels='auto')
     assert repo.lookup_branch('main') == head
+
+
+def test_write_multiscales_overwrite_changes_levels() -> None:
+    repo = _repo_with_base(1024)
+    write_multiscales(repo, 'EPSG:4326', levels=3)
+    write_multiscales(repo, 'EPSG:4326', levels=2, overwrite=True)
+    root = zarr.open_group(repo.readonly_session('main').store, mode='r')
+    assert sorted(root.group_keys()) == ['0', '1']
+    assert root['0/risk'].shape == (1024, 1024)
+    assert len(root.attrs['multiscales']['layout']) == 2

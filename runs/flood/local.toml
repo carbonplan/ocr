@@ -1,0 +1,17 @@
+# Local smoke run, in process: `OCR_STORAGE_LOCAL_ROOT=~/ocr-data pixi run flood-local`.
+# Needs under the local root: a flood store (etl isn't run here; make one with
+# `OCR_STORAGE_LOCAL_ROOT=~/ocr-data pixi run -e flood flood-etl --version v2.0.0-dev`, which reads the
+# raw tif at input/flood/raw/usgs-fdp/CONUS_FDP_100m.tif) and, for regions,
+# TIGER for every level at input/regions/census-tiger/ (`pixi run regions-etl`).
+risk = "flood"
+version = "v2.0.0-dev"
+stages = ["buildings", "regions"]
+
+[kwargs.buildings]
+memory_limit = "8GB"  # DuckDB, for the LOD step on a laptop
+workers = 4
+# Subset instead of CONUS (lon/lat xmin, ymin, xmax, ymax); regions then cover only it.
+# bbox = [-122.5, 37.7, -122.3, 37.8]  # San Francisco
+# Offline: local files for TIGER blocks and Overture buildings.
+# blocks = "/path/to/inputs/tiger/blocks_ca.parquet"
+# source = "/path/to/inputs/overture/buildings_ca.parquet"

@@ -5,12 +5,10 @@ import numpy as np
 import odc.geo.xr  # noqa: F401
 import pytest
 import rioxarray  # noqa: F401
-import typer
 import xarray as xr
-from typer.testing import CliRunner
 
-from ocr.config import StorageConfig
-from ocr.risks.flood.etl.flood import RAW_KEY, STORE_PREFIX, main, read_tif
+from ocr.config import OutputPaths, Risk, StorageConfig
+from ocr.risks.flood.etl.flood import RAW_KEY, read_tif, run
 
 NODATA = -9999.0
 
@@ -33,10 +31,7 @@ def cfg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> StorageConfig:
     return StorageConfig()
 
 
-def _run(*args: str) -> object:
-    app = typer.Typer()
-    app.command()(main)
-    return CliRunner().invoke(app, list(args))
+OUT = OutputPaths(Risk.FLOOD, 'v2.0.0')
 
 
 def test_read_tif(cfg: StorageConfig) -> None:
@@ -49,13 +44,12 @@ def test_read_tif(cfg: StorageConfig) -> None:
 
 
 def _open(cfg: StorageConfig) -> tuple[icechunk.Repository, xr.Dataset]:
-    repo = icechunk.Repository.open(cfg.icechunk_storage(STORE_PREFIX))
-    return repo, xr.open_zarr(repo.readonly_session('main').store, consolidated=False)
+    repo = icechunk.Repository.open(cfg.icechunk_storage(OUT.store))
+    return repo, xr.open_zarr(repo.readonly_session('main').store, group='0', consolidated=False)
 
 
-def test_main_roundtrip(cfg: StorageConfig) -> None:
-    result = _run()
-    assert result.exit_code == 0, result.output
+def test_run_roundtrip(cfg: StorageConfig) -> None:
+    run(OUT)
     _, ds = _open(cfg)
     np.testing.assert_array_equal(ds['fdp'].values, read_tif(cfg)['fdp'].values)
     assert 'EPSG:5070' in str(ds.attrs.get('proj:code'))
@@ -63,9 +57,10 @@ def test_main_roundtrip(cfg: StorageConfig) -> None:
 
 
 def test_overwrite_guard(cfg: StorageConfig) -> None:
-    assert _run().exit_code == 0
+    run(OUT)
     repo, _ = _open(cfg)
     first = repo.lookup_branch('main')
-    assert isinstance(_run().exception, FileExistsError)
-    assert _run('--overwrite').exit_code == 0
+    with pytest.raises(FileExistsError):
+        run(OUT)
+    run(OUT, overwrite=True)
     assert repo.lookup_branch('main') != first

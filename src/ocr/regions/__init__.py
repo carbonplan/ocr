@@ -2,8 +2,6 @@ from enum import StrEnum
 
 from ocr.config import StorageConfig
 
-TIGER_VINTAGE = '2026'
-
 
 class RegionLevel(StrEnum):
     """Census TIGER level. The value is its folder under input/regions/census-tiger/ (written by ocr.regions.tiger)."""

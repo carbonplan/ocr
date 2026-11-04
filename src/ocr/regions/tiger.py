@@ -25,10 +25,10 @@ import typer
 from obstore.store import HTTPStore
 from upath import UPath
 
-from ocr.config import StorageConfig
+from ocr.config import TIGER_VINTAGE, StorageConfig
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import bbox_sql, write_geoparquet
-from ocr.regions import TIGER_VINTAGE, RegionLevel
+from ocr.regions import RegionLevel
 
 TIGER = f'https://www2.census.gov/geo/tiger/TIGER{TIGER_VINTAGE}'
 # CONUS states + DC, copied from fire's census_tiger.FIPS_CODES (importing it pulls in coiled + geopandas).
@@ -74,8 +74,21 @@ STORE = HTTPStore.from_url(TIGER, client_options={'timeout': timedelta(minutes=3
 
 def download(path: str, dest: Path) -> None:
     """Stream TIGER `path` (relative to TIGER) to `dest`."""
+    try:
+        _stream(STORE, path, dest)
+    except obstore.exceptions.GenericError as e:
+        # census.gov's CDN can cache a "Request Rejected" HTML page for a zip (2026: ND blocks); it has
+        # no Content-Length, which obstore refuses. A query string skips that cache entry; it must sit
+        # in the store URL, since obstore percent-encodes '?' in a path.
+        if 'Content-Length' not in str(e):
+            raise
+        store = HTTPStore.from_url(f'{TIGER}/{path}?nocache', client_options=STORE.client_options)
+        _stream(store, '', dest)
+
+
+def _stream(store: HTTPStore, path: str, dest: Path) -> None:
     with dest.open('wb') as f:
-        for chunk in obstore.get(STORE, path).stream():
+        for chunk in obstore.get(store, path).stream():
             f.write(chunk)
 
 

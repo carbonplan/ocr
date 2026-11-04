@@ -1,4 +1,4 @@
-"""Building GeoParquet for analysis and the map in one file (Buildings from the work done in carbonplan/ocr-multi-hazard#8).
+"""Building GeoParquet for analysis and the map in one file.
 
 The output is GeoParquet with every source column and the original geometry, plus
 geoparquet-lod overviews: per-zoom simplified copies, Hilbert order and a spatial index,
@@ -88,7 +88,7 @@ def write_buildings_lod(
     or this function's own output) with overviews to storage key `out_key`, keeping its
     key/value metadata plus `metadata`.
 
-    `shown` is a SQL predicate for the buildings coarse zooms draw (`RiskOutputs.lod_shown`);
+    `shown` is a SQL predicate for the buildings coarse zooms draw (`RiskSpec.lod_shown`);
     `carry` names the columns tiles carry for styling, each a name or a
     (name, Arrow type) pair such as ('rps_2011', 'halffloat'). `temp_dir` holds the local files (on
     Coiled, a large volume). The rest are the thinning knobs.

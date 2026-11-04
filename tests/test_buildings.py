@@ -10,7 +10,6 @@ import xarray as xr
 import xproj  # noqa: F401
 
 from ocr.buildings import (
-    OVERTURE_RELEASE,
     VECTOR_METADATA,
     PointSamplingStrategy,
     _axis,
@@ -20,9 +19,9 @@ from ocr.buildings import (
     _validate_dataset,
     sample_buildings,
 )
+from ocr.config import OVERTURE_RELEASE, TIGER_VINTAGE
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import bbox_sql, write_geoparquet
-from ocr.regions import TIGER_VINTAGE
 
 
 def _ds(crs: str = 'EPSG:4326') -> xr.Dataset:
@@ -70,6 +69,8 @@ def test_rejects_bad_inputs_before_s3(tmp_path: Path) -> None:
         sample_buildings(ds, out)
     with pytest.raises(ValueError, match='not a valid PointSamplingStrategy'):
         sample_buildings(_ds(), out, point_strategy='1; DROP TABLE x')
+    with pytest.raises(ValueError, match='bbox'):
+        sample_buildings(_ds(), out, bbox=(-99, 30, -100, 31))  # xmin > xmax
 
 
 def test_write_geoparquet_metadata(tmp_path: Path) -> None:
@@ -195,6 +196,12 @@ def test_sample_buildings_tags_blocks(tmp_path: Path, blocks: Path) -> None:
     assert rows == {'a': ('A', 0), 'b': ('B', 1), 'c': ('C', 5)}
     assert tbl.schema.metadata[b'tiger_vintage'] == TIGER_VINTAGE.encode()
     assert b'notice' in tbl.schema.metadata
+
+
+def test_sample_buildings_bbox(tmp_path: Path, blocks: Path) -> None:
+    src = _source(tmp_path, {'a': _square(-99.5, 30.5), 'b': _square(-98.5, 30.5)})
+    tbl = _sampled(tmp_path, blocks=blocks, source=src, bbox=(-100, 30, -99, 31))
+    assert tbl['id'].to_pylist() == ['a']
 
 
 def test_sample_buildings_values_follow_rows(tmp_path: Path) -> None:
