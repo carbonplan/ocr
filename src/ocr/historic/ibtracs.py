@@ -52,7 +52,6 @@ from ocr.buildings import CONUS
 from ocr.config import StorageConfig
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import bbox_sql, kv_metadata, write_relation
-from ocr.risks.fire.utils import get_temp_dir
 
 ZIP_NAME = 'IBTrACS.since1980.list.v04r01.lines.zip'
 URL = (
@@ -249,8 +248,8 @@ def built_from_sha256(key: str) -> str | None:
 
 
 def main(overwrite: bool = typer.Option(False, '--overwrite')) -> None:
-    # /scratch on Coiled (VM disk, not the Docker overlay /tmp); the system temp dir elsewhere.
-    with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmp:
+    # TMPDIR, else the system temp dir; on Coiled pass --env TMPDIR=/scratch (VM disk, not overlay /tmp).
+    with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / ZIP_NAME
         sha256, last_modified = download(URL, zip_path)
         day = source_date(last_modified)

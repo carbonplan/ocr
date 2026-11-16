@@ -4,34 +4,28 @@ OCR uses [syrupy](https://github.com/tophat/syrupy) for snapshot testing with cu
 
 ## Overview
 
-The `XarraySnapshotExtension` and `GeoDataFrameSnapshotExtension` allow you to:
+The `XarraySnapshotExtension` allows you to:
 
-- Create and compare snapshots of xarray DataArrays and Datasets and GeoPandas dataframes
+- Create and compare snapshots of xarray DataArrays and Datasets
 - Store snapshots in S3 (default) or locally
-- Handle large datasets efficiently using zarr format and geoparquet for geodataframes.
+- Handle large datasets efficiently using zarr format
 
 ## Basic usage
 
 ### S3 snapshots (default)
 
-By default, snapshots are stored in S3 at `s3://carbonplan-ocr/integration-tests/snapshots/`. This is configured in `tests/conftest.py` and can be overridden if needed.
+By default, snapshots are stored in S3 at `s3://carbonplan-ocr/integration-tests/snapshots/`. This is configured in `tests/fire/conftest.py` and can be overridden if needed. The fire model's snapshot tests are in `tests/fire/risks/test_fire_snapshots.py` (integration, `pixi run tests-integration`); the examples below use a hypothetical `tests/test_snapshot.py`.
 
 ```python
 import numpy as np
 import pytest
 import xarray as xr
-import geopandas as gpd
-from ocr.risks.fire.testing import XarraySnapshotExtension, GeoDataFrameSnapshotExtension
+from ocr.risks.fire.testing import XarraySnapshotExtension
 
 
 @pytest.fixture
 def xarray_snapshot(snapshot):
     return snapshot.use_extension(XarraySnapshotExtension)
-
-
-@pytest.fixture
-def geodataframe_snapshot(snapshot):
-    return snapshot.use_extension(GeoDataFrameSnapshotExtension)
 
 
 def test_my_data(xarray_snapshot):
@@ -40,20 +34,6 @@ def test_my_data(xarray_snapshot):
         dims=('x', 'y'),
     )
     assert xarray_snapshot == data
-
-
-def test_geodataframe_snapshot_extension(geodataframe_snapshot) -> None:
-    """Test snapshot extension for GeoDataFrames."""
-    gdf = gpd.GeoDataFrame(
-        {
-            'name': ['Point A', 'Point B', 'Point C'],
-            'value': [10.5, 20.3, 30.7],
-            'category': ['type1', 'type2', 'type1'],
-        },
-        geometry=[Point(-120.0, 35.0), Point(-119.5, 35.5), Point(-119.0, 36.0)],
-        crs='EPSG:4326',
-    )
-    assert geodataframe_snapshot == gdf
 ```
 
 Run tests with:
@@ -82,7 +62,7 @@ SNAPSHOT_STORAGE_PATH=tests/__snapshots__ pixi run pytest tests/test_snapshot.py
 
 The snapshot storage location is controlled by the `SNAPSHOT_STORAGE_PATH` environment variable:
 
-- **Default**: `s3://carbonplan-ocr/integration-tests/snapshots/` (set in `tests/conftest.py`)
+- **Default**: `s3://carbonplan-ocr/integration-tests/snapshots/` (set in `tests/fire/conftest.py`)
 - **Override**: Set `SNAPSHOT_STORAGE_PATH` to any local path or S3 URI
 
 ### Examples
@@ -106,9 +86,9 @@ Snapshots are named based on the test file and function:
 
 Example:
 
-- Test file: `tests/test_fire_risk.py`
+- Test file: `tests/fire/risks/test_fire_snapshots.py`
 - Test function: `test_wind_adjustment`
-- Snapshot name: `test_fire_risk_test_wind_adjustment.zarr`
+- Snapshot name: `test_fire_snapshots_test_wind_adjustment.zarr`
 
 ## Managing S3 snapshots
 

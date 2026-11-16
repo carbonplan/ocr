@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from ocr.risks.fire.risks.fire import (
+from ocr.risks.fire.model import (
     generate_weights,
     generate_wind_directional_kernels,
     get_grid_spacing_info,

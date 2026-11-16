@@ -9,7 +9,7 @@ WGS84 and simplified at ~0.1 m, which strips the 1 m densified vertices
 
 run: pixi run historic-mtbs [--overwrite]
 peak is ~29 GiB and ~5 min on 16 vCPU / 124 GiB:
-coiled run --vm-type r8g.4xlarge --region us-west-2 --no-credential-forwarding pixi run historic-mtbs
+coiled run --vm-type r8g.4xlarge --region us-west-2 --no-credential-forwarding --env TMPDIR=/scratch pixi run historic-mtbs
 """
 
 import hashlib
@@ -30,7 +30,6 @@ from ocr.buildings import CONUS
 from ocr.config import StorageConfig
 from ocr.duck import duckdb_connect
 from ocr.geoparquet import bbox_sql, kv_metadata, write_relation
-from ocr.risks.fire.utils import get_temp_dir
 
 URL = (
     'https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/composite_data/'
@@ -193,8 +192,8 @@ def built_from_sha256(key: str) -> str | None:
 
 
 def main(overwrite: bool = typer.Option(False, '--overwrite')) -> None:
-    # /scratch on Coiled (VM disk, not the Docker overlay /tmp); the system temp dir elsewhere.
-    with tempfile.TemporaryDirectory(dir=get_temp_dir()) as tmp:
+    # TMPDIR, else the system temp dir; on Coiled pass --env TMPDIR=/scratch (VM disk, not overlay /tmp).
+    with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / 'mtbs_perimeter_data.zip'
         sha256, last_modified = download(URL, zip_path)
         day = source_date(last_modified)

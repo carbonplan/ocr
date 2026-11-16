@@ -4,11 +4,11 @@ import pytest
 from odc.geo.xr import assign_crs
 
 from ocr import catalog
-from ocr.risks.fire.risks.fire import (
+from ocr.risks.fire.model import (
     calculate_wind_adjusted_risk,
     create_wind_informed_burn_probability,
 )
-from ocr.risks.fire.testing import GeoDataFrameSnapshotExtension, XarraySnapshotExtension
+from ocr.risks.fire.testing import XarraySnapshotExtension
 from ocr.risks.fire.utils import geo_sel
 
 # Set default snapshot storage path to S3 if not already set
@@ -187,12 +187,3 @@ def xarray_snapshot(snapshot):
     Available to all tests - use for snapshotting xarray DataArrays and Datasets.
     """
     return snapshot.use_extension(XarraySnapshotExtension)
-
-
-@pytest.fixture
-def geodataframe_snapshot(snapshot):
-    """Fixture for GeoDataFrame snapshot testing.
-
-    Available to all tests - use for snapshotting GeoPandas GeoDataFrames.
-    """
-    return snapshot.use_extension(GeoDataFrameSnapshotExtension)

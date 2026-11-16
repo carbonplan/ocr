@@ -22,16 +22,16 @@ Overture Maps building and address data for CONUS.
 
 ```bash
 # Process both buildings and addresses (default)
-ocr ingest-data run-all overture-maps
+ocr-ingest run-all overture-maps
 
 # Process only buildings
-ocr ingest-data process overture-maps --overture-data-type buildings
+ocr-ingest process overture-maps --overture-data-type buildings
 
 # Process only addresses
-ocr ingest-data process overture-maps --overture-data-type addresses
+ocr-ingest process overture-maps --overture-data-type addresses
 
 # Dry run to preview operations
-ocr ingest-data run-all overture-maps --dry-run
+ocr-ingest run-all overture-maps --dry-run
 ```
 
 **Output**:
@@ -63,17 +63,17 @@ US Census TIGER/Line geographic boundaries for CONUS + DC.
 
 ```bash
 # Process all geography types (default)
-ocr ingest-data run-all census-tiger
+ocr-ingest run-all census-tiger
 
 # Process only counties
-ocr ingest-data process census-tiger --census-geography-type counties
+ocr-ingest process census-tiger --census-geography-type counties
 
 # Process tracts for specific states
-ocr ingest-data process census-tiger --census-geography-type tracts \
+ocr-ingest process census-tiger --census-geography-type tracts \
   --census-subset-states California --census-subset-states Oregon
 
 # Dry run to preview operations
-ocr ingest-data run-all census-tiger --dry-run
+ocr-ingest run-all census-tiger --dry-run
 ```
 
 **Output**:
@@ -105,16 +105,16 @@ Overture Maps building and address data for CONUS.
 
 ```bash
 # Process both buildings and addresses (default)
-ocr ingest-data run-all overture-maps
+ocr-ingest run-all overture-maps
 
 # Process only buildings
-ocr ingest-data process overture-maps --overture-data-type buildings
+ocr-ingest process overture-maps --overture-data-type buildings
 
 # Process only addresses
-ocr ingest-data process overture-maps --overture-data-type addresses
+ocr-ingest process overture-maps --overture-data-type addresses
 
 # Dry run to preview operations
-ocr ingest-data run-all overture-maps --dry-run
+ocr-ingest run-all overture-maps --dry-run
 ```
 
 **Output**:

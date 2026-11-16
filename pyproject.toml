@@ -20,7 +20,7 @@
         "pydantic-settings>=2.16.1,<3",
         "semver>=3.1.0,<4", # required by pydantic_extra_types.semantic_version
         "s3fs>=2026.9.0",
-        "topozarr>=0.2.1,<0.3",
+        "topozarr>=0.3.0,<0.4",
         "universal-pathlib>=0.3.10,<0.4",
         "xarray>=2026.9.0",
         "xproj>=0.2.1,<0.3",
@@ -31,18 +31,14 @@
 [project.optional-dependencies]
     fire = [
         "bottleneck>=1.6.0,<2",
-        "cartopy>=0.26.0,<0.27",
         "dask>=2026.8.0",
         "flox>=0.11.2,<0.12",
         "geopandas>=1.2.0,<2",
-        "matplotlib>=3.11.0,<4",
-        "morecantile>=7.1.0,<8",
         "opencv-python-headless>=5.0.0,<6",
         "pint-xarray>=0.6.1,<0.7",
         "pooch>=1.9.0,<2",
         "pydantic>=2.14.1,<3",
         "pyproj>=3.8.0,<4",
-        "python-dotenv>=1.2.0,<2",
         "rasterio>=1.5.2,<2",
         "rich>=15.0.0",
         "rioxarray>=0.23.0,<0.24",
@@ -54,6 +50,8 @@
     coiled-deploy = ["coiled>=1.135.6,<2", "jupyter-server-proxy>=4.6.0,<5", "jupyterlab>=4.6.4,<5"]
     data-mgmt = [
         "boto3>=1.40.0,<2", # aiobotocore (via s3fs) pins botocore
+        "cartopy>=0.26.0,<0.27", # notebooks only
+        "matplotlib>=3.11.0,<4", # notebooks only
         "netcdf4>=1.7.5,<2",
         "patool>=4.1.0,<5",
     ]
@@ -62,10 +60,10 @@
 [dependency-groups]
     dev = ["prek>=0.5.7,<0.6", "pytest>=9.1.1,<10", "pytest-cov>=7.1.0,<8", "ruff>=0.17.3,<0.18", "syrupy>=6.1.1,<7"]
     docs = [
+        "matplotlib>=3.11.0,<4", # sphinxext-opengraph social cards
         "myst-nb>=1.4.0,<2",
         "sphinx-autobuild>=2025.8.25",
         "sphinx-book-theme>=1.4.0,<2",
-        "sphinx-click>=6.2.0,<7",
         "sphinx-copybutton>=0.5.2,<0.6",
         "sphinx-design>=0.7.0,<0.8",
         "sphinxcontrib-mermaid>=2.1.1,<3",
@@ -74,7 +72,7 @@
 
 [project.scripts]
     ocr        = "ocr.cli:app"
-    ocr-deploy = "ocr.risks.fire.deploy.cli:app"
+    ocr-ingest = "ocr.risks.fire.input_datasets.cli:app"
 
 [tool.setuptools.packages.find]
     include = ["ocr*"]
@@ -117,7 +115,6 @@
         "--cov-report=xml",
         "--cov=./src/ocr",
         "--verbose",
-        "--ignore=tests/fire",  # legacy fire tests; skipped during the multi-hazard refactor
     ]
     console_output_style = "count"
     markers = [
@@ -146,7 +143,6 @@
     # Map environments to features
     all-deps = ["coiled-deploy", "data-mgmt", "dev", "docs", "fire", "flood"]
     default  = ["coiled-deploy", "data-mgmt", "dev", "fire", "flood"]
-    deploy   = ["coiled-deploy", "fire"]
     dev      = ["coiled-deploy", "data-mgmt", "dev", "fire", "flood"]
     docs     = ["coiled-deploy", "docs", "fire"]
     flood    = ["coiled-deploy", "data-mgmt", "dev", "fire", "flood"]
@@ -167,10 +163,21 @@
     flood-all   = { cmd = "ocr run runs/flood/v2.0.0.toml" }
     flood-local = { cmd = "ocr run runs/flood/local.toml" }
 
+[tool.pixi.feature.fire.tasks]
+    fire-all   = { cmd = "ocr run runs/fire/v2.0.0.toml" }
+    fire-local = { cmd = "ocr run runs/fire/local.toml" }
+
+# Fire's PROJ stack, pinned to match production (ocr.risks.fire.model.check_proj_grids).
+# proj-data is ~800 MiB of datum grids. Coiled gets both via cli.DEFAULT's conda extras.
+[tool.pixi.feature.fire.dependencies]
+    proj         = "==9.8.1"
+    proj-data    = "==1.25"
+    rasterio     = "==1.5.2"
+
 [tool.pixi.feature.data-mgmt.tasks]
     jupyter = { cmd = "jupyter lab" }
 
-# Only python comes from conda-forge; all other deps live in the standard [project] / [dependency-groups] tables.
+# Only python (and fire's PROJ stack, above) comes from conda-forge; all other deps live in the standard [project] / [dependency-groups] tables.
 [tool.pixi.dependencies]
     python = "3.13.*"
 
@@ -179,4 +186,5 @@
     historic-mtbs = { cmd = "python -m ocr.historic.mtbs" }
     historic-ibtracs = { cmd = "python -m ocr.historic.ibtracs" }
     # Package-syncs the local env. Bigger VM: `pixi run start-coiled-notebook m8g.2xlarge`.
-    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type {{ vm }} --sync-ignore .pixi --sync-ignore .venv --tag Project=OCR", args = [{ arg = "vm", default = "m8g.xlarge" }] }
+    # It has no conda-extras option, so its kernel gets the newest proj and no proj-data: fire scoring there fails check_proj_grids.
+    start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type {{ vm }} --sync-ignore .pixi --sync-ignore .venv --sync-ignore .git --sync-ignore notebooks/layout-experiment/data --sync-ignore .env --sync-ignore '*.env' --tag Project=OCR", args = [{ arg = "vm", default = "m8g.xlarge" }] }

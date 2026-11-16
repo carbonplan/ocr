@@ -18,22 +18,12 @@ High-level package entry points and public exports.
 
 ## Core modules
 
-### Configuration
+### Region grid
 
-Configuration models for storage, chunking, Coiled, and processing settings.
-
-```{eval-rst}
-.. automodule:: ocr.risks.fire.config
-   :members:
-   :show-inheritance:
-```
-
-### Type definitions
-
-Strongly typed enums for environment, platform, and risk types.
+The Scott 2024 30 m CONUS grid split into regions, the parts fire `score` writes.
 
 ```{eval-rst}
-.. automodule:: ocr.risks.fire.types
+.. automodule:: ocr.risks.fire.grid
    :members:
    :show-inheritance:
 ```
@@ -54,7 +44,7 @@ Dataset and Catalog abstractions for Zarr and GeoParquet on S3/local storage.
 
 ### CONUS404 helpers
 
-Load CONUS404 variables, compute relative humidity, wind rotation and diagnostics. Geographic selection utilities (point/bbox) with CRS-aware transforms.
+Load CONUS404 variables, compute relative humidity, wind rotation, wind speed and direction.
 
 ```{eval-rst}
 .. automodule:: ocr.risks.fire.conus404
@@ -68,7 +58,7 @@ Load CONUS404 variables, compute relative humidity, wind rotation and diagnostic
 
 ### General utilities
 
-Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file transfer.
+Geographic selection (point/bbox) with CRS-aware transforms.
 
 ```{eval-rst}
 .. automodule:: ocr.risks.fire.utils
@@ -78,7 +68,7 @@ Helpers for DuckDB (extension loading, S3 secrets), vector sampling, and file tr
 
 ### Testing utilities
 
-Snapshot testing extensions for xarray and GeoPandas.
+Snapshot testing extension for xarray.
 
 ```{eval-rst}
 .. automodule:: ocr.risks.fire.testing
@@ -95,7 +85,7 @@ Snapshot testing extensions for xarray and GeoPandas.
 Core fire/wind risk utilities used by the pipeline (kernels, wind classification, risk composition).
 
 ```{eval-rst}
-.. automodule:: ocr.risks.fire.risks.fire
+.. automodule:: ocr.risks.fire.model
    :members:
    :show-inheritance:
 ```
@@ -109,16 +99,6 @@ Core fire/wind risk utilities used by the pipeline (kernels, wind classification
 
 These modules are used internally by the pipeline and are not intended for direct public consumption. They are documented here for completeness and advanced use cases.
 :::
-
-### Batch managers
-
-Orchestration backends for local and Coiled execution.
-
-```{eval-rst}
-.. automodule:: ocr.risks.fire.deploy.managers
-   :members:
-   :show-inheritance:
-```
 
 ### Pipeline stages
 

@@ -350,4 +350,4 @@ All datasets include descriptive metadata attributes:
 ## Related documentation
 
 - [Access data](../access-data.md): Information on accessing and downloading datasets
-- [Deployment](deployment.md): Details on data storage infrastructure
+- [Data pipeline](../how-to/data-pipeline.md): How the outputs are produced and where they are stored

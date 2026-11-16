@@ -79,7 +79,6 @@ methods/fire-risk/evaluation
 
 reference/api
 reference/project-structure
-reference/deployment
 reference/data-schema
 reference/data-sources
 ```

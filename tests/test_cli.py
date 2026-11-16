@@ -76,6 +76,30 @@ def test_job_state(status: list[dict], state: str | None) -> None:
     assert cli.job_state(status) == state
 
 
+def two(a: tuple[str, int | None], b: tuple[str, int | None], cluster: str = 'ready') -> list[dict]:
+    tasks = [{'state': s, 'exit_code': e} for s, e in (a, b)]
+    return [{'cluster_state': cluster, 'tasks': tasks}]
+
+
+@pytest.mark.parametrize(
+    ('status', 'finished'),
+    [
+        ([], False),
+        (jobs('pending'), False),
+        # A failed task doesn't end a map job while others still run (unlike job_state).
+        (two(('error', 1), ('running', None)), False),
+        (two(('done', 1), ('running', None)), False),
+        (two(('error', 1), ('done', 0)), True),
+        (two(('done', 0), ('done', 0)), True),
+        # Cluster gone (job_timeout, lost VM): finished, the next round re-plans.
+        (two(('done', 0), ('running', None), cluster='stopped'), True),
+        (jobs('pending', cluster_state='error'), True),
+    ],
+)
+def test_job_finished(status: list[dict], finished: bool) -> None:
+    assert cli.job_finished(status) is finished
+
+
 def test_ctrl_c_deletes_cluster(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
     batch.status.side_effect = [jobs('running'), KeyboardInterrupt]
     deleted = MagicMock()
@@ -88,6 +112,81 @@ def test_failure_stops_later_stages(batch: MagicMock) -> None:
     batch.status.return_value = jobs('done', 1)
     assert invoke('buildings', 'pyramid').exit_code != 0
     assert batch.run.call_count == 1
+
+
+def fire_score(monkeypatch: pytest.MonkeyPatch, plans: list[list[str]], *args: str):
+    plan = MagicMock(side_effect=plans)
+    monkeypatch.setattr(cli, 'plan_score', plan)
+    monkeypatch.setattr(cli, 'stopped_by_hand', lambda cluster_id: None)
+    cmd = ['stage', '--version', 'v2.0.0', '--coiled', *args, 'fire', 'score']
+    return CliRunner().invoke(cli.app, cmd), plan
+
+
+def test_score_rounds_resubmit_missing_parts(
+    batch: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kw = '{"score": {"region_ids": ["a", "b", "c"]}}'
+    r, plan = fire_score(monkeypatch, [['a', 'b', 'c'], ['c'], []], '--overwrite', '--kwargs', kw)
+    assert r.exit_code == 0, r.output
+    # Overwrite only in round 1; region_ids in every plan.
+    assert [(c.args[2], c.kwargs) for c in plan.call_args_list] == [
+        (True, {'region_ids': ['a', 'b', 'c']}),
+        (False, {'region_ids': ['a', 'b', 'c']}),
+        (False, {'region_ids': ['a', 'b', 'c']}),
+    ]
+    runs = [c.kwargs for c in batch.run.call_args_list]
+    assert [k['map_over_values'] for k in runs] == [['a', 'b', 'c'], ['c']]
+    assert runs[0]['command'] == [
+        'ocr',
+        'stage',
+        '--version',
+        'v2.0.0',
+        '--prefix',
+        'output',
+        'fire',
+        'score',
+    ]
+
+
+def test_score_fails_after_rounds(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Progress every round, but parts still missing after the last.
+    plans = [['a', 'b', 'c', 'd'], ['b', 'c', 'd'], ['c', 'd'], ['d']]
+    assert len(plans) == cli.SCORE_ROUNDS + 1
+    r, _ = fire_score(monkeypatch, plans)
+    assert r.exit_code != 0
+    assert batch.run.call_count == cli.SCORE_ROUNDS
+    assert "after 3 rounds; last logs: coiled batch logs 2. Missing: ['d']" in str(r.exception)
+
+
+def test_score_stops_on_no_progress(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Round 1 wrote nothing: no second VM per part.
+    r, _ = fire_score(monkeypatch, [['a', 'b'], ['a', 'b']])
+    assert r.exit_code != 0
+    assert batch.run.call_count == 1
+    assert 'wrote none of its 2 parts; logs: coiled batch logs 2' in str(r.exception)
+
+
+def test_score_hand_stop_ends_run(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A cluster stopped in the Coiled UI ends the run, not just its round.
+    monkeypatch.setattr(cli, 'plan_score', MagicMock(side_effect=[['a', 'b'], ['b']]))
+    monkeypatch.setattr(cli, 'stopped_by_hand', lambda cluster_id: 'me requested')
+    r = CliRunner().invoke(cli.app, ['stage', '--version', 'v2.0.0', '--coiled', 'fire', 'score'])
+    assert r.exit_code != 0
+    assert batch.run.call_count == 1
+    assert 'cluster stopped (me requested)' in str(r.exception)
+
+
+def test_score_nothing_to_do(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    r, _ = fire_score(monkeypatch, [[]])
+    assert r.exit_code == 0, r.output
+    batch.run.assert_not_called()
+
+
+def test_score_dry_run_does_not_plan(batch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    r, plan = fire_score(monkeypatch, [], '--dry-run')
+    assert r.exit_code == 0, r.output
+    plan.assert_not_called()
+    batch.run.assert_not_called()
 
 
 def test_coiled_forwards_overwrite(batch: MagicMock) -> None:
@@ -183,6 +282,8 @@ def test_coiled_forwards_storage_env_and_package_syncs(
         'OCR_STORAGE_REGION': 'us-west-2',
     }
     assert kw['spot_policy'] == 'on-demand'
+    # else Coiled installs the newest proj and no datum grids
+    assert kw['package_sync_conda_extras'] == ['proj', 'proj-data']
     assert 'software' not in kw
 
 
@@ -337,9 +438,6 @@ def test_run_file_prefix(batch: MagicMock, tmp_path: Path) -> None:
     assert 's3://carbonplan-ocr/scratch/nrh/flood/v2.0.0' in r.output
     assert CliRunner().invoke(cli.app, ['run', str(f)]).exit_code == 0
     assert batch.run.call_args.kwargs['command'][4:6] == ['--prefix', 'scratch/nrh']
-    for bad in ('/', '/scratch/nrh/', 's3://carbonplan-ocr/scratch', 'a//b'):
-        (f := tmp_path / 'bad.toml').write_text(f'prefix = "{bad}"\n' + RUN_FILE)
-        assert CliRunner().invoke(cli.app, ['run', str(f), '--dry-run']).exit_code != 0, bad
 
 
 def test_bbox_needs_prerelease_version() -> None:

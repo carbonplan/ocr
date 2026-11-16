@@ -21,22 +21,18 @@ For other platforms, see [pixi.sh](https://pixi.sh).
 ### 2. Clone and install dependencies
 
 ```bash
-git clone https://github.com/carbonplan/ocr.git
-cd ocr
+git clone https://github.com/carbonplan/ocr-multi-hazard.git
+cd ocr-multi-hazard
 pixi install
 ```
 
 ### 3. Configure environment
 
-```bash
-cp ocr-local.env .env
-```
+Storage is read from environment variables (`ocr.config.StorageConfig`); all are optional:
 
-Edit `.env` and set required variables:
-
-- `OCR_STORAGE_ROOT` — where outputs are written (e.g., `s3://your-bucket/` or local path)
-- `OCR_ENVIRONMENT` — environment name (`QA`, `STAGING`, or `PROD`)
-- `OCR_DEBUG` — set to `1` for verbose logging
+- `OCR_STORAGE_BUCKET` — S3 bucket for inputs and outputs (default `carbonplan-ocr`)
+- `OCR_STORAGE_REGION` — its AWS region (default `us-west-2`)
+- `OCR_STORAGE_LOCAL_ROOT` — write outputs under this local directory instead of S3, e.g. `~/ocr-data`
 
 ### 4. Verify installation
 

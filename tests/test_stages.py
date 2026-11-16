@@ -64,6 +64,8 @@ def _ds() -> xr.Dataset:
         {
             'rps_2011': (('latitude', 'longitude'), risk),
             'rps_2047': (('latitude', 'longitude'), risk * 1.5),
+            'bp_2011': (('latitude', 'longitude'), risk / 100),
+            'bp_2047': (('latitude', 'longitude'), risk / 50),
         },
         coords={'latitude': ('latitude', lat, attrs), 'longitude': ('longitude', lon, attrs)},
         attrs={'title': 'fire'},
@@ -214,13 +216,39 @@ def test_delete_prefix_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
 def test_score_overwrite_deletes_store(monkeypatch: pytest.MonkeyPatch) -> None:
     deleted, scored = [], MagicMock()
     monkeypatch.setattr(stages, '_delete_prefix', deleted.append)
+    monkeypatch.delenv(stages.TASK_INPUT, raising=False)
+    monkeypatch.setattr(stages, '_drop_pyramid', lambda out: None)  # no store here
     out = OutputPaths(Risk.FLOOD, 'v2.0.0')
-    spec = dataclasses.replace(RISKS[Risk.FLOOD], score=scored)
+    spec = dataclasses.replace(RISKS[Risk.FLOOD], score=scored, score_parts=lambda out: ['a', 'b'])
     stages.score(spec, out, overwrite=False)
     assert deleted == []
     stages.score(spec, out, overwrite=True)
     assert deleted == [out.store]
-    scored.assert_called_with(out)
+    assert [c.args for c in scored.call_args_list] == [(out, 'a'), (out, 'b')] * 2
+
+
+def test_score_overwrite_with_subset_raises_before_deleting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A subset with overwrite would delete every other region.
+    deleted = MagicMock()
+    monkeypatch.setattr(stages, '_delete_prefix', deleted)
+    spec = dataclasses.replace(RISKS[Risk.FIRE], score_parts=MagicMock())
+    with pytest.raises(ValueError, match='region_ids'):
+        stages.plan_score(spec, OutputPaths(Risk.FIRE, 'v2.0.0'), True, region_ids=['y14_x5'])
+    deleted.assert_not_called()
+
+
+def test_score_task_writes_its_part(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A Coiled task never plans or deletes, even if passed overwrite.
+    scored, planned = MagicMock(), MagicMock()
+    monkeypatch.setattr(stages, '_delete_prefix', planned)
+    monkeypatch.setenv(stages.TASK_INPUT, 'y14_x5')
+    out = OutputPaths(Risk.FLOOD, 'v2.0.0')
+    spec = dataclasses.replace(RISKS[Risk.FLOOD], score=scored, score_parts=planned)
+    stages.score(spec, out, overwrite=True)
+    scored.assert_called_once_with(out, 'y14_x5')
+    planned.assert_not_called()
 
 
 def test_regions_overwrite_deletes_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -287,7 +315,7 @@ def test_pipeline_from_store(
     # A 512x512 grid over the blocks in the risk's store CRS, one variable per hist column.
     crs = spec.crs or 'EPSG:4326'
     x0, y1 = Transformer.from_crs(4326, crs, always_xy=True).transform(-105.5, 40.2)
-    n, step = 512, (100 if spec.crs else 0.002)
+    n, step = 512, (0.002 if crs == 'EPSG:4326' else 100)
     variables = [v for h in spec.hists for v in h.variables] or ['risk']
     rng = np.random.default_rng(1)
     ds = xr.Dataset(

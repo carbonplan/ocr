@@ -13,14 +13,14 @@ For comprehensive documentation on using the input dataset ingestion system, see
 List all available datasets:
 
 ```bash
-ocr ingest-data list-datasets
+ocr-ingest list-datasets
 ```
 
 Process a dataset:
 
 ```bash
-ocr ingest-data run-all <dataset> --dry-run  # Preview first
-ocr ingest-data run-all <dataset>            # Execute
+ocr-ingest run-all <dataset> --dry-run  # Preview first
+ocr-ingest run-all <dataset>            # Execute
 ```
 
 ## Architecture Overview

@@ -2,7 +2,7 @@
 
 Each risk runs as an ordered list of stages: `score`, `pyramid`, `buildings`, `regions`. Each risk's ETL runs on its own first (flood: `pixi run -e flood flood-etl`). Storage is the hand-off: each stage reads what an earlier one wrote. `pyramid` and `buildings` each read only the risk store (`store.icechunk`); `regions` reads the buildings file. A stage runs in process, or as one Coiled batch job with `--coiled`.
 
-Fire still uses the older `ocr-deploy` CLI (`ocr-deploy --help`) until its refactor.
+Fire runs `score`, `pyramid`, `buildings` and `regions` (`pixi run fire-all`).
 
 ## Run a deployment
 
@@ -85,18 +85,29 @@ Subset: `bbox` (lon/lat xmin, ymin, xmax, ymax) on `buildings` keeps only buildi
 ocr stage --version v2.0.0-dev --kwargs '{"buildings": {"bbox": [-122.5, 37.7, -122.3, 37.8]}}' flood buildings
 ```
 
+## Fire score
+
+`score` writes the fire store one region of the 30 m grid at a time. With `--coiled` it is one Coiled map job, one VM per region, all regions at once. Each region commits to the store with its `region_id` in the commit metadata, so:
+
+- After the job, the regions missing from the commit history are resubmitted, up to 3 rounds; a round that writes none of its regions stops the run. If any are still missing, the run fails with their ids and `pyramid` doesn't start.
+- A rerun writes only the missing regions. `--overwrite` deletes the store first and writes every region; with `region_ids` it raises before deleting anything.
+- A run that writes any region first drops the pyramid levels (groups 1..N), so they never go stale over group "0" (as `flood-etl --overwrite`); rerun `pyramid` after. A rerun with nothing missing keeps them.
+- `region_ids` subsets `score` for dev runs (`--kwargs '{"score": {"region_ids": ["y14_x5"]}}'`). `pyramid` still coarsens the full CONUS grid; unwritten regions are NaN.
+
 ## How it works
 
 `ocr run` and `ocr stage` (`ocr/cli.py`) run a risk's stages one at a time, in `STAGES` order (`ocr/stages.py`). There is no graph and no scheduler, only a for-loop in `execute()`. Paths are under `<prefix>/<risk>/v<version>/` (prefix default `output`) (`OutputPaths.store`, `.buildings`, `.regions`).
 
 | stage | util | reads | writes |
 | --- | --- | --- | --- |
-| score (fire only) | `RiskSpec.score` | ETL output (not checked) | `store.icechunk` group "0" |
+| score (fire only) | `RiskSpec.score`, one call per part from `RiskSpec.score_parts` | ETL output (not checked) | `store.icechunk` group "0" |
 | pyramid | `write_multiscales` | `store.icechunk` | `store.icechunk` groups 1..N |
 | buildings | `write_buildings` | `store.icechunk` | `vector/buildings.geoparquet` |
 | regions | `write_regions` | `vector/buildings.geoparquet` | `vector/regions/` |
 
 The store is written by `score`, or by the risk's own ETL when it has no score (flood). Before anything runs, `preflight()` does the checks listed under [Rerun some stages](#rerun-some-stages), so Coiled never boots a VM just to raise.
+
+Fire `score` is the one map job (`run_score`): `score_parts` plans the regions missing from the store's commit metadata (`region_id`), one task per region (`COILED_BATCH_TASK_INPUT`), all at once. After every task finishes it plans again, up to `SCORE_ROUNDS`, then raises with the missing ids. Only round 1 gets `--overwrite`; tasks never get `--overwrite` or kwargs.
 
 ## Change the pipeline
 

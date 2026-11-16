@@ -1,0 +1,14 @@
+# Full fire deploy on Coiled: `pixi run fire-all`.
+risk = "fire"
+version = "v2.0.0"
+stages = ["score", "pyramid", "buildings", "regions"]
+coiled = true
+
+[kwargs.pyramid]
+x_dim = "longitude"
+y_dim = "latitude"
+variables = ["rps_2011", "rps_2047", "bp_2011", "bp_2047","crps_scott"]
+levels = "auto"
+
+[kwargs.buildings]
+point_strategy = "ST_Centroid"

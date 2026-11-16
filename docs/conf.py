@@ -31,7 +31,6 @@ extensions = [
     'sphinx_copybutton',
     'sphinx_design',
     'sphinxcontrib.mermaid',
-    'sphinx_click',
 ]
 
 # MyST config

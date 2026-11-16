@@ -1,6 +1,6 @@
 # Open Climate Risk (OCR) Platform
 
-| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Deploy Status][github-deploy-badge]][github-deploy-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
+| CI          | [![GitHub Workflow Status][github-ci-badge]][github-ci-link] [![Code Coverage Status][codecov-badge]][codecov-link] [![pre-commit.ci status][pre-commit.ci-badge]][pre-commit.ci-link] |
 | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | **License** |                                                                                                       [![License][license-badge]][repo-link]                                                                                                       |
 | **Docs**    |                                                                                                   [![Documentation Status][rtd-badge]][rtd-link]                                                                                                   |
@@ -76,8 +76,6 @@ Details on how to use the data can be found in our [technical documentation](htt
 
 [github-ci-badge]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml/badge.svg
 [github-ci-link]: https://github.com/carbonplan/ocr/actions/workflows/ci.yaml
-[github-deploy-badge]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml/badge.svg
-[github-deploy-link]: https://github.com/carbonplan/ocr/actions/workflows/deploy.yaml
 [codecov-badge]: https://img.shields.io/codecov/c/github/carbonplan/ocr.svg?logo=codecov
 [codecov-link]: https://codecov.io/gh/carbonplan/ocr
 [license-badge]: https://img.shields.io/github/license/carbonplan/ocr

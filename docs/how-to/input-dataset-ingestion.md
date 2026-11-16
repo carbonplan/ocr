@@ -13,7 +13,7 @@ The input dataset infrastructure provides a consistent interface for ingesting b
 List all available datasets:
 
 ```bash
-pixi run ocr ingest-data list-datasets
+pixi run ocr-ingest list-datasets
 ```
 
 ### Processing
@@ -22,13 +22,13 @@ Process a dataset (always dry run first to preview):
 
 ```bash
 # Preview operations (recommended first step)
-pixi run ocr ingest-data run-all scott-et-al-2024 --dry-run
+pixi run ocr-ingest run-all scott-et-al-2024 --dry-run
 
 # Execute the full pipeline
-pixi run ocr ingest-data run-all scott-et-al-2024
+pixi run ocr-ingest run-all scott-et-al-2024
 
 # Use Coiled for distributed processing
-pixi run ocr ingest-data run-all scott-et-al-2024 --use-coiled
+pixi run ocr-ingest run-all scott-et-al-2024 --use-coiled
 ```
 
 ### Dataset-specific options
@@ -37,10 +37,10 @@ Different datasets support different processing options:
 
 ```bash
 # Vector datasets: Overture Maps - select data type
-pixi run ocr ingest-data process overture-maps --overture-data-type buildings
+pixi run ocr-ingest process overture-maps --overture-data-type buildings
 
 # Vector datasets: Census TIGER - select geography and states
-pixi run ocr ingest-data process census-tiger \
+pixi run ocr-ingest process census-tiger \
   --census-geography-type tracts \
   --census-subset-states California --census-subset-states Oregon
 ```
@@ -72,13 +72,17 @@ Our processed input dataset have been transfered to a public AWS bucket in `us-w
 
 ```bash
 # Full pipeline
-pixi run ocr ingest-data run-all scott-et-al-2024 --dry-run
-pixi run ocr ingest-data run-all scott-et-al-2024 --use-coiled
+pixi run ocr-ingest run-all scott-et-al-2024 --dry-run
+pixi run ocr-ingest run-all scott-et-al-2024 --use-coiled
 
 # Individual steps
-pixi run ocr ingest-data download scott-et-al-2024
-pixi run ocr ingest-data process scott-et-al-2024 --use-coiled
+pixi run ocr-ingest download scott-et-al-2024
+pixi run ocr-ingest process scott-et-al-2024 --use-coiled
 ```
+
+:::{note}
+`download` caches the TIFFs in the system temp dir of the machine running `ocr-ingest`. On a Coiled VM (`coiled run`), pass `--env TMPDIR=/scratch` so they land on the VM disk, not the small overlay `/tmp`.
+:::
 
 **Outputs**:
 
@@ -108,7 +112,7 @@ pixi run ocr ingest-data process scott-et-al-2024 --use-coiled
 **Usage**:
 
 ```bash
-pixi run ocr ingest-data run-all riley-et-al-2025 --use-coiled
+pixi run ocr-ingest run-all riley-et-al-2025 --use-coiled
 ```
 
 **Outputs**:
@@ -137,7 +141,7 @@ pixi run ocr ingest-data run-all riley-et-al-2025 --use-coiled
 **Usage**:
 
 ```bash
-pixi run ocr ingest-data run-all dillon-et-al-2023 --use-coiled
+pixi run ocr-ingest run-all dillon-et-al-2023 --use-coiled
 ```
 
 **Outputs**:
@@ -181,19 +185,19 @@ When buildings are processed, an additional dataset is automatically created tha
 ```bash
 # Both buildings and addresses (default)
 # Also creates region-tagged buildings automatically
-pixi run ocr ingest-data run-all overture-maps
+pixi run ocr-ingest run-all overture-maps
 
 # Only buildings (also creates region-tagged buildings)
-pixi run ocr ingest-data process overture-maps --overture-data-type buildings
+pixi run ocr-ingest process overture-maps --overture-data-type buildings
 
 # Only addresses (no region tagging)
-pixi run ocr ingest-data process overture-maps --overture-data-type addresses
+pixi run ocr-ingest process overture-maps --overture-data-type addresses
 
 # Dry run
-pixi run ocr ingest-data run-all overture-maps --dry-run
+pixi run ocr-ingest run-all overture-maps --dry-run
 
 # Use Coiled for distributed processing
-pixi run ocr ingest-data run-all overture-maps --use-coiled
+pixi run ocr-ingest run-all overture-maps --use-coiled
 ```
 
 **Outputs**:
@@ -224,17 +228,17 @@ pixi run ocr ingest-data run-all overture-maps --use-coiled
 
 ```bash
 # All geography types (default)
-pixi run ocr ingest-data run-all census-tiger
+pixi run ocr-ingest run-all census-tiger
 
 # Only counties
-pixi run ocr ingest-data process census-tiger --census-geography-type counties
+pixi run ocr-ingest process census-tiger --census-geography-type counties
 
 # Tracts for specific states
-pixi run ocr ingest-data process census-tiger --census-geography-type tracts \
+pixi run ocr-ingest process census-tiger --census-geography-type tracts \
   --census-subset-states California --census-subset-states Oregon
 
 # Dry run
-pixi run ocr ingest-data run-all census-tiger --dry-run
+pixi run ocr-ingest run-all census-tiger --dry-run
 ```
 
 **Outputs**:
@@ -318,7 +322,7 @@ The `InputDatasetConfig` class (Pydantic model) provides:
 Always test with `--dry-run` before executing:
 
 ```bash
-ocr ingest-data run-all <dataset> --dry-run
+ocr-ingest run-all <dataset> --dry-run
 ```
 
 This previews all operations without making changes.

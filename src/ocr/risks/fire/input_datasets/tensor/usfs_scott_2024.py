@@ -23,7 +23,6 @@ from odc.geo.xr import assign_crs, xr_reproject
 from ocr.risks.fire.console import console
 from ocr.risks.fire.input_datasets.base import BaseDatasetProcessor, InputDatasetConfig
 from ocr.risks.fire.input_datasets.storage import IcechunkReader, IcechunkWriter, S3Uploader
-from ocr.risks.fire.utils import get_temp_dir
 
 
 class ScottEtAl2024Processor(BaseDatasetProcessor):
@@ -184,9 +183,7 @@ class ScottEtAl2024Processor(BaseDatasetProcessor):
         from ocr.risks.fire.input_datasets.storage import S3Uploader
 
         # Download and extract using pooch
-        cache_dir = get_temp_dir()
-        cache_path = Path(cache_dir) if cache_dir else Path(tempfile.gettempdir())
-        cache_path.mkdir(parents=True, exist_ok=True)
+        cache_path = Path(tempfile.gettempdir())  # set TMPDIR=/scratch on Coiled
 
         # Get URL and hash (must be defined for this dataset)
         url = var_info['url']

@@ -30,6 +30,17 @@ def test_bad_version(version: str):
         OutputPaths(Risk.FIRE, version)
 
 
+@pytest.mark.parametrize('prefix', ['/abs', '../x', 'scratch/../output', './x', 'a//b', 'a/', ''])
+def test_bad_prefix(prefix: str):
+    with pytest.raises(ValueError, match='prefix'):
+        OutputPaths(Risk.FIRE, 'v2.0.0', prefix)
+
+
+@pytest.mark.parametrize('prefix', ['output', 'scratch/nrh', 'scratch/v2.0.0-dev'])
+def test_good_prefix(prefix: str):
+    assert OutputPaths(Risk.FIRE, 'v2.0.0', prefix).root.startswith(prefix)
+
+
 def test_bad_risk():
     with pytest.raises(ValueError):
         OutputPaths('avalanche', 'v2.0.0')

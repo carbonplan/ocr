@@ -115,10 +115,8 @@ class OvertureProcessor(BaseDatasetProcessor):
         dry_run: bool = False,
     ) -> None:
         """Subset Overture buildings data to CONUS bbox."""
-        import duckdb
-
+        from ocr.duck import duckdb_connect
         from ocr.risks.fire.console import console
-        from ocr.risks.fire.utils import apply_s3_creds, install_load_extensions
 
         console.log(f'Subsetting Overture buildings (release {version}) to CONUS...')
 
@@ -129,8 +127,7 @@ class OvertureProcessor(BaseDatasetProcessor):
             console.log(f'[DRY RUN] Would write to {output_s3_uri}')
             return
 
-        install_load_extensions()
-        apply_s3_creds()
+        con = duckdb_connect(s3_write=True)
 
         console.log(f'Querying buildings with bbox: {bbox}')
         console.log(f'Output: {output_s3_uri}')
@@ -145,7 +142,7 @@ class OvertureProcessor(BaseDatasetProcessor):
         ) TO '{output_s3_uri}' (FORMAT 'parquet', COMPRESSION 'zstd');
         """
 
-        duckdb.sql(query)
+        con.sql(query)
         console.log(f'Successfully wrote buildings to {output_s3_uri}')
 
     @staticmethod
@@ -157,10 +154,8 @@ class OvertureProcessor(BaseDatasetProcessor):
         dry_run: bool = False,
     ) -> None:
         """Subset Overture addresses data to CONUS bbox."""
-        import duckdb
-
+        from ocr.duck import duckdb_connect
         from ocr.risks.fire.console import console
-        from ocr.risks.fire.utils import apply_s3_creds, install_load_extensions
 
         console.log(f'Subsetting Overture addresses (release {version}) to CONUS...')
 
@@ -171,8 +166,7 @@ class OvertureProcessor(BaseDatasetProcessor):
             console.log(f'[DRY RUN] Would write to {output_s3_uri}')
             return
 
-        install_load_extensions()
-        apply_s3_creds()
+        con = duckdb_connect(s3_write=True)
 
         console.log(f'Querying addresses with bbox: {bbox}')
         console.log(f'Output: {output_s3_uri}')
@@ -187,7 +181,7 @@ class OvertureProcessor(BaseDatasetProcessor):
         ) TO '{output_s3_uri}' (FORMAT 'parquet', COMPRESSION 'zstd');
         """
 
-        duckdb.sql(query)
+        con.sql(query)
         console.log(f'Successfully wrote addresses to {output_s3_uri}')
 
     @staticmethod
@@ -203,10 +197,8 @@ class OvertureProcessor(BaseDatasetProcessor):
         adding geographic identifiers at multiple administrative levels (state,
         county, tract, block group, block).
         """
-        import duckdb
-
+        from ocr.duck import duckdb_connect
         from ocr.risks.fire.console import console
-        from ocr.risks.fire.utils import apply_s3_creds, install_load_extensions
 
         console.log('Creating region-tagged buildings dataset...')
 
@@ -216,11 +208,10 @@ class OvertureProcessor(BaseDatasetProcessor):
             console.log(f'[DRY RUN] Would write to {output_s3_uri}')
             return
 
-        install_load_extensions()
-        apply_s3_creds()
+        con = duckdb_connect(s3_write=True)
 
         console.log('Loading census FIPS lookup table...')
-        duckdb.sql("""
+        con.sql("""
             CREATE TEMP TABLE fips_lookup AS
                 SELECT
                     column0 AS STATE,
@@ -234,17 +225,17 @@ class OvertureProcessor(BaseDatasetProcessor):
         """)
 
         console.log('Creating spatial indexes...')
-        duckdb.sql(f"""
+        con.sql(f"""
             CREATE TEMP TABLE buildings AS
                 SELECT bbox, geometry FROM read_parquet('{buildings_s3_uri}');
         """)
-        duckdb.sql('CREATE INDEX buildings_idx ON buildings USING RTREE (geometry);')
+        con.sql('CREATE INDEX buildings_idx ON buildings USING RTREE (geometry);')
 
-        duckdb.sql(f"""
+        con.sql(f"""
             CREATE TEMP TABLE blocks AS
                 SELECT GEOID, bbox, geometry FROM read_parquet('{blocks_s3_uri}');
         """)
-        duckdb.sql('CREATE INDEX blocks_idx ON blocks USING RTREE (geometry);')
+        con.sql('CREATE INDEX blocks_idx ON blocks USING RTREE (geometry);')
 
         console.log('Performing spatial join...')
         query = f"""
@@ -276,7 +267,7 @@ class OvertureProcessor(BaseDatasetProcessor):
         ) TO '{output_s3_uri}' (FORMAT 'parquet', OVERWRITE_OR_IGNORE true, COMPRESSION 'zstd');
         """
 
-        duckdb.sql(query)
+        con.sql(query)
         console.log(f'Successfully wrote region-tagged buildings to {output_s3_uri}')
 
     def download(self) -> None:

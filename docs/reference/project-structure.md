@@ -13,24 +13,13 @@ graph TB
     subgraph Repository["OCR Repository"]
         subgraph Core["Core Package"]
             OCR[src/ocr/risks/fire/]
-            OCR --> CONFIG[config.py - Configuration models]
-            OCR --> TYPES[types.py - Type definitions]
+            OCR --> GRID[grid.py - Region grid]
             OCR --> DATASETS[datasets.py - Data catalog]
             OCR --> CONUS[conus404.py - Climate data]
             OCR --> UTILS[utils.py - Utilities]
             OCR --> TESTING[testing.py - Test helpers]
 
-            OCR --> DEPLOY[deploy/]
-            DEPLOY --> CLI[cli.py - CLI app]
-            DEPLOY --> MANAGERS[managers.py - Orchestration]
-
-            OCR --> PIPELINE[pipeline/]
-            PIPELINE --> PROCESS[process_region.py]
-            PIPELINE --> BUILDINGS[create_building_geoparquet.py]
-            PIPELINE --> STATS[fire_wind_risk_regional_aggregator.py]
-            PIPELINE --> PYRAMID[create_pyramid.py]
-            PIPELINE --> REGIONS[create_region_geoparquet.py]
-            PIPELINE --> WRITERS[write_aggregated_region_analysis_files.py]
+            OCR --> SCORE[score.py - Score stage]
 
             OCR --> INPUTDS[input_datasets/]
             INPUTDS --> INPUTCLI[cli.py - Ingest CLI]
@@ -39,8 +28,7 @@ graph TB
             INPUTDS --> INPUTTENSOR[tensor/ - Tensor ingestion]
             INPUTDS --> INPUTVECTOR[vector/ - Vector ingestion]
 
-            OCR --> RISKS[risks/]
-            RISKS --> FIRE[fire.py - Risk models]
+            OCR --> MODEL[model.py - Risk model]
         end
 
         subgraph Data["Data & Inputs"]
@@ -74,7 +62,6 @@ graph TB
             PYPROJECT[pyproject.toml - Package config]
             PIXI[pixi.lock - Environment lock]
             SPHINX[docs/conf.py - Docs config]
-            ENV[ocr-*.env - Environment vars]
             GITHUB[.github/ - CI/CD workflows]
         end
 
@@ -102,43 +89,20 @@ Each hazard lives in its own subpackage under `src/ocr/risks/` (`fire/`, `flood/
 
 | Module        | Purpose                                                                               |
 | ------------- | ------------------------------------------------------------------------------------- |
-| `config.py`   | Pydantic models for storage, chunking, Coiled, and processing configuration           |
-| `types.py`    | Type definitions and enums (Environment, Platform, RiskType, RegionType)              |
+| `grid.py`     | Scott 2024 30 m CONUS grid split into regions (`ChunkingConfig`), the score parts     |
 | `datasets.py` | Catalog abstraction for Zarr and GeoParquet datasets in S3 storage                    |
 | `conus404.py` | CONUS404 climate data helpers: load variables, compute humidity, wind transformations |
-| `utils.py`    | DuckDB utilities, S3 secrets, vector sampling, file transfer helpers                  |
-| `testing.py`  | Snapshot testing extensions for xarray and GeoPandas                                  |
+| `utils.py`    | Geo selection helpers (`geo_sel`)                                                     |
+| `testing.py`  | Snapshot testing extension for xarray                                                 |
 | `console.py`  | Rich console instance for pretty terminal output                                      |
-
-### Deployment (`deploy/`)
-
-Orchestration layer for local and cloud execution:
-
-- **`cli.py`** - Typer-based CLI application (`ocr` command) with commands for processing regions, aggregation, PMTiles generation, and analysis file creation
-- **`managers.py`** - Abstract batch manager interface with `CoiledBatchManager` (cloud) and `LocalBatchManager` (local) implementations
-
-### Pipeline (`pipeline/`)
-
-Internal processing modules coordinated by the CLI. These implement the data processing workflow:
-
-- **`process_region.py`** - Sample risk values to building locations
-- **`create_building_geoparquet.py`** - Write all buildings to one GeoParquet file with web map overviews
-- **`fire_wind_risk_regional_aggregator.py`** - Compute regional statistics with DuckDB
-- **`create_pyramid.py`** - Generate ndpyramid multiscale Zarr for web visualization
-- **`create_region_geoparquet.py`** - Write region statistics as GeoParquet laid out for web map lookups
-- **`write_aggregated_region_analysis_files.py`** - Write regional summary tables for all regions
-
-### Risk models (`risks/`)
-
-Domain-specific risk calculation logic:
-
-- **`fire.py`** - Fire/wind risk kernels, wind classification, elliptical spread models
+| `model.py`    | Fire/wind risk model: kernels, wind classification, elliptical spread                 |
+| `score.py`    | Score stage of `ocr run`: plans missing regions, writes one region per Coiled task    |
 
 ### Input datasets (`input_datasets/`)
 
 Infrastructure for ingesting and processing input datasets:
 
-- **`cli.py`** - CLI application for dataset ingestion (`ocr ingest-data` command)
+- **`cli.py`** - CLI application for dataset ingestion (`ocr-ingest` command)
 - **`base.py`** - Abstract base classes for dataset processors
 - **`storage.py`** - Storage utilities for managing dataset files
 - **`tensor/`** - Tensor (raster) dataset ingestion modules
@@ -173,7 +137,6 @@ Exploratory Jupyter notebooks for prototyping and analysis, grouped by hazard (`
 - `elliptical_kernel.ipynb` - Fire spread kernel development
 - `evaluating_wind_spreading.ipynb` - Wind spreading validation
 - `fire-weather-wind-mode-reprojected.ipynb` - Wind mode analysis
-- `wind_spread.ipynb` - Wind-driven fire spread modeling
 - `wind-spreading-kernels.ipynb` - Wind spread kernel experiments
 - `methods-figures.ipynb` - Generate figures for methodology documentation
 - `benchmarking.ipynb` - Performance benchmarking experiments
@@ -208,12 +171,10 @@ Tests mirror the hazard layout (`tests/fire/` for `ocr.risks.fire`). Fire test s
 | File                         | Purpose                                               |
 | ---------------------------- | ----------------------------------------------------- |
 | `conftest.py`                | Pytest fixtures and configuration                     |
-| `test_config.py`             | Configuration model validation                        |
+| `test_grid.py`               | Region grid (`ChunkingConfig`)                        |
+| `test_score.py`              | Score stage: template, resume, overwrite, PROJ guard  |
 | `test_conus404.py`           | CONUS404 data loading and transformations             |
 | `test_datasets.py`           | Dataset catalog and access patterns                   |
-| `test_managers.py`           | Batch manager orchestration logic                     |
-| `test_utils.py`              | Utility function tests                                |
-| `test_pipeline_snapshots.py` | Snapshot-based integration tests for pipeline outputs |
 | `risks/`                     | Risk model tests                                      |
 
 **Test execution:**
@@ -237,13 +198,6 @@ pixi run tests-integration  # Integration tests (may require S3 access)
 - **`docs/conf.py`** - Sphinx configuration: theme, extensions, intersphinx mappings
 - **`.readthedocs.yaml`** - ReadTheDocs build configuration
 
-### Environment templates
-
-- **`ocr-local.env`** - Template for local development (uses local filesystem)
-- **`ocr-coiled-s3.env`** - Template for cloud execution (S3 backend)
-- **`ocr-coiled-s3-staging.env`** - Staging environment configuration
-- **`ocr-coiled-s3-production.env`** - Production environment configuration
-
 ### Code quality
 
 - **`.pre-commit-config.yaml`** - Pre-commit hooks for linting and formatting
@@ -262,10 +216,9 @@ Helper scripts for cloud infrastructure setup:
 
 ## CI/CD (`.github/`)
 
-GitHub Actions workflows for automated testing, building, and deployment:
+GitHub Actions workflows for testing, docs and releases:
 
 - **`workflows/`** - CI/CD pipeline definitions (tests, linting, docs deployment, releases)
-- **`scripts/`** - Helper scripts for environment export and Coiled software creation
 - **`dependabot.yaml`** - Automated dependency updates configuration
 - **`release-drafter.yml`** - Automated release notes generation
 

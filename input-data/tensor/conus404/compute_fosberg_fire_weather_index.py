@@ -23,7 +23,7 @@ from ocr.risks.fire.conus404 import (
     load_conus404,
     rotate_winds_to_earth,
 )
-from ocr.risks.fire.risks.fire import fosberg_fire_weather_index
+from ocr.risks.fire.model import fosberg_fire_weather_index
 from ocr.risks.fire.utils import geo_sel
 
 console = rich.console.Console()

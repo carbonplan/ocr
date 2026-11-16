@@ -6,6 +6,17 @@ import xproj  # noqa: F401 - registers .proj accessor
 import zarr
 from topozarr import create_pyramid
 
+# icechunk<=2.3.1 str(store) waits on the session lock holding the GIL; zarr>=3.4.1 calls it: hang
+icechunk.IcechunkStore.__str__ = lambda self: 'icechunk.IcechunkStore'
+
+
+def drop_levels(session: icechunk.Session) -> None:
+    """Delete the pyramid levels (every group but "0") and the root multiscales attrs; uncommitted."""
+    root = zarr.open_group(session.store, mode='r+')
+    for name in [n for n in root.group_keys() if n != '0']:
+        del root[name]
+    root.attrs.pop('multiscales', None)
+
 
 def write_multiscales(
     repo: icechunk.Repository,
@@ -24,10 +35,7 @@ def write_multiscales(
     """
     session = repo.writable_session(branch)
     if overwrite:
-        root = zarr.open_group(session.store, mode='r+')
-        for name in [n for n in root.group_keys() if n != '0']:
-            del root[name]
-        root.attrs.pop('multiscales', None)
+        drop_levels(session)
     ds = xr.open_zarr(session.store, group='0', consolidated=False, chunks=None)
     if variables is not None:
         ds = ds[variables]

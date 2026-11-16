@@ -22,7 +22,7 @@ CONUS = BoundingBox(-125.0, 24.0, -66.0, 50.0, crs='EPSG:4326')
 OVERTURE_LICENSE = 'ODbL-1.0'  # Buildings dataset; includes OpenStreetMap data
 OVERTURE_ATTRIBUTION_URL = 'https://docs.overturemaps.org/attribution/'
 OVERTURE_ATTRIBUTION = 'OpenStreetMap contributors, Overture Maps Foundation'
-# Fire's OCRConfig.vector.metadata_dict, minus `version` (comes with the versioned storage layout).
+# Fire v1.1.0's buildings metadata, minus `version` (comes with the versioned storage layout).
 VECTOR_METADATA = {
     'provider': 'CarbonPlan',
     'terms_of_access': 'https://docs.carbonplan.org/ocr/en/latest/terms-of-data-access.html',

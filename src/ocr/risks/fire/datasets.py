@@ -109,8 +109,6 @@ class Dataset(pydantic.BaseModel):
     def query_geoparquet(
         self,
         query: str | None = None,
-        *,
-        install_extensions: bool = True,
     ) -> 'duckdb.DuckDBPyRelation':
         """
         Query a geoparquet file using DuckDB.
@@ -119,8 +117,6 @@ class Dataset(pydantic.BaseModel):
         ----------
         query : str, optional
             SQL query to execute. If not provided, returns all data.
-        install_extensions : bool, default True
-            Whether to install and load the spatial and httpfs extensions.
 
         Returns
         -------
@@ -157,23 +153,21 @@ class Dataset(pydantic.BaseModel):
         ... \"\"\")
 
         """
-        from ocr.risks.fire.utils import install_load_extensions
+        from ocr.duck import duckdb_connect
 
         if self.data_format != 'geoparquet':
             raise ValueError("Dataset must be in 'geoparquet' format to query with DuckDB.")
 
-        if install_extensions:
-            install_load_extensions()
-
         s3_path = f's3://{self.bucket}/{self.prefix}'
+        con = duckdb_connect()
 
         if query is None:
-            return duckdb.sql(f"SELECT * FROM read_parquet('{s3_path}')")
+            return con.sql(f"SELECT * FROM read_parquet('{s3_path}')")
         else:
             # Replace placeholder in query if present
             if '{s3_path}' in query:
                 query = query.format(s3_path=s3_path)
-            return duckdb.sql(query)
+            return con.sql(query)
 
     def to_geopandas(
         self,

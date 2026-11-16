@@ -180,6 +180,5 @@ cython_debug/
 ocr/_version.py
 .vscode/
 uv.lock
-environment.yaml
 .DS_Store
 _build/

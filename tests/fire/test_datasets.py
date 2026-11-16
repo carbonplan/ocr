@@ -61,9 +61,10 @@ def test_to_xarray_non_zarr():
         dataset.to_xarray(xarray_open_kwargs={})
 
 
-@patch('duckdb.sql')
-def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
+@patch('ocr.duck.duckdb_connect')
+def test_query_geoparquet(mock_connect, sample_dataset):
     """Test the query_geoparquet method."""
+    mock_duckdb_sql = mock_connect.return_value.sql
     geoparquet_dataset = Dataset(
         name=sample_dataset.name,
         description=sample_dataset.description,
@@ -100,13 +101,6 @@ def test_query_geoparquet(mock_duckdb_sql, sample_dataset):
     expected_query = f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}') WHERE id > 100"
     result = geoparquet_dataset.query_geoparquet(query=custom_query_with_placeholder)
     mock_duckdb_sql.assert_called_with(expected_query)
-    assert result == mock_result
-
-    mock_duckdb_sql.reset_mock()
-    result = geoparquet_dataset.query_geoparquet(install_extensions=False)
-    mock_duckdb_sql.assert_called_once_with(
-        f"SELECT * FROM read_parquet('s3://{geoparquet_dataset.bucket}/{geoparquet_dataset.prefix}')"
-    )
     assert result == mock_result
 
     # Test 5: Error when data_format is not geoparquet

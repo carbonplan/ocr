@@ -1,0 +1,12 @@
+# Laptop smoke run: `OCR_STORAGE_LOCAL_ROOT=~/ocr-data pixi run fire-local` (needs AWS credentials for inputs and TIGER under that root).
+risk = "fire"
+version = "v2.0.0-dev"
+stages = ["score", "buildings", "regions"]
+
+[kwargs.score]
+region_ids = ["y8_x4"]  # covers the buildings bbox; ~10 min, ~9 GB RAM
+
+[kwargs.buildings]
+memory_limit = "8GB"
+workers = 4
+bbox = [-122.5, 37.7, -122.3, 37.8]  # San Francisco

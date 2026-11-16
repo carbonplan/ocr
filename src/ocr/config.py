@@ -1,5 +1,6 @@
-"""Risk-agnostic storage config. Fire still uses its own config! TODO: refactor fire config to this later"""
+"""Risk-agnostic storage config and output paths."""
 
+from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -8,7 +9,7 @@ import icechunk
 import pydantic_settings
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
-from pydantic import BeforeValidator, StringConstraints, field_validator
+from pydantic import AfterValidator, BeforeValidator, field_validator
 from pydantic.dataclasses import dataclass
 from pydantic_extra_types.semantic_version import SemanticVersion
 
@@ -35,8 +36,19 @@ class StorageConfig(pydantic_settings.BaseSettings):
         if self.local_root:
             return LocalStore(self.local_root, mkdir=True)
         # boto3's chain covers SSO profiles, which obstore's own (env/IMDS only) misses on laptops.
+        # Default 5 s connect timeout and 100 ms backoff failed bulk deletes (connect timeouts on
+        # POST are never retried; S3 503 SlowDown outlasted 10 fast retries).
         return S3Store(
-            self.bucket, region=self.region, credential_provider=Boto3CredentialProvider()
+            self.bucket,
+            region=self.region,
+            credential_provider=Boto3CredentialProvider(),
+            client_options={'connect_timeout': '30s'},
+            retry_config={
+                'backoff': {
+                    'init_backoff': timedelta(seconds=1),
+                    'max_backoff': timedelta(seconds=30),
+                }
+            },
         )
 
     def uri(self, key: str) -> str:
@@ -62,6 +74,13 @@ def _strip_v(version: str) -> str:
     return version[1:]
 
 
+def _check_prefix(prefix: str) -> str:
+    # Keys join onto local_root / the bucket: an absolute or '..' prefix would escape local_root.
+    if prefix.startswith('/') or {'', '.', '..'} & set(prefix.split('/')):
+        raise ValueError(f'prefix must be a relative key like scratch/you, got {prefix!r}')
+    return prefix
+
+
 OUTPUT_PREFIX = 'output'  # production outputs; anything else is scratch
 
 
@@ -78,7 +97,7 @@ class OutputPaths:
     # not a standard str, so we can validate as semver
     version: Annotated[SemanticVersion, BeforeValidator(_strip_v)]
     # Bucket key prefix for outputs, e.g. 'scratch/<you>'. Inputs always read from input/.
-    prefix: Annotated[str, StringConstraints(pattern=r'^[\w.-]+(/[\w.-]+)*$')] = OUTPUT_PREFIX
+    prefix: Annotated[str, AfterValidator(_check_prefix)] = OUTPUT_PREFIX
 
     @property
     def root(self) -> str:

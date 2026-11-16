@@ -1,6 +1,8 @@
+import sys
 import typing
 import warnings
 from math import asin, cos, radians, sin, sqrt
+from pathlib import Path
 
 import numpy as np
 import xarray as xr
@@ -8,6 +10,30 @@ from odc.geo.xr import assign_crs, xr_reproject
 
 from ocr import catalog
 from ocr.risks.fire.utils import geo_sel
+
+# Values match production v1.1.0 only with this PROJ and its datum grids (conda proj-data; without
+# them ~30% of pixels shift). Rerun notebooks/fire/check_vs_v1_1_0.py before bumping either.
+PROJ_VERSION = '9.8.1'  # 9.9.0 picks other HARN grids where they overlap
+PROJ_DATA_VERSION = '1.25'
+# EPSG:5070 (-1e6, 2e6) -> 4326 longitude with the datum grid; without it, 2.1e-6 deg off
+PROJ_PROBE_LON = -107.92266951038741
+
+
+def check_proj_grids() -> None:
+    """Raise unless rasterio's PROJ and proj-data are the pinned versions and the grid is used."""
+    import rasterio
+    import rasterio.warp
+
+    if rasterio.__proj_version__ != PROJ_VERSION:
+        raise RuntimeError(f'rasterio PROJ {rasterio.__proj_version__}, want {PROJ_VERSION}')
+    if not any(Path(sys.prefix, 'conda-meta').glob(f'proj-data-{PROJ_DATA_VERSION}-*.json')):
+        raise RuntimeError(f'conda proj-data {PROJ_DATA_VERSION} not installed in {sys.prefix}')
+    (lon,), _ = rasterio.warp.transform('EPSG:5070', 'EPSG:4326', [-1e6], [2e6])
+    if abs(lon - PROJ_PROBE_LON) > 5e-7:
+        raise RuntimeError(
+            f'PROJ datum grid not used (lon {lon!r}, want {PROJ_PROBE_LON!r}); check PROJ_DATA'
+        )
+
 
 CARDINAL_AND_ORDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
@@ -701,6 +727,36 @@ def create_wind_informed_burn_probability(
     return smoothed_bp
 
 
+# Output variables and their attrs. Also the store template (`ocr.risks.fire.score`), since region
+# writes drop attrs.
+VARIABLE_ATTRS: dict[str, dict[str, str]] = {
+    'rps_scott': {
+        'description': 'Annual risk to potential structures from Scott et al., (2024)',
+        'units': 'percent',
+    },
+    'rps_2011': {
+        'description': 'Annual relative risk to potential structures (RPS) for ~2011 climate conditions. Calculated as bp_2011 × crps_scott',
+        'units': 'percent',
+    },
+    'rps_2047': {
+        'description': 'Annual risk to potential structures (RPS) for ~2047 climate conditions. Calculated as bp_2047 × crps_scott',
+        'units': 'percent',
+    },
+    'bp_2011': {'description': 'Annual burn probability for ~2011 climate conditions'},
+    'bp_2047': {'description': 'Annual burn probability for ~2047 climate conditions'},
+    'crps_scott': {
+        'description': 'Conditional risk to potential structures (cRPS) from Scott et al., (2024)',
+        'units': 'percent',
+    },
+    'bp_2011_riley': {
+        'description': 'Burn probability for ~2011 from Riley et al. (2025) (RDS-2025-0006)'
+    },
+    'bp_2047_riley': {
+        'description': 'Burn probability for ~2047 from Riley et al. (2025) (RDS-2025-0006)'
+    },
+}
+
+
 def calculate_wind_adjusted_risk(
     *,
     x_slice: slice,
@@ -726,6 +782,7 @@ def calculate_wind_adjusted_risk(
     fire_risk : xr.Dataset
         Dataset containing wind-adjusted fire risk variables.
     """
+    check_proj_grids()  # raise, rather than compute values that drift from production
 
     buffered_x_slice = slice(x_slice.start - buffer, x_slice.stop + buffer, x_slice.step)
     buffered_y_slice = slice(y_slice.start - buffer, y_slice.stop + buffer, y_slice.step)
@@ -801,54 +858,20 @@ def calculate_wind_adjusted_risk(
     # Note: for QA. Remove in further production versions
     rps_30_subset = rps_30.sel(latitude=y_slice, longitude=x_slice)
     fire_risk['rps_scott'] = rps_30_subset['RPS']
-    fire_risk['rps_scott'].attrs['description'] = (
-        'Annual risk to potential structures from Scott et al., (2024)'
-    )
-    fire_risk['rps_scott'].attrs['units'] = 'percent'
     with xr.set_options(arithmetic_join='exact'):
-        # rps_2011 (our wind-informed RPS value)
+        # rps_2011, rps_2047 (our wind-informed RPS values)
         fire_risk['rps_2011'] = wind_informed_bp_combined_2011 * rps_30_subset['CRPS']
-        fire_risk['rps_2011'].attrs['description'] = (
-            'Annual relative risk to potential structures (RPS) for ~2011 climate conditions. Calculated as bp_2011 × crps_scott'
-        )
-        fire_risk['rps_2011'].attrs['units'] = 'percent'
-        # rps_2047 (our wind-informed RPS value)
         fire_risk['rps_2047'] = wind_informed_bp_combined_2047 * rps_30_subset['CRPS']
-        fire_risk['rps_2047'].attrs['description'] = (
-            'Annual risk to potential structures (RPS) for ~2047 climate conditions. Calculated as bp_2047 × crps_scott'
-        )
-        fire_risk['rps_2047'].attrs['units'] = 'percent'
-
-        # bp_2011 (our wind-informed BP value)
+        # bp_2011, bp_2047 (our wind-informed BP values)
         fire_risk['bp_2011'] = wind_informed_bp_combined_2011
-        fire_risk['bp_2011'].attrs['description'] = (
-            'Annual burn probability for ~2011 climate conditions'
-        )
-
-        # bp_2047 (our wind-informed BP value)
         fire_risk['bp_2047'] = wind_informed_bp_combined_2047
-        fire_risk['bp_2047'].attrs['description'] = (
-            'Annual burn probability for ~2047 climate conditions'
-        )
-
         # crps_scott (from USFS Scott 2024)(RDS-2020-0016-2)
         fire_risk['crps_scott'] = rps_30_subset['CRPS']
-        fire_risk['crps_scott'].attrs['description'] = (
-            'Conditional risk to potential structures (cRPS) from Scott et al., (2024)'
-        )
-        fire_risk['crps_scott'].attrs['units'] = 'percent'
-
-        # bp_2011_riley (BP from Riley 2025 (RDS-2025-0006))
+        # bp_2011_riley, bp_2047_riley (BP from Riley 2025 (RDS-2025-0006))
         fire_risk['bp_2011_riley'] = riley_2011_30m_4326_subset['BP']
-        fire_risk['bp_2011_riley'].attrs['description'] = (
-            'Burn probability for ~2011 from Riley et al. (2025) (RDS-2025-0006)'
-        )
-
-        # bp_2047_riley (BP from Riley 2025 (RDS-2025-0006))
         fire_risk['bp_2047_riley'] = riley_2047_30m_4326_subset['BP']
-        fire_risk['bp_2047_riley'].attrs['description'] = (
-            'Burn probability for ~2047 from Riley et al. (2025) (RDS-2025-0006)'
-        )
+    for name, attrs in VARIABLE_ATTRS.items():
+        fire_risk[name].attrs = dict(attrs)
 
     return fire_risk.drop_vars(['spatial_ref', 'crs', 'quantile'], errors='ignore')
 
@@ -1042,62 +1065,3 @@ def compute_modal_wind_direction(distribution: xr.DataArray) -> xr.Dataset:
         }
     )
     return mode.to_dataset()
-
-
-# Bin edges that define the 11-category fire risk scoring system (scores 0–10).
-# Score 0 captures zero-risk buildings; score 1 captures the smallest non-zero risks;
-# scores 2–10 correspond to increasing RPS thresholds whose percentile breakpoints
-# grow increasingly close together toward the 100th percentile.
-# See docs/methods/fire-risk/score-bins.ipynb for the full derivation.
-FIRE_RISK_SCORE_BINS: list[float] = [
-    0.0,
-    1e-64,
-    0.01,
-    0.02,
-    0.035,
-    0.06,
-    0.1,
-    0.2,
-    0.5,
-    1.0,
-    3.0,
-    100.0,
-]
-
-
-def rps_to_score(rps: float | np.ndarray) -> int | np.ndarray:
-    """Convert RPS (Risk Percent to Structures) value(s) to a categorical fire risk score.
-
-    The scoring system uses 11 categories (0–10) with bin boundaries designed so
-    that higher scores are increasingly rare: each higher score encompasses a
-    progressively smaller share of the building population.
-
-    Parameters
-    ----------
-    rps : float or array-like
-        RPS value(s) in percent. Must be in the range [0, 100].
-
-    Returns
-    -------
-    int or numpy.ndarray
-        Risk score(s) in the range [0, 10].
-
-    Examples
-    --------
-    >>> rps_to_score(0.0)
-    0
-    >>> rps_to_score(0.005)
-    1
-    >>> rps_to_score(100.0)
-    10
-    >>> import numpy as np
-    >>> rps_to_score(np.array([0.0, 0.015, 3.5]))
-    array([ 0,  2, 10])
-    """
-    scalar = np.ndim(rps) == 0
-    arr = np.asarray(rps, dtype=float)
-    bins = np.asarray(FIRE_RISK_SCORE_BINS)
-    # np.digitize(x, bins, right=False) returns i where bins[i-1] <= x < bins[i].
-    # Subtract 1 to get 0-based scores; clip to [0, 10] to handle x == 100.
-    scores = np.clip(np.digitize(arr, bins, right=False) - 1, 0, len(bins) - 2)
-    return int(scores) if scalar else scores

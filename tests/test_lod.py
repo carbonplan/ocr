@@ -32,6 +32,7 @@ def buildings(tmp_path):
             'rps_2011': pa.array(risk),
             'rps_2047': pa.array(risk * 1.5),
             'bp_2011': pa.array(rng.random(n).astype(np.float32)),
+            'bp_2047': pa.array(rng.random(n).astype(np.float32)),
             'geometry': pa.array(shapely.to_wkb(boxes), pa.binary()),
         }
     ).replace_schema_metadata({'geo': json.dumps(GEO), 'overture_release': 'r1'})
@@ -66,6 +67,8 @@ def test_buildings_lod_keeps_every_building(buildings, tmp_path, monkeypatch):
     assert lod['attributes'] == [
         {'name': 'rps_2011', 'type': 'halffloat'},
         {'name': 'rps_2047', 'type': 'halffloat'},
+        {'name': 'bp_2011', 'type': 'halffloat'},
+        {'name': 'bp_2047', 'type': 'halffloat'},
     ]
     assert out.schema_arrow.field('rps_2011').type == src.schema.field('rps_2011').type
     t = pq.read_table(dest, columns=['rps_2011', 'rps_2047', 'lod'])

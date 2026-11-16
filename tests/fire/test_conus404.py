@@ -30,6 +30,7 @@ def _make_spatial_constants(time_len: int = 2, y_len: int = 3, x_len: int = 4):
 # ------------------ load_conus404 Tests ------------------ #
 
 
+@pytest.mark.integration  # reads Source Coop (network)
 def test_load_conus404_with_spatial_constants():
     ds = conus404.load_conus404(add_spatial_constants=True)
 
@@ -45,6 +46,7 @@ def test_load_conus404_with_spatial_constants():
     assert 'crs_wkt' in ds.crs.attrs
 
 
+@pytest.mark.integration  # reads Source Coop (network)
 def test_load_conus404_without_spatial_constants():
     ds = conus404.load_conus404(add_spatial_constants=False)
 
@@ -143,7 +145,7 @@ def test_geo_sel_bbox():
 
 def test_geo_sel_invalid_conflict():
     ds = _make_geo_dataset()
-    with pytest.raises(ValueError, match='Provide either bbox OR point'):
+    with pytest.raises(ValueError, match='Provide either bbox OR a point'):
         geo_sel(ds, lon=-119, lat=35, bbox=(-121, 34, -118, 36))
 
 

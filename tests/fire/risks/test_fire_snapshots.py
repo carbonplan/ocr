@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from ocr.risks.fire.risks.fire import (
+from ocr.risks.fire.model import (
     apply_wind_directional_convolution,
     classify_wind_directions,
     compute_modal_wind_direction,
