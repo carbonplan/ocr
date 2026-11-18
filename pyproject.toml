@@ -185,6 +185,7 @@
     regions-etl = { cmd = "python -m ocr.regions.tiger" }
     historic-mtbs = { cmd = "python -m ocr.historic.mtbs" }
     historic-ibtracs = { cmd = "python -m ocr.historic.ibtracs" }
+    historic-storm-events = { cmd = "python -m ocr.historic.storm_events" }
     # Package-syncs the local env. Bigger VM: `pixi run start-coiled-notebook m8g.2xlarge`.
     # It has no conda-extras option, so its kernel gets the newest proj and no proj-data: fire scoring there fails check_proj_grids.
     start-coiled-notebook = { cmd = "coiled notebook start --sync --vm-type {{ vm }} --sync-ignore .pixi --sync-ignore .venv --sync-ignore .git --sync-ignore notebooks/layout-experiment/data --sync-ignore .env --sync-ignore '*.env' --tag Project=OCR", args = [{ arg = "vm", default = "m8g.xlarge" }] }
