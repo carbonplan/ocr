@@ -4,6 +4,15 @@ Each risk runs as an ordered list of stages: `score`, `pyramid`, `buildings`, `r
 
 Fire runs `score`, `pyramid`, `buildings` and `regions` (`pixi run fire-all`).
 
+Hurricane has an input ETL only (no stages yet). It reads the raw CHAZ netCDFs and writes `input/hurricane/chaz.icechunk`, one group per metric and representation. Run the jobs one at a time, since they all commit to one repo:
+
+```bash
+pixi run hurricane-fetch copy-raw                     # once: copy raw netCDFs from ocr-explore/CHAZ/ to input/hurricane/raw/chaz/
+pixi run hurricane-etl --metric return_periods        # --representation raster for the 0.05 deg grid; --overwrite rebuilds that group; --prefix scratch/<you> for a test store
+pixi run hurricane-etl --metric exceedance_intensity  # reruns resume from the last committed scenario
+pixi run hurricane-etl --metric return_periods --source era5  # ERA5-forced baseline: <group>_era5, dims (lat, lon) on its own grid
+```
+
 ## Run a deployment
 
 A deployment is one committed TOML file under `runs/<risk>/`:
@@ -116,5 +125,5 @@ New stage: a function `(spec, out, overwrite, **kw)` in `STAGES` at its place in
 `test_run_files_dry_run` dry-runs every `runs/**/*.toml`. After a change, run:
 
 ```bash
-pixi run -e dev pytest tests/test_cli.py tests/test_stages.py tests/flood/test_flood_etl.py
+pixi run -e dev pytest tests/test_cli.py tests/test_stages.py tests/flood/test_flood_etl.py tests/hurricane/test_chaz_etl.py
 ```
