@@ -15,10 +15,10 @@ On Coiled: coiled batch run --vm-type m8g.large --arm --tag Project=OCR --secret
 """
 
 import os
-import sys
 import zipfile
 from fnmatch import fnmatch
-from typing import Annotated
+from pathlib import PurePosixPath
+from typing import Annotated, Literal, get_args
 
 import obstore
 import requests
@@ -26,17 +26,18 @@ import typer
 from obspec_utils.readers import BufferedStoreReader
 from obstore.store import HTTPStore
 
-from ocr.config import StorageConfig
+from ocr.config import INPUT_PREFIX, StorageConfig
 
-RAW_PREFIX = 'input/hurricane/raw/chaz'
+RAW_PREFIX = f'{INPUT_PREFIX}/hurricane/raw/chaz'
 EXPLORE_PREFIX = 'ocr-explore/CHAZ'
-METRICS = ('return_periods', 'exceedance_intensity')
+Metric = Literal['return_periods', 'exceedance_intensity']
+METRICS: tuple[Metric, ...] = get_args(Metric)
 
 # Dryad file ids for dataset version 408938 (doi:10.5061/dryad.qfttdz0vz).
-FILES: dict[str, dict] = {
-    'exceedance_intensity': {'id': 4471224, 'gb': 44.69},
-    'return_periods': {'id': 4471225, 'gb': 13.75},
-}
+FILES: dict[Metric, int] = {
+    'exceedance_intensity': 4471224,
+    'return_periods': 4471225,
+}  # 44.7 / 13.8 GB
 DOWNLOAD = 'https://datadryad.org/api/v2/files/{id}/download'
 
 app = typer.Typer(no_args_is_help=True)
@@ -73,7 +74,9 @@ def copy_raw(dry_run: bool = False) -> None:
 
 def _presigned_url(file_id: int) -> str:
     """Resolve the Dryad download to its presigned, range-readable S3 URL."""
-    token = os.environ.get('DRYAD_TOKEN') or sys.exit('set DRYAD_TOKEN')
+    token = os.environ.get('DRYAD_TOKEN')
+    if not token:
+        raise RuntimeError('set DRYAD_TOKEN')
     r = requests.get(
         DOWNLOAD.format(id=file_id),
         headers={'Authorization': f'Bearer {token}'},
@@ -83,7 +86,7 @@ def _presigned_url(file_id: int) -> str:
     if r.is_redirect and 'Location' in r.headers:
         return r.headers['Location']
     r.raise_for_status()
-    sys.exit(f'expected a redirect to presigned storage, got {r.status_code}')
+    raise RuntimeError(f'expected a redirect to presigned storage, got {r.status_code}')
 
 
 class _PresignedStore:
@@ -109,44 +112,33 @@ def _open_zip(file_id: int) -> zipfile.ZipFile:
 
 def _clean_rel(member_path: str, name: str) -> str | None:
     """Zip member path -> path under RAW_PREFIX/<name>/, or None to skip macOS cruft."""
-    parts = member_path.lstrip('/').split('/')
-    base = parts[-1]
-    if '__MACOSX' in parts or base == '.DS_Store' or base.startswith('._'):
+    parts = PurePosixPath(member_path.lstrip('/')).parts
+    if '__MACOSX' in parts or parts[-1].startswith('.'):
         return None
-    if parts and parts[0] == name:
-        parts = parts[1:]
-    return '/'.join(parts) if parts and parts[-1] else None
+    return '/'.join(parts[1:] if parts[0] == name else parts)
 
 
 @app.command()
 def fetch(
-    name: Annotated[str, typer.Argument(help=f'one of {list(FILES)}')],
-    only: Annotated[
-        str | None, typer.Option(help="glob on member path, e.g. '*raster.nc*'")
-    ] = None,
+    name: Metric,
+    only: Annotated[str, typer.Option(help="glob on member path, e.g. '*raster.nc*'")] = '*',
     dry_run: bool = False,
 ) -> None:
     """Stream members of one Dryad zip into RAW_PREFIX/<name>/."""
-    if name not in FILES:
-        sys.exit(f'unknown: {name}; known: {list(FILES)}')
-    file_id = FILES[name]['id']
+    file_id = FILES[name]
     with _open_zip(file_id) as zf:
-        plan = [
-            (info.filename, rel, info.file_size)
-            for info in zf.infolist()
-            if not info.is_dir()
-            and (only is None or fnmatch(info.filename, only))
-            and (rel := _clean_rel(info.filename, name)) is not None
-        ]
+        members = [i for i in zf.infolist() if not i.is_dir() and fnmatch(i.filename, only)]
+    plan = [(m, rel) for m in members if (rel := _clean_rel(m.filename, name))]
     store = StorageConfig().object_store()
-    print(f'{len(plan)} files, {sum(s for *_, s in plan) / 1e9:.2f} GB -> {RAW_PREFIX}/{name}/')
+    gb = sum(m.file_size for m, _ in plan) / 1e9
+    print(f'{len(plan)} files, {gb:.2f} GB -> {RAW_PREFIX}/{name}/')
     copied = skipped = 0
-    for i, (member, rel, size) in enumerate(plan, 1):
+    for i, (member, rel) in enumerate(plan, 1):
         dst = f'{RAW_PREFIX}/{name}/{rel}'
-        if _size(store, dst) == size:
+        if _size(store, dst) == member.file_size:
             skipped += 1
             continue
-        print(f'  [{i}/{len(plan)}] {rel} ({size / 1e6:.1f} MB)')
+        print(f'  [{i}/{len(plan)}] {rel} ({member.file_size / 1e6:.1f} MB)')
         if dry_run:
             continue
         # Fresh presigned URL per member: one URL can expire during a multi-GB stream.

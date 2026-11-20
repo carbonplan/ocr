@@ -8,8 +8,8 @@ Hurricane has an input ETL only (no stages yet). It reads the raw CHAZ netCDFs a
 
 ```bash
 pixi run hurricane-fetch copy-raw                     # once: copy raw netCDFs from ocr-explore/CHAZ/ to input/hurricane/raw/chaz/
-pixi run hurricane-etl --metric return_periods        # --representation raster for the 0.05 deg grid; --overwrite rebuilds that group; --prefix scratch/<you> for a test store
-pixi run hurricane-etl --metric exceedance_intensity  # reruns resume from the last committed scenario
+pixi run hurricane-etl --metric return_periods        # --representation raster for the 0.05 deg grid; --prefix scratch/<you> for a test store
+pixi run hurricane-etl --metric exceedance_intensity  # an existing group raises; --overwrite replaces it
 pixi run hurricane-etl --metric return_periods --source era5  # ERA5-forced baseline: <group>_era5, dims (lat, lon) on its own grid
 ```
 

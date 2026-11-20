@@ -82,6 +82,7 @@ def _check_prefix(prefix: str) -> str:
 
 
 OUTPUT_PREFIX = 'output'  # production outputs; anything else is scratch
+INPUT_PREFIX = 'input'  # production inputs (ETL stores, raw files)
 
 
 @dataclass(frozen=True)

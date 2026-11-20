@@ -53,7 +53,6 @@
         "h5py>=3.16.0,<4",
         "obspec-utils>=0.9.0,<0.10",
         "requests>=2.34.2,<3",
-        "spacetimer @ git+https://github.com/norlandrhagen/spacetimer.git@3c48ac9cd28e95e6901c58826a3724732c953473",
         "typer>=0.27.3,<0.28",
     ]
     coiled-deploy = ["coiled>=1.135.6,<2", "jupyter-server-proxy>=4.6.0,<5", "jupyterlab>=4.6.4,<5"]
@@ -147,7 +146,6 @@
 [tool.pixi.pypi-dependencies]
     geoparquet-lod = { git = "https://github.com/Shane98c/geoparquet-lod.git", rev = "5f4556a6d581ad850f247893652484fb713f7dfe" }
     ocr            = { path = ".", editable = true }
-    spacetimer     = { git = "https://github.com/norlandrhagen/spacetimer.git", rev = "3c48ac9cd28e95e6901c58826a3724732c953473" }
 
 [tool.pixi.environments]
     # Map environments to features
